@@ -219,7 +219,6 @@ async def _configure_application(
         runway_api_key, session=session
     )
 
-
 async def _shutdown_application(application: Application) -> None:
     client: Optional[RunwayClient] = application.bot_data.pop("runway_client", None)
     session: Optional[aiohttp.ClientSession] = application.bot_data.pop(
@@ -270,6 +269,14 @@ def main() -> None:
     bot_token = _load_env_var("BOT_TOKEN")
     runway_api_key = _load_env_var("RUNWAY_API")
 
+    application = (
+        ApplicationBuilder()
+        .token(bot_token)
+        .post_init(_configure_application_factory(runway_api_key))
+        .post_shutdown(_shutdown_application)
+        .build()
+    )
+
     asyncio.run(_run_bot(bot_token, runway_api_key))
     builder = ApplicationBuilder().token(bot_token)
     builder.post_init(lambda app: _configure_application(app, runway_api_key=runway_api_key))
@@ -280,6 +287,7 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_prompt))
 
     LOGGER.info("Starting Telegram bot")
+    application.run_polling()
     application.run_polling(close_loop=False)
 
 
