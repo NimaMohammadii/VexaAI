@@ -201,6 +201,15 @@ async def handle_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await update.message.reply_photo(photo=url)
 
 
+def _configure_application_factory(runway_api_key: str):
+    async def _configure_application(application: Application) -> None:
+        session = aiohttp.ClientSession()
+        application.bot_data["runway_session"] = session
+        application.bot_data["runway_client"] = RunwayClient(
+            runway_api_key, session=session
+        )
+
+    return _configure_application
 async def _configure_application(
     application: Application, *, runway_api_key: str
 ) -> None:
@@ -223,6 +232,31 @@ async def _shutdown_application(application: Application) -> None:
         await session.close()
 
 
+async def _run_bot(bot_token: str, runway_api_key: str) -> None:
+    application = (
+        ApplicationBuilder()
+        .token(bot_token)
+        .post_init(_configure_application_factory(runway_api_key))
+        .post_shutdown(_shutdown_application)
+        .build()
+    )
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_prompt))
+
+    LOGGER.info("Starting Telegram bot")
+
+    await application.initialize()
+    await application.start()
+
+    try:
+        await application.updater.start_polling()
+        await application.updater.wait()
+    finally:
+        await application.stop()
+        await application.shutdown()
+
+
 def _load_env_var(name: str) -> str:
     value = os.environ.get(name)
     if not value:
@@ -236,6 +270,7 @@ def main() -> None:
     bot_token = _load_env_var("BOT_TOKEN")
     runway_api_key = _load_env_var("RUNWAY_API")
 
+    asyncio.run(_run_bot(bot_token, runway_api_key))
     builder = ApplicationBuilder().token(bot_token)
     builder.post_init(lambda app: _configure_application(app, runway_api_key=runway_api_key))
     builder.post_shutdown(_shutdown_application)
