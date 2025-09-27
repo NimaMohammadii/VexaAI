@@ -128,6 +128,7 @@ def main() -> None:
 
     LOGGER.info("Starting Telegram bot...")
     application.run_polling()
+    application.run_polling(close_loop=False)
 
 
 if __name__ == "__main__":
