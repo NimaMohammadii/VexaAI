@@ -127,6 +127,7 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     LOGGER.info("Starting Telegram bot...")
+    application.run_polling()
     application.run_polling(close_loop=False)
 
 
