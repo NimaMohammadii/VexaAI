@@ -118,7 +118,9 @@ async def _send_media_items(update: Update, media_items: List[MediaItem]) -> Non
         caption_sent = caption_sent or bool(caption)
 
 
-def main() -> None:
+async def _run_bot() -> None:
+    """Create the Telegram application and keep polling for updates."""
+
     token = _get_bot_token()
     application = Application.builder().token(token).build()
 
@@ -127,8 +129,26 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     LOGGER.info("Starting Telegram bot...")
-    application.run_polling()
-    application.run_polling(close_loop=False)
+
+    # Using ``async with`` ensures that initialize/start/shutdown hooks of the
+    # application are executed correctly even on platforms (like Railway)
+    # where the default event loop handling of ``run_polling`` can fail.
+    async with application:
+        await application.updater.start_polling()
+
+        # Keep the bot running forever until the process receives a stop
+        # signal (e.g. SIGTERM from the hosting platform).
+        try:
+            await asyncio.Future()
+        except asyncio.CancelledError:
+            # Hosting platforms typically cancel the main task on shutdown.
+            # Swallow the cancellation so the context manager can handle
+            # graceful teardown (stop/shutdown).
+            pass
+
+
+def main() -> None:
+    asyncio.run(_run_bot())
 
 
 if __name__ == "__main__":
