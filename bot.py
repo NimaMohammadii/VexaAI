@@ -148,6 +148,21 @@ async def _run_bot() -> None:
             if application.running:
                 await application.stop()
             await application.shutdown()
+    # Using ``async with`` ensures that initialize/start/shutdown hooks of the
+    # application are executed correctly even on platforms (like Railway)
+    # where the default event loop handling of ``run_polling`` can fail.
+    async with application:
+        await application.updater.start_polling()
+
+        # Keep the bot running forever until the process receives a stop
+        # signal (e.g. SIGTERM from the hosting platform).
+        try:
+            await asyncio.Future()
+        except asyncio.CancelledError:
+            # Hosting platforms typically cancel the main task on shutdown.
+            # Swallow the cancellation so the context manager can handle
+            # graceful teardown (stop/shutdown).
+            pass
 
 
 def main() -> None:
