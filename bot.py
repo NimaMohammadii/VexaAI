@@ -130,6 +130,24 @@ async def _run_bot() -> None:
 
     LOGGER.info("Starting Telegram bot...")
 
+    await application.initialize()
+
+    try:
+        await application.updater.start_polling()
+        await application.start()
+
+        try:
+            await asyncio.Future()
+        except asyncio.CancelledError:
+            LOGGER.info("Cancellation requested. Stopping bot gracefully...")
+    finally:
+        try:
+            if application.updater and application.updater.running:
+                await application.updater.stop()
+        finally:
+            if application.running:
+                await application.stop()
+            await application.shutdown()
     # Using ``async with`` ensures that initialize/start/shutdown hooks of the
     # application are executed correctly even on platforms (like Railway)
     # where the default event loop handling of ``run_polling`` can fail.
