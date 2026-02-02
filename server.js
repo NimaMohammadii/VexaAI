@@ -50,10 +50,10 @@ const adminAuth = (req, res, next) => {
 };
 
 const voiceMap = {
-  Ava: "21m00Tcm4TlvDq8ikWAM",
-  Liam: "AZnzlk1XvdvUeBnXmlld",
-  Noah: "ErXwobaYiN019PkySvjV",
-  Emma: "MF3mGyEYCl7XYWbV9V6O",
+  Rachel: "21m00Tcm4TlvDq8ikWAM",
+  Maya: "AZnzlk1XvdvUeBnXmlld",
+  Arman: "ErXwobaYiN019PkySvjV",
+  Noah: "MF3mGyEYCl7XYWbV9V6O",
 };
 
 app.post("/tts", async (req, res) => {
@@ -64,7 +64,7 @@ app.post("/tts", async (req, res) => {
       return res.status(400).json({ error: "Text is required." });
     }
 
-    const voiceId = voiceMap[voice] || voiceMap.Ava;
+    const voiceId = voiceMap[voice] || voiceMap.Rachel;
     const apiKey = process.env.ELEVEN_API;
 
     if (!apiKey) {

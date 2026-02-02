@@ -29,22 +29,36 @@
     </aside>
 
     <main class="tts-page">
-      <div class="menu-bar">
-        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
-          ☰ <span>Text to Speech</span>
-        </button>
-      </div>
-      <section class="app" aria-labelledby="tts-title">
-        <div class="container card">
-          <div class="card-header">
-            <h2 id="tts-title">Text to Speech</h2>
+      <section class="tts-shell" aria-labelledby="tts-title">
+        <header class="tts-header">
+          <div class="tts-header-left">
+            <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
+              ☰
+            </button>
+            <div>
+              <p class="tts-label">Text to Speech Studio</p>
+              <h1 id="tts-title">Text to Speech</h1>
+            </div>
+          </div>
+          <div class="tts-header-right">
+            <div class="tts-logo-slot" aria-label="Logo placeholder">Logo</div>
+            <div class="tts-avatar-slot" aria-label="Photo placeholder"></div>
+          </div>
+        </header>
+
+        <div class="tts-card">
+          <div class="tts-voice-strip" role="group" aria-label="Voices">
+            <button class="voice-pill is-active" type="button" data-voice="Rachel">Rachel</button>
+            <button class="voice-pill" type="button" data-voice="Maya">Maya</button>
+            <button class="voice-pill" type="button" data-voice="Arman">Arman</button>
+            <button class="voice-pill" type="button" data-voice="Noah">Noah</button>
           </div>
 
           <div class="field">
             <label for="textInput">Your text</label>
             <textarea
               id="textInput"
-              placeholder="Type or paste a script to hear it instantly..."
+              placeholder="Type your script to hear it in expressive speech..."
               maxlength="1000"
             ></textarea>
             <div class="meta-row">
@@ -56,28 +70,20 @@
             </div>
           </div>
 
-          <div class="field">
+          <div class="field" hidden>
             <label for="voiceSelect">Voice</label>
             <div class="select-wrap">
               <select id="voiceSelect">
-                <option value="Ava">Ava — Warm (EN)</option>
-                <option value="Liam">Liam — Natural (EN)</option>
-                <option value="Noah">Noah — Calm (EN)</option>
+                <option value="Rachel" selected>Rachel</option>
+                <option value="Maya">Maya</option>
+                <option value="Arman">Arman</option>
+                <option value="Noah">Noah</option>
               </select>
             </div>
           </div>
 
           <div class="cta-row">
-            <button id="generateBtn" class="cta" type="button">🎧 Generate Voice</button>
-          </div>
-
-          <div class="quick-actions" aria-label="Quick prompts">
-            <button class="chip-btn" type="button">✨ Brand intro</button>
-            <button class="chip-btn" type="button">🎙️ Podcast teaser</button>
-            <button class="chip-btn" type="button">😂 Laughing tone</button>
-            <button class="chip-btn" type="button">📣 Product announcement</button>
-            <button class="chip-btn" type="button">🌙 Calm bedtime story</button>
-            <button class="chip-btn" type="button">🧠 Thoughtful narration</button>
+            <button id="generateBtn" class="cta tts-primary" type="button">Generate speech</button>
           </div>
 
           <div class="status" id="statusMessage" aria-live="polite"></div>
@@ -87,6 +93,36 @@
             <audio id="audioPlayer" controls></audio>
           </div>
         </div>
+
+        <details class="tts-history">
+          <summary>
+            <span>History</span>
+            <span class="history-meta">Tap to view your conversions</span>
+          </summary>
+          <ul class="history-list">
+            <li>
+              <div>
+                <p class="history-title">Brand intro</p>
+                <p class="history-meta">Rachel · 24s · 09:14</p>
+              </div>
+              <button class="ghost-btn" type="button">Play</button>
+            </li>
+            <li>
+              <div>
+                <p class="history-title">Product teaser</p>
+                <p class="history-meta">Maya · 18s · 08:02</p>
+              </div>
+              <button class="ghost-btn" type="button">Play</button>
+            </li>
+            <li>
+              <div>
+                <p class="history-title">Story sample</p>
+                <p class="history-meta">Arman · 42s · 07:10</p>
+              </div>
+              <button class="ghost-btn" type="button">Play</button>
+            </li>
+          </ul>
+        </details>
       </section>
     </main>
 

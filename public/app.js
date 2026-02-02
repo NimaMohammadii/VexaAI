@@ -10,6 +10,7 @@ const menuToggle = document.getElementById("menuToggle");
 const menuClose = document.getElementById("menuClose");
 const sideMenu = document.getElementById("sideMenu");
 const menuOverlay = document.getElementById("menuOverlay");
+const voicePills = document.querySelectorAll(".voice-pill");
 
 const maxChars = textInput ? Number(textInput.getAttribute("maxlength")) || 1000 : 0;
 
@@ -40,7 +41,7 @@ const toggleLoading = (isLoading) => {
   }
   generateBtn.disabled = isLoading;
   generateBtn.classList.toggle("is-loading", isLoading);
-  generateBtn.textContent = isLoading ? "Generating voice..." : "🎧 Generate Voice";
+  generateBtn.textContent = isLoading ? "Generating speech..." : "Generate speech";
 };
 
 const handleGenerate = async () => {
@@ -120,6 +121,24 @@ if (textInput) {
 
 if (generateBtn) {
   generateBtn.addEventListener("click", handleGenerate);
+}
+
+if (voicePills.length && voiceSelect) {
+  const setActiveVoice = (voice) => {
+    voiceSelect.value = voice;
+    voicePills.forEach((pill) => {
+      pill.classList.toggle("is-active", pill.dataset.voice === voice);
+    });
+  };
+
+  voicePills.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const voice = pill.dataset.voice;
+      if (voice) {
+        setActiveVoice(voice);
+      }
+    });
+  });
 }
 
 if (menuToggle) {
