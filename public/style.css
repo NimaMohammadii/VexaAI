@@ -116,6 +116,106 @@ a {
   gap: 10px;
 }
 
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 7, 10, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 30;
+}
+
+.side-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(320px, 85vw);
+  height: 100vh;
+  background: #0c0d10;
+  border-right: 1px solid var(--border);
+  padding: 20px 18px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  transform: translateX(-110%);
+  transition: transform 0.25s ease;
+  z-index: 40;
+  box-shadow: 24px 0 40px rgba(0, 0, 0, 0.45);
+}
+
+.side-menu.is-open {
+  transform: translateX(0);
+}
+
+.side-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.side-menu-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.menu-close {
+  width: 34px;
+  height: 34px;
+  font-size: 0.9rem;
+}
+
+.side-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side-menu-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.menu-link {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--text);
+  background: transparent;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.menu-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border);
+}
+
+.menu-link.is-active {
+  background: rgba(143, 146, 255, 0.12);
+  border-color: rgba(143, 146, 255, 0.4);
+}
+
+.menu-bar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .icon-btn {
   width: 36px;
   height: 36px;
@@ -152,6 +252,10 @@ a {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.tts-page {
+  padding-top: 30px;
 }
 
 .home-banner {
