@@ -1,59 +1,57 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>تبدیل متن به صدا | MVP</title>
+    <title>Human-like Text to Speech</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main class="app">
-      <header>
-        <p class="eyebrow">Text to Speech MVP</p>
-        <h1>تبدیل متن به صدا، ساده و سریع</h1>
-        <p class="subtitle">
-          متن خود را وارد کنید، یک صدا انتخاب کنید و خروجی MP3 بگیرید.
-        </p>
-      </header>
-
-      <section class="card">
-        <label for="textInput">متن شما</label>
-        <textarea
-          id="textInput"
-          placeholder="یک متن کوتاه برای تست بنویسید..."
-          maxlength="1000"
-        ></textarea>
-        <div class="meta-row">
-          <span id="charCount">۰</span>
-          <span>کاراکتر (هر ۱ کاراکتر = ۱ کردیت)</span>
-        </div>
-
-        <label for="voiceSelect">انتخاب صدا</label>
-        <select id="voiceSelect">
-          <option value="Ava">Ava</option>
-          <option value="Liam">Liam</option>
-          <option value="Noah">Noah</option>
-          <option value="Emma">Emma</option>
-        </select>
-        <!-- در صورت نیاز، صداهای بیشتری را اینجا به لیست اضافه کنید. -->
-
-        <button id="generateBtn">ساخت صدا</button>
-
-        <div class="status" id="statusMessage"></div>
-
-        <div class="player" id="playerWrap" hidden>
-          <p>پخش خروجی:</p>
-          <audio id="audioPlayer" controls></audio>
-        </div>
+      <section class="hero">
+        <p class="eyebrow">AI Voice Studio</p>
+        <h1>Human-like Text to Speech</h1>
+        <p class="subtitle">Fast • Natural • MP3 output</p>
       </section>
 
-      <section class="notes">
-        <p>
-          این نسخه فقط برای تست UX است. در آینده می‌توان سیستم کردیت، پرداخت و
-          احراز هویت را به بک‌اند اضافه کرد.
-        </p>
-        <!-- محل افزودن سیستم کردیت: می‌توانید تعداد کاراکترهای مصرفی را از این بخش به بک‌اند ارسال کنید. -->
-        <!-- محل افزودن پرداخت و احراز هویت: اینجا می‌تواند به صفحه لاگین و پلن‌های اشتراک لینک شود. -->
+      <section class="card" aria-labelledby="tts-title">
+        <h2 id="tts-title" class="sr-only">Generate voice</h2>
+        <div class="field">
+          <label for="textInput">Your text</label>
+          <textarea
+            id="textInput"
+            placeholder="Type or paste a script to hear it instantly..."
+            maxlength="1000"
+          ></textarea>
+          <div class="meta-row">
+            <span class="meta-label">
+              <span id="charCount">0</span> /
+              <span id="charTotal">1,000</span> characters
+            </span>
+            <span class="meta-pill">MP3</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="voiceSelect">Voice</label>
+          <div class="select-wrap">
+            <select id="voiceSelect">
+              <option value="Ava">Ava</option>
+              <option value="Liam">Liam</option>
+              <option value="Noah">Noah</option>
+              <option value="Emma">Emma</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="generateBtn" class="cta">🎧 Generate Voice</button>
+
+        <div class="status" id="statusMessage" aria-live="polite"></div>
+
+        <div class="player" id="playerWrap" hidden>
+          <p class="player-title">Your audio is ready</p>
+          <audio id="audioPlayer" controls></audio>
+        </div>
       </section>
     </main>
 
