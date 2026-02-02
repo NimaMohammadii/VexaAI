@@ -54,11 +54,21 @@
               </button>
               <div class="voice-menu" id="voiceMenu" role="listbox" aria-label="Select a voice" hidden>
                 <button class="voice-option is-active" type="button" role="option" data-voice="Rachel">
-                  Rachel
+                  <span class="voice-avatar" aria-hidden="true">🎧</span>
+                  <span>Rachel</span>
                 </button>
-                <button class="voice-option" type="button" role="option" data-voice="Maya">Maya</button>
-                <button class="voice-option" type="button" role="option" data-voice="Arman">Arman</button>
-                <button class="voice-option" type="button" role="option" data-voice="Noah">Noah</button>
+                <button class="voice-option" type="button" role="option" data-voice="Maya">
+                  <span class="voice-avatar" aria-hidden="true">🎧</span>
+                  <span>Maya</span>
+                </button>
+                <button class="voice-option" type="button" role="option" data-voice="Arman">
+                  <span class="voice-avatar" aria-hidden="true">🎧</span>
+                  <span>Arman</span>
+                </button>
+                <button class="voice-option" type="button" role="option" data-voice="Noah">
+                  <span class="voice-avatar" aria-hidden="true">🎧</span>
+                  <span>Noah</span>
+                </button>
               </div>
             </div>
             <button class="history-toggle" id="historyToggle" type="button">
@@ -125,17 +135,6 @@
         </div>
       </aside>
 
-      <div class="field" hidden>
-        <label for="voiceSelect">Voice</label>
-        <div class="select-wrap">
-          <select id="voiceSelect">
-            <option value="Rachel" selected>Rachel</option>
-            <option value="Maya">Maya</option>
-            <option value="Arman">Arman</option>
-            <option value="Noah">Noah</option>
-          </select>
-        </div>
-      </div>
     </main>
 
     <script src="app.js"></script>

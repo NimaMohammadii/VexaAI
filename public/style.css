@@ -261,9 +261,9 @@ a {
 }
 
 .tts-shell {
-  width: min(980px, 92%);
+  width: min(1200px, 100%);
   margin: 0 auto;
-  padding: 24px 0 40px;
+  padding: 24px clamp(16px, 4vw, 36px) 40px;
   display: flex;
   flex-direction: column;
   gap: 26px;
@@ -318,15 +318,15 @@ a {
 }
 
 .tts-editor-card {
-  background: #0d0e12;
-  border-radius: 28px;
-  padding: clamp(22px, 3vw, 32px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 24px 40px rgba(0, 0, 0, 0.45);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  min-height: min(68vh, 640px);
+  min-height: auto;
 }
 
 .tts-editor-header {
@@ -355,6 +355,14 @@ a {
   cursor: pointer;
 }
 
+.voice-trigger .chevron {
+  transition: transform 0.2s ease;
+}
+
+.voice-trigger[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
 .voice-menu {
   position: absolute;
   top: calc(100% + 10px);
@@ -380,12 +388,27 @@ a {
   color: var(--text);
   font-size: 0.9rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .voice-option:hover,
 .voice-option.is-active {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+.voice-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(143, 146, 255, 0.18);
+  border: 1px solid rgba(143, 146, 255, 0.4);
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  flex: 0 0 auto;
 }
 
 .history-toggle {
@@ -412,14 +435,14 @@ a {
   background: transparent;
   border: none;
   border-radius: 20px;
-  padding: 8px 4px 0;
+  padding: 8px 0 0;
   display: flex;
   flex-direction: column;
-  min-height: 360px;
+  min-height: clamp(420px, 64vh, 680px);
 }
 
 .tts-editor textarea {
-  min-height: 360px;
+  min-height: clamp(420px, 64vh, 680px);
   border: none;
   padding: 0;
   background: transparent;
@@ -439,14 +462,22 @@ a {
   justify-content: center;
   font-size: 1rem;
   padding: 14px 24px;
-  border-radius: 999px;
-  box-shadow: 0 0 24px rgba(143, 146, 255, 0.25);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 16px;
+  background: rgba(143, 146, 255, 0.18);
+  color: rgba(240, 242, 255, 0.7);
+  box-shadow: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.tts-primary.is-ready {
+  background: rgba(143, 146, 255, 0.9);
+  color: #0b0c12;
+  box-shadow: 0 14px 28px rgba(108, 111, 255, 0.25);
 }
 
 .tts-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 0 30px rgba(143, 146, 255, 0.4);
+  box-shadow: 0 0 30px rgba(143, 146, 255, 0.25);
 }
 
 .tts-actions {
