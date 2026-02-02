@@ -14,6 +14,10 @@ const creditsWarning = document.getElementById("creditsWarning");
 const siteHeader = document.getElementById("siteHeader");
 const langToggle = document.getElementById("langToggle");
 const themeToggle = document.getElementById("themeToggle");
+const menuToggle = document.getElementById("menuToggle");
+const menuClose = document.getElementById("menuClose");
+const sideMenu = document.getElementById("sideMenu");
+const menuOverlay = document.getElementById("menuOverlay");
 
 const maxChars = textInput ? Number(textInput.getAttribute("maxlength")) || 1000 : 0;
 let currentCredits = 1240;
@@ -173,6 +177,24 @@ const toggleTheme = () => {
   localStorage.setItem(themeStorageKey, nextTheme);
 };
 
+const openMenu = () => {
+  if (!sideMenu || !menuOverlay) {
+    return;
+  }
+  sideMenu.classList.add("is-open");
+  menuOverlay.hidden = false;
+  menuToggle?.setAttribute("aria-expanded", "true");
+};
+
+const closeMenu = () => {
+  if (!sideMenu || !menuOverlay) {
+    return;
+  }
+  sideMenu.classList.remove("is-open");
+  menuOverlay.hidden = true;
+  menuToggle?.setAttribute("aria-expanded", "false");
+};
+
 if (textInput) {
   textInput.addEventListener("input", updateCharCount);
 }
@@ -189,6 +211,20 @@ if (langToggle) {
 if (themeToggle) {
   themeToggle.addEventListener("click", toggleTheme);
 }
+if (menuToggle) {
+  menuToggle.addEventListener("click", openMenu);
+}
+if (menuClose) {
+  menuClose.addEventListener("click", closeMenu);
+}
+if (menuOverlay) {
+  menuOverlay.addEventListener("click", closeMenu);
+}
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeMenu();
+  }
+});
 
 if (charTotal) {
   charTotal.textContent = formatNumber(maxChars);

@@ -7,18 +7,47 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body dir="ltr" data-theme="dark">
-    <header class="home-header">
-      <div class="home-header-left">
-        <span class="home-icon" aria-hidden="true">▢</span>
-        <span class="home-title">Home</span>
+    <div class="menu-overlay" id="menuOverlay" hidden></div>
+    <aside class="side-menu" id="sideMenu" aria-hidden="true">
+      <div class="side-menu-header">
+        <div class="side-menu-brand">
+          <span class="home-icon" aria-hidden="true">▢</span>
+          <span>VexaAI</span>
+        </div>
+        <button class="icon-btn menu-close" id="menuClose" type="button" aria-label="Close menu">
+          ✕
+        </button>
       </div>
-      <div class="home-header-right">
-        <button class="icon-btn" type="button" aria-label="Notifications">🔔</button>
-        <div class="avatar" aria-label="Profile">C</div>
+
+      <div class="side-menu-section">
+        <p class="side-menu-title">Main</p>
+        <a class="menu-link is-active" href="index.html">Home</a>
+        <a class="menu-link" href="voices.html">Voices</a>
       </div>
-    </header>
+
+      <div class="side-menu-section">
+        <p class="side-menu-title">Playground</p>
+        <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
+        <a class="menu-link" href="how-it-works.html">Voice Changer</a>
+        <a class="menu-link" href="pricing.html">Sound Effects</a>
+        <a class="menu-link" href="about.html">Voice Isolator</a>
+      </div>
+
+      <div class="side-menu-section">
+        <p class="side-menu-title">Products</p>
+        <a class="menu-link" href="credits.html">Studio</a>
+        <a class="menu-link" href="pricing.html">Music</a>
+        <a class="menu-link" href="about.html">Dubbing</a>
+        <a class="menu-link" href="how-it-works.html">Speech to Text</a>
+      </div>
+    </aside>
 
     <main class="home">
+      <div class="menu-bar">
+        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
+          ☰ <span>Home</span>
+        </button>
+      </div>
       <section class="home-banner">
         <span class="pill">New</span>
         <span class="banner-text">Become an affiliate, earn with every referral.</span>
