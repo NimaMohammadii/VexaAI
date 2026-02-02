@@ -73,6 +73,7 @@ const getOrCreateUser = (userId) => {
     user = {
       id: userId,
       credits: USER_STARTING_CREDITS,
+      startingCredits: USER_STARTING_CREDITS,
       createdAt: Date.now(),
       lastActivityAt: Date.now(),
       online: true,
@@ -146,6 +147,8 @@ app.post("/tts", async (req, res) => {
     const audioBuffer = Buffer.from(await response.arrayBuffer());
     user.credits -= creditCost;
     touchUser(user);
+    res.setHeader("X-User-Credits", user.credits);
+    res.setHeader("X-User-Starting-Credits", user.startingCredits);
     return res.send(audioBuffer);
   } catch (error) {
     return res.status(500).json({ error: "Unexpected server error." });
@@ -162,6 +165,7 @@ app.post("/api/users/init", (req, res) => {
   return res.json({
     id: user.id,
     credits: user.credits,
+    startingCredits: user.startingCredits,
     lastActivityAt: user.lastActivityAt,
   });
 });

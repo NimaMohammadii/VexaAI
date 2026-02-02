@@ -38,6 +38,9 @@
             <span class="tts-brand">VexaAI</span>
           </div>
           <div class="tts-header-right">
+            <div class="credits-chip" id="creditsChip" hidden>
+              Credits: <span id="creditsAvailable">--</span>
+            </div>
             <button class="ghost-btn" type="button">Upgrade</button>
             <div class="tts-avatar-slot" aria-label="Photo placeholder"></div>
           </div>
@@ -95,11 +98,11 @@
           <button id="generateBtn" class="cta tts-primary" type="button">Generate speech</button>
           <div class="credit-usage">
             <div class="credit-meta">
-              <span>Credits used</span>
-              <span>3,200 / 10,000</span>
+              <span>Credits remaining</span>
+              <span><span id="creditsRemaining">--</span> / <span id="creditsTotal">--</span></span>
             </div>
             <div class="credit-bar">
-              <span class="credit-fill" style="width: 32%"></span>
+              <span class="credit-fill" id="creditsFill" style="width: 0%"></span>
             </div>
           </div>
         </div>

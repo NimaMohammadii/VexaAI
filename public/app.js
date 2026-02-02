@@ -11,11 +11,20 @@ const menuClose = document.getElementById("menuClose");
 const sideMenu = document.getElementById("sideMenu");
 const menuOverlay = document.getElementById("menuOverlay");
 const voicePills = document.querySelectorAll(".voice-pill");
+const creditsChip = document.getElementById("creditsChip");
+const creditsAvailable = document.getElementById("creditsAvailable");
+const creditsRemaining = document.getElementById("creditsRemaining");
+const creditsTotal = document.getElementById("creditsTotal");
+const creditsFill = document.getElementById("creditsFill");
 
 const maxChars = textInput ? Number(textInput.getAttribute("maxlength")) || 1000 : 0;
 
 const formatNumber = (value) => value.toLocaleString("en-US");
 const USER_ID_STORAGE_KEY = "vexa_user_id";
+const CREDIT_FILL_MAX = 100;
+
+let currentCredits = null;
+let totalCredits = null;
 
 const readCookie = (name) => {
   const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
@@ -61,13 +70,58 @@ const getOrCreateUserId = () => {
 
 const userId = getOrCreateUserId();
 
+const updateCreditDisplay = () => {
+  if (currentCredits === null) {
+    return;
+  }
+
+  if (creditsAvailable) {
+    creditsAvailable.textContent = formatNumber(currentCredits);
+  }
+
+  if (creditsRemaining) {
+    creditsRemaining.textContent = formatNumber(currentCredits);
+  }
+
+  if (creditsTotal) {
+    const totalValue = totalCredits ?? currentCredits;
+    creditsTotal.textContent = formatNumber(totalValue);
+  }
+
+  if (creditsFill) {
+    const totalValue = totalCredits ?? currentCredits;
+    const ratio = totalValue > 0 ? (currentCredits / totalValue) * CREDIT_FILL_MAX : 0;
+    const clamped = Math.min(CREDIT_FILL_MAX, Math.max(0, ratio));
+    creditsFill.style.width = `${clamped}%`;
+  }
+
+  if (creditsChip) {
+    creditsChip.hidden = false;
+  }
+};
+
+const setCredits = (remaining, total) => {
+  if (Number.isFinite(remaining)) {
+    currentCredits = Math.max(0, Math.floor(remaining));
+  }
+  if (Number.isFinite(total)) {
+    totalCredits = Math.max(currentCredits ?? 0, Math.floor(total));
+  }
+  updateCreditDisplay();
+};
+
 const initUser = async () => {
   try {
-    await fetch("/api/users/init", {
+    const response = await fetch("/api/users/init", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
+    if (!response.ok) {
+      throw new Error("Unable to initialize user.");
+    }
+    const data = await response.json();
+    setCredits(data.credits, data.startingCredits);
   } catch (error) {
     console.warn("Unable to initialize user.", error);
   }
@@ -146,6 +200,16 @@ const handleGenerate = async () => {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || "We couldn't generate that voice.");
+    }
+
+    const remainingHeader = response.headers.get("x-user-credits");
+    const startingHeader = response.headers.get("x-user-starting-credits");
+    const remainingCredits = remainingHeader ? Number(remainingHeader) : null;
+    const startingCredits = startingHeader ? Number(startingHeader) : null;
+    if (Number.isFinite(remainingCredits)) {
+      setCredits(remainingCredits, Number.isFinite(startingCredits) ? startingCredits : totalCredits);
+    } else if (Number.isFinite(currentCredits)) {
+      setCredits(currentCredits - text.length, totalCredits);
     }
 
     const audioBlob = await response.blob();
