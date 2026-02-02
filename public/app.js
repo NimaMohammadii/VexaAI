@@ -371,7 +371,6 @@ if (generateBtn) {
 
 if (voiceTrigger && voiceMenu) {
   voiceTrigger.addEventListener("click", () => {
-    toggleHistoryPanel(false);
     toggleVoiceMenu(voiceMenu.hidden);
   });
 
@@ -381,14 +380,12 @@ if (voiceTrigger && voiceMenu) {
       if (voice) {
         setVoice(voice);
       }
-      toggleVoiceMenu(false);
     });
   });
 }
 
 if (historyToggle) {
   historyToggle.addEventListener("click", () => {
-    toggleVoiceMenu(false);
     toggleHistoryPanel(historyPanel?.hidden ?? true);
   });
 }
@@ -422,7 +419,6 @@ if (menuOverlay) {
 }
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    toggleVoiceMenu(false);
     toggleHistoryPanel(false);
     closeMenu();
   }
@@ -430,9 +426,6 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("click", (event) => {
   const target = event.target;
-  if (voiceMenu && voiceTrigger && !voiceMenu.contains(target) && !voiceTrigger.contains(target)) {
-    toggleVoiceMenu(false);
-  }
   if (historyPanel && historyToggle && !historyPanel.contains(target) && !historyToggle.contains(target)) {
     toggleHistoryPanel(false);
   }
