@@ -15,6 +15,75 @@ const voicePills = document.querySelectorAll(".voice-pill");
 const maxChars = textInput ? Number(textInput.getAttribute("maxlength")) || 1000 : 0;
 
 const formatNumber = (value) => value.toLocaleString("en-US");
+const USER_ID_STORAGE_KEY = "vexa_user_id";
+
+const readCookie = (name) => {
+  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+  return match ? decodeURIComponent(match[2]) : null;
+};
+
+const writeCookie = (name, value, days = 365) => {
+  const expires = new Date(Date.now() + days * 86400000).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+};
+
+const getStoredUserId = () => {
+  try {
+    return localStorage.getItem(USER_ID_STORAGE_KEY);
+  } catch (error) {
+    return readCookie(USER_ID_STORAGE_KEY);
+  }
+};
+
+const storeUserId = (userId) => {
+  try {
+    localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+  } catch (error) {
+    writeCookie(USER_ID_STORAGE_KEY, userId);
+  }
+};
+
+const generateUserId = () => {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `user_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+};
+
+const getOrCreateUserId = () => {
+  let userId = getStoredUserId();
+  if (!userId) {
+    userId = generateUserId();
+    storeUserId(userId);
+  }
+  return userId;
+};
+
+const userId = getOrCreateUserId();
+
+const initUser = async () => {
+  try {
+    await fetch("/api/users/init", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+  } catch (error) {
+    console.warn("Unable to initialize user.", error);
+  }
+};
+
+const sendHeartbeat = async () => {
+  try {
+    await fetch("/api/users/heartbeat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+  } catch (error) {
+    console.warn("Unable to send heartbeat.", error);
+  }
+};
 
 const updateCharCount = () => {
   const length = textInput.value.length;
@@ -57,7 +126,7 @@ const handleGenerate = async () => {
   }
 
   if (text === "/adminmain") {
-    window.location.href = "/admin-login";
+    window.location.href = "/adminmain";
     return;
   }
 
@@ -71,7 +140,7 @@ const handleGenerate = async () => {
     const response = await fetch("/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voice }),
+      body: JSON.stringify({ text, voice, userId }),
     });
 
     if (!response.ok) {
@@ -163,3 +232,12 @@ if (textInput) {
   updateCharCount();
 }
 document.body.setAttribute("data-theme", "dark");
+
+initUser();
+sendHeartbeat();
+setInterval(sendHeartbeat, 60 * 1000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    sendHeartbeat();
+  }
+});
