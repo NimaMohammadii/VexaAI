@@ -7,242 +7,40 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body dir="ltr" data-theme="dark">
-    <header class="site-header" id="siteHeader">
-      <div class="container header-content">
-        <div class="logo">Vexa <span>AI Voice Studio</span></div>
-        <nav class="nav-links">
-          <a href="index.html">Home</a>
-          <a href="voices.html">Voices</a>
-          <a href="pricing.html">Pricing</a>
-          <a href="how-it-works.html">How it works</a>
-          <a href="about.html">About</a>
-        </nav>
-        <div class="header-actions">
-          <button id="langToggle" class="lang-toggle" type="button">EN / FA</button>
-          <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">
-            🌙 Dark
-          </button>
-          <div class="credits-chip">
-            Credits: <span id="headerCredits">1,240</span>
-          </div>
-          <a class="primary-btn" href="credits.html">Buy Credits</a>
-        </div>
+    <header class="home-header">
+      <div class="home-header-left">
+        <span class="home-icon" aria-hidden="true">▢</span>
+        <span class="home-title">Home</span>
+      </div>
+      <div class="home-header-right">
+        <button class="icon-btn" type="button" aria-label="Notifications">🔔</button>
+        <div class="avatar" aria-label="Profile">C</div>
       </div>
     </header>
 
-    <main>
-      <section class="hero">
-        <div class="container hero-content">
-          <p class="eyebrow">Premium AI Voice</p>
-          <h1>Turn text into studio-quality speech in seconds.</h1>
-          <p class="subtitle">
-            Simple, fast, and conversion-focused. Pay per credit, no subscriptions.
-          </p>
-        </div>
+    <main class="home">
+      <section class="home-banner">
+        <span class="pill">New</span>
+        <span class="banner-text">Become an affiliate, earn with every referral.</span>
+        <span class="chevron" aria-hidden="true">›</span>
       </section>
 
-      <section class="app" aria-labelledby="tts-title">
-        <div class="container card">
-          <div class="card-header">
-            <h2 id="tts-title">Text to Speech</h2>
-            <p class="card-meta">1 character = 1 credit</p>
-          </div>
-
-          <div class="field">
-            <label for="textInput">Your text</label>
-            <textarea
-              id="textInput"
-              placeholder="Type or paste a script to hear it instantly..."
-              maxlength="1000"
-            ></textarea>
-            <div class="meta-row">
-              <span class="meta-label">
-                <span id="charCount">0</span> /
-                <span id="charTotal">1,000</span> characters
-              </span>
-              <span class="meta-pill">MP3</span>
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="voiceSelect">Voice</label>
-            <div class="select-wrap">
-              <select id="voiceSelect">
-                <option value="Ava">Ava — Warm (EN)</option>
-                <option value="Liam">Liam — Natural (EN)</option>
-                <option value="Noah">Noah — Calm (EN)</option>
-                <option value="Parisa">Parisa — Warm (FA)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="credits-panel">
-            <div>
-              <p class="credits-title">Credits preview</p>
-              <p class="credits-subtitle">
-                Required: <span id="requiredCredits">0</span> • Remaining after:
-                <span id="remainingCredits">1,240</span>
-              </p>
-            </div>
-            <div class="credits-available">
-              Available credits: <span id="availableCredits">1,240</span>
-            </div>
-          </div>
-
-          <div class="cta-row">
-            <button id="generateBtn" class="cta" type="button">🎧 Generate Voice</button>
-            <a class="secondary-btn" href="credits.html">Buy Credits</a>
-          </div>
-
-          <div class="quick-actions" aria-label="Quick prompts">
-            <button class="chip-btn" type="button">✨ Brand intro</button>
-            <button class="chip-btn" type="button">🎙️ Podcast teaser</button>
-            <button class="chip-btn" type="button">😂 Laughing tone</button>
-            <button class="chip-btn" type="button">📣 Product announcement</button>
-            <button class="chip-btn" type="button">🌙 Calm bedtime story</button>
-            <button class="chip-btn" type="button">🧠 Thoughtful narration</button>
-          </div>
-
-          <div class="status" id="statusMessage" aria-live="polite"></div>
-          <div class="warning" id="creditsWarning" hidden>
-            You don’t have enough credits. Add more to continue.
-          </div>
-
-          <div class="player" id="playerWrap" hidden>
-            <p class="player-title">Your audio is ready</p>
-            <audio id="audioPlayer" controls></audio>
-          </div>
-        </div>
+      <section class="home-greeting">
+        <p class="home-label">My Workspace</p>
+        <h1>Good evening, Nima</h1>
       </section>
 
-      <section class="how" id="how">
-        <div class="container">
-          <h2>How it works</h2>
-          <div class="steps">
-            <div class="step">
-              <div class="step-icon">📝</div>
-              <h3>Paste your text</h3>
-              <p>Start with any script, article, or short message.</p>
-            </div>
-            <div class="step">
-              <div class="step-icon">🎙️</div>
-              <h3>Choose a voice</h3>
-              <p>Pick a tone that matches your brand or audience.</p>
-            </div>
-            <div class="step">
-              <div class="step-icon">⬇️</div>
-              <h3>Download MP3</h3>
-              <p>Generate audio instantly and use it anywhere.</p>
-            </div>
-          </div>
-        </div>
+      <section class="home-grid" aria-label="Workspace tools">
+        <a class="home-card" href="text-to-speech.html">
+          <div class="home-card-icon">🔊</div>
+          <h2>Text to Speech</h2>
+          <p>Generate instant voice from any script.</p>
+        </a>
       </section>
 
-      <section class="voices" id="voices">
-        <div class="container">
-          <div class="section-header">
-            <h2>Voices</h2>
-            <p>Clean, expressive voices ready for product and content use.</p>
-          </div>
-          <div class="voice-grid">
-            <article class="voice-card">
-              <div class="voice-avatar">A</div>
-              <h3>Ava</h3>
-              <p class="voice-meta">Female • EN</p>
-              <div class="tags">
-                <span>Warm</span>
-                <span>Natural</span>
-                <span>Calm</span>
-              </div>
-              <button class="outline-btn" type="button">▶ Play Demo</button>
-            </article>
-            <article class="voice-card">
-              <div class="voice-avatar">L</div>
-              <h3>Liam</h3>
-              <p class="voice-meta">Male • EN</p>
-              <div class="tags">
-                <span>Clear</span>
-                <span>Friendly</span>
-                <span>Studio</span>
-              </div>
-              <button class="outline-btn" type="button">▶ Play Demo</button>
-            </article>
-            <article class="voice-card">
-              <div class="voice-avatar">N</div>
-              <h3>Noah</h3>
-              <p class="voice-meta">Male • EN</p>
-              <div class="tags">
-                <span>Confident</span>
-                <span>Calm</span>
-                <span>Deep</span>
-              </div>
-              <button class="outline-btn" type="button">▶ Play Demo</button>
-            </article>
-            <article class="voice-card">
-              <div class="voice-avatar">P</div>
-              <h3>Parisa</h3>
-              <p class="voice-meta">Female • FA</p>
-              <div class="tags">
-                <span>Warm</span>
-                <span>Elegant</span>
-                <span>Persian</span>
-              </div>
-              <button class="outline-btn" type="button">▶ Play Demo</button>
-            </article>
-            <article class="voice-card">
-              <div class="voice-avatar">T</div>
-              <h3>Tarik</h3>
-              <p class="voice-meta">Male • TR</p>
-              <div class="tags">
-                <span>Bright</span>
-                <span>Natural</span>
-                <span>Turkish</span>
-              </div>
-              <button class="outline-btn" type="button">▶ Play Demo</button>
-            </article>
-            <article class="voice-card">
-              <div class="voice-avatar">S</div>
-              <h3>Sara</h3>
-              <p class="voice-meta">Female • EN</p>
-              <div class="tags">
-                <span>Soft</span>
-                <span>Warm</span>
-                <span>Podcast</span>
-              </div>
-              <button class="outline-btn" type="button">▶ Play Demo</button>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="pricing" id="pricing">
-        <div class="container">
-          <div class="section-header">
-            <h2>Pricing</h2>
-            <p>Simple credit packs. No subscriptions or lock-ins.</p>
-          </div>
-          <div class="pricing-grid">
-            <article class="price-card">
-              <h3>Starter</h3>
-              <p class="price">$5</p>
-              <p class="price-credits">10,000 credits</p>
-              <a class="primary-btn" href="credits.html">Buy Credits</a>
-            </article>
-            <article class="price-card featured">
-              <div class="badge">Best Value</div>
-              <h3>Creator</h3>
-              <p class="price">$20</p>
-              <p class="price-credits">50,000 credits</p>
-              <a class="primary-btn" href="credits.html">Buy Credits</a>
-            </article>
-            <article class="price-card">
-              <h3>Studio</h3>
-              <p class="price">$60</p>
-              <p class="price-credits">200,000 credits</p>
-              <a class="primary-btn" href="credits.html">Buy Credits</a>
-            </article>
-          </div>
-        </div>
+      <section class="home-footer" aria-label="Support">
+        <p>Have a question?</p>
+        <button class="support-btn" type="button">Talk to Vexa</button>
       </section>
     </main>
 
