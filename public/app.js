@@ -349,6 +349,18 @@ const closeMenu = () => {
   menuToggle?.setAttribute("aria-expanded", "false");
 };
 
+const toggleMenu = () => {
+  if (!sideMenu) {
+    return;
+  }
+  const isOpen = sideMenu.classList.contains("is-open");
+  if (isOpen) {
+    closeMenu();
+  } else {
+    openMenu();
+  }
+};
+
 if (textInput) {
   textInput.addEventListener("input", updateCharCount);
 }
@@ -400,7 +412,7 @@ if (historyList) {
 }
 
 if (menuToggle) {
-  menuToggle.addEventListener("click", openMenu);
+  menuToggle.addEventListener("click", toggleMenu);
 }
 if (menuClose) {
   menuClose.addEventListener("click", closeMenu);
