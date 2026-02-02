@@ -13,9 +13,11 @@ const remainingCredits = document.getElementById("remainingCredits");
 const creditsWarning = document.getElementById("creditsWarning");
 const siteHeader = document.getElementById("siteHeader");
 const langToggle = document.getElementById("langToggle");
+const themeToggle = document.getElementById("themeToggle");
 
 const maxChars = Number(textInput.getAttribute("maxlength")) || 1000;
 let currentCredits = 1240;
+const themeStorageKey = "vexa-theme";
 
 const formatNumber = (value) => value.toLocaleString("en-US");
 
@@ -115,14 +117,40 @@ const toggleLanguageDirection = () => {
   document.documentElement.setAttribute("lang", nextDir === "rtl" ? "fa" : "en");
 };
 
+const setTheme = (theme) => {
+  document.body.setAttribute("data-theme", theme);
+  if (themeToggle) {
+    const isDark = theme === "dark";
+    themeToggle.textContent = isDark ? "☀️ Light" : "🌙 Dark";
+    themeToggle.setAttribute("aria-pressed", String(isDark));
+  }
+};
+
+const getPreferredTheme = () => {
+  const storedTheme = localStorage.getItem(themeStorageKey);
+  if (storedTheme) {
+    return storedTheme;
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
+
+const toggleTheme = () => {
+  const currentTheme = document.body.getAttribute("data-theme") || "light";
+  const nextTheme = currentTheme === "dark" ? "light" : "dark";
+  setTheme(nextTheme);
+  localStorage.setItem(themeStorageKey, nextTheme);
+};
+
 textInput.addEventListener("input", updateCharCount);
 
 generateBtn.addEventListener("click", handleGenerate);
 
 window.addEventListener("scroll", handleHeaderShadow);
 langToggle.addEventListener("click", toggleLanguageDirection);
+themeToggle.addEventListener("click", toggleTheme);
 
 charTotal.textContent = formatNumber(maxChars);
 syncCreditsDisplay();
 updateCharCount();
 handleHeaderShadow();
+setTheme(getPreferredTheme());
