@@ -1,27 +1,31 @@
 const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
+const charTotal = document.getElementById("charTotal");
 const voiceSelect = document.getElementById("voiceSelect");
 const generateBtn = document.getElementById("generateBtn");
 const statusMessage = document.getElementById("statusMessage");
 const audioPlayer = document.getElementById("audioPlayer");
 const playerWrap = document.getElementById("playerWrap");
 
+const maxChars = Number(textInput.getAttribute("maxlength")) || 1000;
+
 const updateCharCount = () => {
   const length = textInput.value.length;
-  charCount.textContent = length.toLocaleString("fa-IR");
-  // اینجا می‌توان شمارش کاراکترها را برای سیستم کردیت ذخیره یا ارسال کرد.
+  charCount.textContent = length.toLocaleString("en-US");
 };
 
-const setStatus = (message, isError = false) => {
+const setStatus = (message, { isError = false, isLoading = false } = {}) => {
   statusMessage.textContent = message;
   statusMessage.classList.toggle("error", isError);
+  statusMessage.classList.toggle("loading", isLoading);
 };
 
 textInput.addEventListener("input", updateCharCount);
 
 const toggleLoading = (isLoading) => {
   generateBtn.disabled = isLoading;
-  generateBtn.textContent = isLoading ? "در حال ساخت..." : "ساخت صدا";
+  generateBtn.classList.toggle("is-loading", isLoading);
+  generateBtn.textContent = isLoading ? "Generating voice..." : "🎧 Generate Voice";
 };
 
 const handleGenerate = async () => {
@@ -29,11 +33,11 @@ const handleGenerate = async () => {
   const voice = voiceSelect.value;
 
   if (!text) {
-    setStatus("لطفاً ابتدا یک متن وارد کنید.", true);
+    setStatus("Please enter some text to generate audio.", { isError: true });
     return;
   }
 
-  setStatus("در حال آماده‌سازی صدا...");
+  setStatus("Generating your voice...", { isLoading: true });
   toggleLoading(true);
   playerWrap.hidden = true;
 
@@ -46,7 +50,7 @@ const handleGenerate = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "خطا در ساخت صدا.");
+      throw new Error(errorData.error || "We couldn't generate that voice.");
     }
 
     const audioBlob = await response.blob();
@@ -54,9 +58,9 @@ const handleGenerate = async () => {
 
     audioPlayer.src = audioUrl;
     playerWrap.hidden = false;
-    setStatus("صدا آماده است. می‌توانید آن را پخش کنید.");
+    setStatus("Your audio is ready. Press play to listen.");
   } catch (error) {
-    setStatus(error.message, true);
+    setStatus(error.message, { isError: true });
   } finally {
     toggleLoading(false);
   }
@@ -64,5 +68,5 @@ const handleGenerate = async () => {
 
 generateBtn.addEventListener("click", handleGenerate);
 
+charTotal.textContent = maxChars.toLocaleString("en-US");
 updateCharCount();
-// در این بخش می‌توانید احراز هویت یا پرداخت را به جریان UX اضافه کنید.
