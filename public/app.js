@@ -157,6 +157,15 @@ const updateCharCount = () => {
   if (statusMessage && statusMessage.classList.contains("error")) {
     setStatus("");
   }
+  if (playerWrap && !playerWrap.hidden) {
+    playerWrap.hidden = true;
+  }
+  if (audioPlayer && !audioPlayer.paused) {
+    audioPlayer.pause();
+  }
+  if (audioPlay) {
+    audioPlay.classList.remove("is-playing");
+  }
   if (generateBtn) {
     generateBtn.classList.toggle("is-ready", textInput.value.trim().length > 0);
   }
@@ -350,6 +359,7 @@ if (generateBtn) {
 
 if (voiceTrigger && voiceMenu) {
   voiceTrigger.addEventListener("click", () => {
+    toggleHistoryPanel(false);
     toggleVoiceMenu(voiceMenu.hidden);
   });
 
@@ -366,6 +376,7 @@ if (voiceTrigger && voiceMenu) {
 
 if (historyToggle) {
   historyToggle.addEventListener("click", () => {
+    toggleVoiceMenu(false);
     toggleHistoryPanel(historyPanel?.hidden ?? true);
   });
 }
