@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vexa Admin</title>
+    <link rel="stylesheet" href="adminmain.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="admin-header">
+        <div>
+          <p class="eyebrow">Hidden Admin Panel</p>
+          <h1>Vexa Admin</h1>
+        </div>
+        <button class="btn" id="refreshBtn" type="button" hidden>Refresh</button>
+      </header>
+
+      <section class="panel login-panel" id="loginPanel">
+        <h2>Enter admin code</h2>
+        <p class="muted">Provide the secret code stored in the server environment to continue.</p>
+        <form id="loginForm" class="form-row">
+          <input id="adminCode" type="password" placeholder="Admin code" required />
+          <button class="btn primary" type="submit">Unlock dashboard</button>
+        </form>
+        <p class="error" id="loginError" role="alert"></p>
+      </section>
+
+      <section class="panel" id="dashboard" hidden>
+        <div class="stats">
+          <div class="stat-card">
+            <p class="stat-label">Total users</p>
+            <p class="stat-value" id="totalUsers">0</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Search</p>
+            <form id="searchForm" class="form-row compact">
+              <input id="searchInput" type="text" placeholder="Search by user ID" />
+              <button class="btn" type="submit">Search</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Credits</th>
+                <th>Status</th>
+                <th>Last activity</th>
+                <th>Adjust credits</th>
+              </tr>
+            </thead>
+            <tbody id="userRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="adminmain.js"></script>
+  </body>
+</html>

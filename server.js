@@ -11,6 +11,10 @@ const __dirname = path.dirname(__filename);
 const ADMIN_SESSION_COOKIE = "admin_session";
 const ADMIN_SESSION_TTL_MS = 30 * 60 * 1000;
 const adminSessions = new Map();
+const users = new Map();
+
+const USER_STARTING_CREDITS = 500;
+const USER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 
 app.use(express.json({ limit: "1mb" }));
 
@@ -44,7 +48,10 @@ const getAdminSession = (req) => {
 const adminAuth = (req, res, next) => {
   const session = getAdminSession(req);
   if (!session) {
-    return res.redirect("/");
+    if (req.originalUrl.startsWith("/api/")) {
+      return res.status(401).json({ error: "Unauthorized." });
+    }
+    return res.redirect("/adminmain");
   }
   return next();
 };
@@ -56,12 +63,50 @@ const voiceMap = {
   Noah: "MF3mGyEYCl7XYWbV9V6O",
 };
 
+const getOrCreateUser = (userId) => {
+  if (!userId) {
+    return null;
+  }
+  // In-memory storage for simplicity; replace with a database for production.
+  let user = users.get(userId);
+  if (!user) {
+    user = {
+      id: userId,
+      credits: USER_STARTING_CREDITS,
+      createdAt: Date.now(),
+      lastActivityAt: Date.now(),
+      online: true,
+    };
+    users.set(userId, user);
+  }
+  return user;
+};
+
+const touchUser = (user) => {
+  if (!user) {
+    return;
+  }
+  user.lastActivityAt = Date.now();
+  user.online = true;
+  users.set(user.id, user);
+};
+
 app.post("/tts", async (req, res) => {
   try {
-    const { text, voice } = req.body;
+    const { text, voice, userId } = req.body;
 
     if (!text || !text.trim()) {
       return res.status(400).json({ error: "Text is required." });
+    }
+
+    const user = getOrCreateUser(userId);
+    if (!user) {
+      return res.status(400).json({ error: "User ID is required." });
+    }
+
+    const creditCost = text.trim().length;
+    if (user.credits < creditCost) {
+      return res.status(402).json({ error: "Not enough credits remaining." });
     }
 
     const voiceId = voiceMap[voice] || voiceMap.Rachel;
@@ -99,10 +144,36 @@ app.post("/tts", async (req, res) => {
     res.setHeader("Content-Type", "audio/mpeg");
 
     const audioBuffer = Buffer.from(await response.arrayBuffer());
+    user.credits -= creditCost;
+    touchUser(user);
     return res.send(audioBuffer);
   } catch (error) {
     return res.status(500).json({ error: "Unexpected server error." });
   }
+});
+
+app.post("/api/users/init", (req, res) => {
+  const { userId } = req.body;
+  const user = getOrCreateUser(userId);
+  if (!user) {
+    return res.status(400).json({ error: "User ID is required." });
+  }
+  touchUser(user);
+  return res.json({
+    id: user.id,
+    credits: user.credits,
+    lastActivityAt: user.lastActivityAt,
+  });
+});
+
+app.post("/api/users/heartbeat", (req, res) => {
+  const { userId } = req.body;
+  const user = getOrCreateUser(userId);
+  if (!user) {
+    return res.status(400).json({ error: "User ID is required." });
+  }
+  touchUser(user);
+  return res.json({ success: true });
 });
 
 app.post("/api/admin/login", (req, res) => {
@@ -139,9 +210,58 @@ app.get("/admin-login", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin-login.html"));
 });
 
+app.get("/adminmain", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "adminmain.html"));
+});
+
+app.get("/api/admin/summary", adminAuth, (req, res) => {
+  res.json({ totalUsers: users.size });
+});
+
+app.get("/api/admin/users", adminAuth, (req, res) => {
+  const search = (req.query.search || "").toString().trim();
+  const list = Array.from(users.values())
+    .filter((user) => (search ? user.id.includes(search) : true))
+    .map((user) => ({
+      id: user.id,
+      credits: user.credits,
+      online: user.online,
+      lastActivityAt: user.lastActivityAt,
+    }))
+    .sort((a, b) => b.lastActivityAt - a.lastActivityAt);
+  res.json({ users: list });
+});
+
+app.patch("/api/admin/users/:id/credits", adminAuth, (req, res) => {
+  const user = users.get(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: "User not found." });
+  }
+  const { delta, credits } = req.body;
+  if (typeof credits === "number") {
+    user.credits = Math.max(0, Math.floor(credits));
+  } else if (typeof delta === "number") {
+    user.credits = Math.max(0, user.credits + Math.floor(delta));
+  } else {
+    return res.status(400).json({ error: "A delta or credits value is required." });
+  }
+  touchUser(user);
+  return res.json({ id: user.id, credits: user.credits });
+});
+
 app.use("/admin", adminAuth, express.static(path.join(__dirname, "public", "admin")));
 
 app.use(express.static(path.join(__dirname, "public")));
+
+setInterval(() => {
+  const now = Date.now();
+  users.forEach((user) => {
+    if (user.online && now - user.lastActivityAt > USER_INACTIVITY_TIMEOUT_MS) {
+      user.online = false;
+      users.set(user.id, user);
+    }
+  });
+}, 60 * 1000);
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
