@@ -35,30 +35,27 @@
             <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
               ☰
             </button>
-            <div>
-              <p class="tts-label">Text to Speech Studio</p>
-              <h1 id="tts-title">Text to Speech</h1>
-            </div>
+            <span class="tts-brand">VexaAI</span>
           </div>
           <div class="tts-header-right">
-            <div class="tts-logo-slot" aria-label="Logo placeholder">Logo</div>
+            <button class="ghost-btn" type="button">Upgrade</button>
             <div class="tts-avatar-slot" aria-label="Photo placeholder"></div>
           </div>
         </header>
 
         <div class="tts-card">
-          <div class="tts-voice-strip" role="group" aria-label="Voices">
-            <button class="voice-pill is-active" type="button" data-voice="Rachel">Rachel</button>
-            <button class="voice-pill" type="button" data-voice="Maya">Maya</button>
-            <button class="voice-pill" type="button" data-voice="Arman">Arman</button>
-            <button class="voice-pill" type="button" data-voice="Noah">Noah</button>
+          <div class="tts-toolbar" role="group" aria-label="Voice selector">
+            <button class="voice-pill is-active" type="button" data-voice="Rachel">
+              Rachel
+              <span aria-hidden="true">▾</span>
+            </button>
           </div>
 
-          <div class="field">
-            <label for="textInput">Your text</label>
+          <div class="tts-editor">
+            <label for="textInput" class="sr-only">Your text</label>
             <textarea
               id="textInput"
-              placeholder="Type your script to hear it in expressive speech..."
+              placeholder="Start typing, or paste any text you want to convert."
               maxlength="1000"
             ></textarea>
             <div class="meta-row">
@@ -69,6 +66,8 @@
               <span class="meta-pill">MP3</span>
             </div>
           </div>
+
+          <button class="speaker-divider" type="button">+ Add speaker</button>
 
           <div class="field" hidden>
             <label for="voiceSelect">Voice</label>
@@ -82,10 +81,6 @@
             </div>
           </div>
 
-          <div class="cta-row">
-            <button id="generateBtn" class="cta tts-primary" type="button">Generate speech</button>
-          </div>
-
           <div class="status" id="statusMessage" aria-live="polite"></div>
 
           <div class="player" id="playerWrap" hidden>
@@ -93,37 +88,22 @@
             <audio id="audioPlayer" controls></audio>
           </div>
         </div>
-
-        <details class="tts-history">
-          <summary>
-            <span>History</span>
-            <span class="history-meta">Tap to view your conversions</span>
-          </summary>
-          <ul class="history-list">
-            <li>
-              <div>
-                <p class="history-title">Brand intro</p>
-                <p class="history-meta">Rachel · 24s · 09:14</p>
-              </div>
-              <button class="ghost-btn" type="button">Play</button>
-            </li>
-            <li>
-              <div>
-                <p class="history-title">Product teaser</p>
-                <p class="history-meta">Maya · 18s · 08:02</p>
-              </div>
-              <button class="ghost-btn" type="button">Play</button>
-            </li>
-            <li>
-              <div>
-                <p class="history-title">Story sample</p>
-                <p class="history-meta">Arman · 42s · 07:10</p>
-              </div>
-              <button class="ghost-btn" type="button">Play</button>
-            </li>
-          </ul>
-        </details>
       </section>
+
+      <div class="tts-bottom-bar">
+        <div class="tts-bottom-inner">
+          <button id="generateBtn" class="cta tts-primary" type="button">Generate speech</button>
+          <div class="credit-usage">
+            <div class="credit-meta">
+              <span>Credits used</span>
+              <span>3,200 / 10,000</span>
+            </div>
+            <div class="credit-bar">
+              <span class="credit-fill" style="width: 32%"></span>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <script src="app.js"></script>
