@@ -6,13 +6,38 @@ const generateBtn = document.getElementById("generateBtn");
 const statusMessage = document.getElementById("statusMessage");
 const audioPlayer = document.getElementById("audioPlayer");
 const playerWrap = document.getElementById("playerWrap");
-const themeToggle = document.getElementById("themeToggle");
+const headerCredits = document.getElementById("headerCredits");
+const availableCredits = document.getElementById("availableCredits");
+const requiredCredits = document.getElementById("requiredCredits");
+const remainingCredits = document.getElementById("remainingCredits");
+const creditsWarning = document.getElementById("creditsWarning");
+const siteHeader = document.getElementById("siteHeader");
+const langToggle = document.getElementById("langToggle");
 
 const maxChars = Number(textInput.getAttribute("maxlength")) || 1000;
+let currentCredits = 1240;
+
+const formatNumber = (value) => value.toLocaleString("en-US");
 
 const updateCharCount = () => {
   const length = textInput.value.length;
-  charCount.textContent = length.toLocaleString("en-US");
+  charCount.textContent = formatNumber(length);
+  requiredCredits.textContent = formatNumber(length);
+  const remaining = Math.max(currentCredits - length, 0);
+  remainingCredits.textContent = formatNumber(remaining);
+  const isInsufficient = length > currentCredits;
+  creditsWarning.hidden = !isInsufficient;
+  generateBtn.disabled = isInsufficient;
+  if (isInsufficient) {
+    setStatus("Not enough credits to generate this voice.", { isError: true });
+  } else if (statusMessage.classList.contains("error")) {
+    setStatus("");
+  }
+};
+
+const syncCreditsDisplay = () => {
+  headerCredits.textContent = formatNumber(currentCredits);
+  availableCredits.textContent = formatNumber(currentCredits);
 };
 
 const setStatus = (message, { isError = false, isLoading = false } = {}) => {
@@ -20,8 +45,6 @@ const setStatus = (message, { isError = false, isLoading = false } = {}) => {
   statusMessage.classList.toggle("error", isError);
   statusMessage.classList.toggle("loading", isLoading);
 };
-
-textInput.addEventListener("input", updateCharCount);
 
 const toggleLoading = (isLoading) => {
   generateBtn.disabled = isLoading;
@@ -35,6 +58,12 @@ const handleGenerate = async () => {
 
   if (!text) {
     setStatus("Please enter some text to generate audio.", { isError: true });
+    return;
+  }
+
+  if (text.length > currentCredits) {
+    creditsWarning.hidden = false;
+    setStatus("Not enough credits to generate this voice.", { isError: true });
     return;
   }
 
@@ -59,6 +88,9 @@ const handleGenerate = async () => {
 
     audioPlayer.src = audioUrl;
     playerWrap.hidden = false;
+    currentCredits = Math.max(currentCredits - text.length, 0);
+    syncCreditsDisplay();
+    updateCharCount();
     setStatus("Your audio is ready. Press play to listen.");
   } catch (error) {
     setStatus(error.message, { isError: true });
@@ -67,34 +99,25 @@ const handleGenerate = async () => {
   }
 };
 
+const handleHeaderShadow = () => {
+  siteHeader.classList.toggle("is-scrolled", window.scrollY > 4);
+};
+
+const toggleLanguageDirection = () => {
+  const isRtl = document.body.getAttribute("dir") === "rtl";
+  const nextDir = isRtl ? "ltr" : "rtl";
+  document.body.setAttribute("dir", nextDir);
+  document.documentElement.setAttribute("lang", nextDir === "rtl" ? "fa" : "en");
+};
+
+textInput.addEventListener("input", updateCharCount);
+
 generateBtn.addEventListener("click", handleGenerate);
 
-charTotal.textContent = maxChars.toLocaleString("en-US");
+window.addEventListener("scroll", handleHeaderShadow);
+langToggle.addEventListener("click", toggleLanguageDirection);
+
+charTotal.textContent = formatNumber(maxChars);
+syncCreditsDisplay();
 updateCharCount();
-
-const getPreferredTheme = () => {
-  const storedTheme = localStorage.getItem("theme");
-  if (storedTheme) {
-    return storedTheme;
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-};
-
-const applyTheme = (theme) => {
-  document.documentElement.dataset.theme = theme;
-  const isDark = theme === "dark";
-  themeToggle.setAttribute("aria-pressed", String(isDark));
-  themeToggle.textContent = isDark ? "☀️ Light mode" : "🌙 Dark mode";
-};
-
-const toggleTheme = () => {
-  const nextTheme =
-    document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  localStorage.setItem("theme", nextTheme);
-  applyTheme(nextTheme);
-};
-
-applyTheme(getPreferredTheme());
-themeToggle.addEventListener("click", toggleTheme);
+handleHeaderShadow();
