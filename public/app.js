@@ -15,7 +15,7 @@ const siteHeader = document.getElementById("siteHeader");
 const langToggle = document.getElementById("langToggle");
 const themeToggle = document.getElementById("themeToggle");
 
-const maxChars = Number(textInput.getAttribute("maxlength")) || 1000;
+const maxChars = textInput ? Number(textInput.getAttribute("maxlength")) || 1000 : 0;
 let currentCredits = 1240;
 const themeStorageKey = "vexa-theme";
 
@@ -23,38 +23,61 @@ const formatNumber = (value) => value.toLocaleString("en-US");
 
 const updateCharCount = () => {
   const length = textInput.value.length;
-  charCount.textContent = formatNumber(length);
-  requiredCredits.textContent = formatNumber(length);
+  if (charCount) {
+    charCount.textContent = formatNumber(length);
+  }
+  if (requiredCredits) {
+    requiredCredits.textContent = formatNumber(length);
+  }
   const remaining = Math.max(currentCredits - length, 0);
-  remainingCredits.textContent = formatNumber(remaining);
+  if (remainingCredits) {
+    remainingCredits.textContent = formatNumber(remaining);
+  }
   const isInsufficient = length > currentCredits;
-  creditsWarning.hidden = !isInsufficient;
-  generateBtn.disabled = isInsufficient;
+  if (creditsWarning) {
+    creditsWarning.hidden = !isInsufficient;
+  }
+  if (generateBtn) {
+    generateBtn.disabled = isInsufficient;
+  }
   if (isInsufficient) {
     setStatus("Not enough credits to generate this voice.", { isError: true });
-  } else if (statusMessage.classList.contains("error")) {
+  } else if (statusMessage && statusMessage.classList.contains("error")) {
     setStatus("");
   }
 };
 
 const syncCreditsDisplay = () => {
-  headerCredits.textContent = formatNumber(currentCredits);
-  availableCredits.textContent = formatNumber(currentCredits);
+  if (headerCredits) {
+    headerCredits.textContent = formatNumber(currentCredits);
+  }
+  if (availableCredits) {
+    availableCredits.textContent = formatNumber(currentCredits);
+  }
 };
 
 const setStatus = (message, { isError = false, isLoading = false } = {}) => {
+  if (!statusMessage) {
+    return;
+  }
   statusMessage.textContent = message;
   statusMessage.classList.toggle("error", isError);
   statusMessage.classList.toggle("loading", isLoading);
 };
 
 const toggleLoading = (isLoading) => {
+  if (!generateBtn) {
+    return;
+  }
   generateBtn.disabled = isLoading;
   generateBtn.classList.toggle("is-loading", isLoading);
   generateBtn.textContent = isLoading ? "Generating voice..." : "🎧 Generate Voice";
 };
 
 const handleGenerate = async () => {
+  if (!textInput || !voiceSelect) {
+    return;
+  }
   const text = textInput.value.trim();
   const voice = voiceSelect.value;
 
@@ -76,7 +99,9 @@ const handleGenerate = async () => {
 
   setStatus("Generating your voice...", { isLoading: true });
   toggleLoading(true);
-  playerWrap.hidden = true;
+  if (playerWrap) {
+    playerWrap.hidden = true;
+  }
 
   try {
     const response = await fetch("/tts", {
@@ -93,8 +118,12 @@ const handleGenerate = async () => {
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
 
-    audioPlayer.src = audioUrl;
-    playerWrap.hidden = false;
+    if (audioPlayer) {
+      audioPlayer.src = audioUrl;
+    }
+    if (playerWrap) {
+      playerWrap.hidden = false;
+    }
     currentCredits = Math.max(currentCredits - text.length, 0);
     syncCreditsDisplay();
     updateCharCount();
@@ -107,6 +136,9 @@ const handleGenerate = async () => {
 };
 
 const handleHeaderShadow = () => {
+  if (!siteHeader) {
+    return;
+  }
   siteHeader.classList.toggle("is-scrolled", window.scrollY > 4);
 };
 
@@ -131,7 +163,7 @@ const getPreferredTheme = () => {
   if (storedTheme) {
     return storedTheme;
   }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "dark";
 };
 
 const toggleTheme = () => {
@@ -141,16 +173,29 @@ const toggleTheme = () => {
   localStorage.setItem(themeStorageKey, nextTheme);
 };
 
-textInput.addEventListener("input", updateCharCount);
+if (textInput) {
+  textInput.addEventListener("input", updateCharCount);
+}
 
-generateBtn.addEventListener("click", handleGenerate);
+if (generateBtn) {
+  generateBtn.addEventListener("click", handleGenerate);
+}
 
 window.addEventListener("scroll", handleHeaderShadow);
-langToggle.addEventListener("click", toggleLanguageDirection);
-themeToggle.addEventListener("click", toggleTheme);
 
-charTotal.textContent = formatNumber(maxChars);
+if (langToggle) {
+  langToggle.addEventListener("click", toggleLanguageDirection);
+}
+if (themeToggle) {
+  themeToggle.addEventListener("click", toggleTheme);
+}
+
+if (charTotal) {
+  charTotal.textContent = formatNumber(maxChars);
+}
 syncCreditsDisplay();
-updateCharCount();
+if (textInput) {
+  updateCharCount();
+}
 handleHeaderShadow();
 setTheme(getPreferredTheme());

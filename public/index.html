@@ -6,14 +6,16 @@
     <title>Vexa AI Voice Studio</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body dir="ltr">
+  <body dir="ltr" data-theme="dark">
     <header class="site-header" id="siteHeader">
       <div class="container header-content">
         <div class="logo">Vexa <span>AI Voice Studio</span></div>
         <nav class="nav-links">
-          <a href="#voices">Voices</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#how">How it works</a>
+          <a href="index.html">Home</a>
+          <a href="voices.html">Voices</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="how-it-works.html">How it works</a>
+          <a href="about.html">About</a>
         </nav>
         <div class="header-actions">
           <button id="langToggle" class="lang-toggle" type="button">EN / FA</button>
@@ -23,7 +25,7 @@
           <div class="credits-chip">
             Credits: <span id="headerCredits">1,240</span>
           </div>
-          <button class="primary-btn" type="button">Buy Credits</button>
+          <a class="primary-btn" href="credits.html">Buy Credits</a>
         </div>
       </div>
     </header>
@@ -89,7 +91,16 @@
 
           <div class="cta-row">
             <button id="generateBtn" class="cta" type="button">🎧 Generate Voice</button>
-            <button class="secondary-btn" type="button">Buy Credits</button>
+            <a class="secondary-btn" href="credits.html">Buy Credits</a>
+          </div>
+
+          <div class="quick-actions" aria-label="Quick prompts">
+            <button class="chip-btn" type="button">✨ Brand intro</button>
+            <button class="chip-btn" type="button">🎙️ Podcast teaser</button>
+            <button class="chip-btn" type="button">😂 Laughing tone</button>
+            <button class="chip-btn" type="button">📣 Product announcement</button>
+            <button class="chip-btn" type="button">🌙 Calm bedtime story</button>
+            <button class="chip-btn" type="button">🧠 Thoughtful narration</button>
           </div>
 
           <div class="status" id="statusMessage" aria-live="polite"></div>
@@ -215,20 +226,20 @@
               <h3>Starter</h3>
               <p class="price">$5</p>
               <p class="price-credits">10,000 credits</p>
-              <button class="primary-btn" type="button">Buy Credits</button>
+              <a class="primary-btn" href="credits.html">Buy Credits</a>
             </article>
             <article class="price-card featured">
               <div class="badge">Best Value</div>
               <h3>Creator</h3>
               <p class="price">$20</p>
               <p class="price-credits">50,000 credits</p>
-              <button class="primary-btn" type="button">Buy Credits</button>
+              <a class="primary-btn" href="credits.html">Buy Credits</a>
             </article>
             <article class="price-card">
               <h3>Studio</h3>
               <p class="price">$60</p>
               <p class="price-credits">200,000 credits</p>
-              <button class="primary-btn" type="button">Buy Credits</button>
+              <a class="primary-btn" href="credits.html">Buy Credits</a>
             </article>
           </div>
         </div>
