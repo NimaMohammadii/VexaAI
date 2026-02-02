@@ -61,6 +61,11 @@ const handleGenerate = async () => {
     return;
   }
 
+  if (text === "/adminmain") {
+    window.location.href = "/admin-login";
+    return;
+  }
+
   if (text.length > currentCredits) {
     creditsWarning.hidden = false;
     setStatus("Not enough credits to generate this voice.", { isError: true });
