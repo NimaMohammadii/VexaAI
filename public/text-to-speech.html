@@ -29,28 +29,41 @@
     </aside>
 
     <main class="tts-page">
-      <section class="tts-shell" aria-labelledby="tts-title">
-        <header class="tts-header">
-          <div class="tts-header-left">
-            <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
-              ☰
-            </button>
-            <span class="tts-brand">VexaAI</span>
-          </div>
-          <div class="tts-header-right">
-            <div class="credits-chip" id="creditsChip" hidden>
-              Credits: <span id="creditsAvailable">--</span>
-            </div>
-            <button class="ghost-btn" type="button">Upgrade</button>
-            <div class="tts-avatar-slot" aria-label="Photo placeholder"></div>
-          </div>
-        </header>
+      <header class="tts-topbar">
+        <span class="tts-title">Text to Speech</span>
+        <button class="menu-toggle tts-menu-btn" id="menuToggle" type="button" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </header>
 
-        <div class="tts-card">
-          <div class="tts-toolbar" role="group" aria-label="Voice selector">
-            <button class="voice-pill is-active" type="button" data-voice="Rachel">
-              Rachel
-              <span aria-hidden="true">▾</span>
+      <section class="tts-shell" aria-labelledby="tts-title">
+        <div class="tts-editor-card">
+          <div class="tts-editor-header">
+            <div class="voice-selector" id="voiceSelector">
+              <button
+                class="voice-trigger"
+                id="voiceTrigger"
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+              >
+                <span id="voiceLabel">Rachel</span>
+                <span class="chevron" aria-hidden="true">▾</span>
+              </button>
+              <div class="voice-menu" id="voiceMenu" role="listbox" aria-label="Select a voice" hidden>
+                <button class="voice-option is-active" type="button" role="option" data-voice="Rachel">
+                  Rachel
+                </button>
+                <button class="voice-option" type="button" role="option" data-voice="Maya">Maya</button>
+                <button class="voice-option" type="button" role="option" data-voice="Arman">Arman</button>
+                <button class="voice-option" type="button" role="option" data-voice="Noah">Noah</button>
+              </div>
+            </div>
+            <button class="history-toggle" id="historyToggle" type="button">
+              <span class="history-dot" aria-hidden="true"></span>
+              History
             </button>
           </div>
 
@@ -58,53 +71,69 @@
             <label for="textInput" class="sr-only">Your text</label>
             <textarea
               id="textInput"
-              placeholder="Start typing, or paste any text you want to convert."
+              placeholder="Type or paste text here to generate speech. You can add pauses, emotions, and emphasis as needed."
               maxlength="1000"
             ></textarea>
-            <div class="meta-row">
-              <span class="meta-label">
-                <span id="charCount">0</span> /
-                <span id="charTotal">1,000</span> characters
-              </span>
-              <span class="meta-pill">MP3</span>
-            </div>
-          </div>
-
-          <button class="speaker-divider" type="button">+ Add speaker</button>
-
-          <div class="field" hidden>
-            <label for="voiceSelect">Voice</label>
-            <div class="select-wrap">
-              <select id="voiceSelect">
-                <option value="Rachel" selected>Rachel</option>
-                <option value="Maya">Maya</option>
-                <option value="Arman">Arman</option>
-                <option value="Noah">Noah</option>
-              </select>
-            </div>
           </div>
 
           <div class="status" id="statusMessage" aria-live="polite"></div>
+        </div>
 
-          <div class="player" id="playerWrap" hidden>
-            <p class="player-title">Your audio is ready</p>
-            <audio id="audioPlayer" controls></audio>
+        <div class="tts-actions">
+          <button id="generateBtn" class="cta tts-primary" type="button">Generate Speech</button>
+        </div>
+
+        <div class="player" id="playerWrap" hidden>
+          <div class="audio-output">
+            <button class="audio-play" id="audioPlay" type="button" aria-label="Play audio">
+              <span class="play-icon" aria-hidden="true">▶</span>
+            </button>
+            <div class="audio-wave">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <a class="audio-download" id="audioDownload" href="#" download aria-label="Download audio">
+              ⬇
+            </a>
           </div>
+          <audio id="audioPlayer"></audio>
+        </div>
+
+        <div class="tts-footer">
+          <span class="credits-inline">Credits left: <span id="creditsRemaining">--</span></span>
+          <span class="char-inline"><span id="charCount">0</span> / <span id="charTotal">1,000</span></span>
         </div>
       </section>
 
-      <div class="tts-bottom-bar">
-        <div class="tts-bottom-inner">
-          <button id="generateBtn" class="cta tts-primary" type="button">Generate speech</button>
-          <div class="credit-usage">
-            <div class="credit-meta">
-              <span>Credits remaining</span>
-              <span><span id="creditsRemaining">--</span> / <span id="creditsTotal">--</span></span>
-            </div>
-            <div class="credit-bar">
-              <span class="credit-fill" id="creditsFill" style="width: 0%"></span>
-            </div>
-          </div>
+      <aside class="history-panel" id="historyPanel" hidden aria-label="History">
+        <div class="history-header">
+          <span>History</span>
+          <button class="history-close" id="historyClose" type="button" aria-label="Close history">✕</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <p class="history-empty">No generations yet.</p>
+        </div>
+      </aside>
+
+      <div class="field" hidden>
+        <label for="voiceSelect">Voice</label>
+        <div class="select-wrap">
+          <select id="voiceSelect">
+            <option value="Rachel" selected>Rachel</option>
+            <option value="Maya">Maya</option>
+            <option value="Arman">Arman</option>
+            <option value="Noah">Noah</option>
+          </select>
         </div>
       </div>
     </main>
