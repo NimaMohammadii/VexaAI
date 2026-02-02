@@ -7,31 +7,37 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body dir="ltr" data-theme="dark">
-    <header class="site-header" id="siteHeader">
-      <div class="container header-content">
-        <div class="logo">Vexa <span>AI Voice Studio</span></div>
-        <nav class="nav-links">
-          <a href="index.html">Home</a>
-          <a href="voices.html">Voices</a>
-          <a href="pricing.html">Pricing</a>
-          <a href="how-it-works.html">How it works</a>
-          <a href="about.html">About</a>
-        </nav>
-        <div class="header-actions">
-          <button id="langToggle" class="lang-toggle" type="button">EN / FA</button>
-          <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">
-            🌙 Dark
-          </button>
-          <a class="primary-btn" href="credits.html">Buy Credits</a>
+    <div class="menu-overlay" id="menuOverlay" hidden></div>
+    <aside class="side-menu" id="sideMenu" aria-hidden="true">
+      <div class="side-menu-header">
+        <div class="side-menu-brand">
+          <span class="home-icon" aria-hidden="true">▢</span>
+          <span>VexaAI</span>
         </div>
+        <button class="icon-btn menu-close" id="menuClose" type="button" aria-label="Close menu">
+          ✕
+        </button>
       </div>
-    </header>
+
+      <div class="side-menu-section">
+        <p class="side-menu-title">Menu</p>
+        <a class="menu-link" href="index.html">Home</a>
+        <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
+        <a class="menu-link" href="voices.html">Voices</a>
+        <a class="menu-link is-active" href="about.html">About</a>
+      </div>
+    </aside>
 
     <main>
+      <div class="menu-bar">
+        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
+          ☰ <span>About</span>
+        </button>
+      </div>
       <section class="page-hero">
         <div class="container">
           <p class="eyebrow">About Vexa</p>
-          <h1>Studio-grade voices built for modern Persian creators.</h1>
+          <h1>Studio-grade voices built for modern creators.</h1>
           <p>
             Vexa AI Voice Studio blends expressive AI voices with a clean workflow so you can
             generate narration, ads, and onboarding audio without complex tools.
@@ -46,8 +52,8 @@
             <p>Generate, preview, and ship audio in minutes with no subscriptions.</p>
           </article>
           <article class="info-card">
-            <h3>Persian-ready voices</h3>
-            <p>Curated voice packs with warm, natural delivery for local audiences.</p>
+            <h3>English-ready voices</h3>
+            <p>Curated voice packs with warm, natural delivery for global audiences.</p>
           </article>
           <article class="info-card">
             <h3>Premium controls</h3>

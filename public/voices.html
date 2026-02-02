@@ -7,27 +7,33 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body dir="ltr" data-theme="dark">
-    <header class="site-header" id="siteHeader">
-      <div class="container header-content">
-        <div class="logo">Vexa <span>AI Voice Studio</span></div>
-        <nav class="nav-links">
-          <a href="index.html">Home</a>
-          <a href="voices.html">Voices</a>
-          <a href="pricing.html">Pricing</a>
-          <a href="how-it-works.html">How it works</a>
-          <a href="about.html">About</a>
-        </nav>
-        <div class="header-actions">
-          <button id="langToggle" class="lang-toggle" type="button">EN / FA</button>
-          <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">
-            🌙 Dark
-          </button>
-          <a class="primary-btn" href="credits.html">Buy Credits</a>
+    <div class="menu-overlay" id="menuOverlay" hidden></div>
+    <aside class="side-menu" id="sideMenu" aria-hidden="true">
+      <div class="side-menu-header">
+        <div class="side-menu-brand">
+          <span class="home-icon" aria-hidden="true">▢</span>
+          <span>VexaAI</span>
         </div>
+        <button class="icon-btn menu-close" id="menuClose" type="button" aria-label="Close menu">
+          ✕
+        </button>
       </div>
-    </header>
+
+      <div class="side-menu-section">
+        <p class="side-menu-title">Menu</p>
+        <a class="menu-link" href="index.html">Home</a>
+        <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
+        <a class="menu-link is-active" href="voices.html">Voices</a>
+        <a class="menu-link" href="about.html">About</a>
+      </div>
+    </aside>
 
     <main>
+      <div class="menu-bar">
+        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
+          ☰ <span>Voices</span>
+        </button>
+      </div>
       <section class="page-hero">
         <div class="container">
           <p class="eyebrow">Voice Library</p>
@@ -57,28 +63,6 @@
               <span>Clear</span>
               <span>Friendly</span>
               <span>Studio</span>
-            </div>
-            <button class="outline-btn" type="button">▶ Play Demo</button>
-          </article>
-          <article class="voice-card">
-            <div class="voice-avatar">P</div>
-            <h3>Parisa</h3>
-            <p class="voice-meta">Female • FA</p>
-            <div class="tags">
-              <span>Warm</span>
-              <span>Elegant</span>
-              <span>Persian</span>
-            </div>
-            <button class="outline-btn" type="button">▶ Play Demo</button>
-          </article>
-          <article class="voice-card">
-            <div class="voice-avatar">T</div>
-            <h3>Tarik</h3>
-            <p class="voice-meta">Male • TR</p>
-            <div class="tags">
-              <span>Bright</span>
-              <span>Natural</span>
-              <span>Turkish</span>
             </div>
             <button class="outline-btn" type="button">▶ Play Demo</button>
           </article>
