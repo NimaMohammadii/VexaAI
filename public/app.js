@@ -1,7 +1,6 @@
 const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
 const charTotal = document.getElementById("charTotal");
-const voiceSelect = document.getElementById("voiceSelect");
 const generateBtn = document.getElementById("generateBtn");
 const statusMessage = document.getElementById("statusMessage");
 const audioPlayer = document.getElementById("audioPlayer");
@@ -27,6 +26,7 @@ const creditsTotal = document.getElementById("creditsTotal");
 const creditsFill = document.getElementById("creditsFill");
 
 const maxChars = textInput ? Number(textInput.getAttribute("maxlength")) || 1000 : 0;
+let currentVoice = voiceLabel ? voiceLabel.textContent.trim() : "Rachel";
 
 const formatNumber = (value) => value.toLocaleString("en-US");
 const USER_ID_STORAGE_KEY = "vexa_user_id";
@@ -157,6 +157,9 @@ const updateCharCount = () => {
   if (statusMessage && statusMessage.classList.contains("error")) {
     setStatus("");
   }
+  if (generateBtn) {
+    generateBtn.classList.toggle("is-ready", textInput.value.trim().length > 0);
+  }
 };
 
 const setStatus = (message, { isError = false, isLoading = false } = {}) => {
@@ -169,13 +172,10 @@ const setStatus = (message, { isError = false, isLoading = false } = {}) => {
 };
 
 const setVoice = (voice) => {
-  if (!voiceSelect) {
-    return;
-  }
-  voiceSelect.value = voice;
   if (voiceLabel) {
     voiceLabel.textContent = voice;
   }
+  currentVoice = voice;
   voiceOptions.forEach((option) => {
     option.classList.toggle("is-active", option.dataset.voice === voice);
   });
@@ -246,11 +246,11 @@ const toggleLoading = (isLoading) => {
 };
 
 const handleGenerate = async () => {
-  if (!textInput || !voiceSelect) {
+  if (!textInput) {
     return;
   }
   const text = textInput.value.trim();
-  const voice = voiceSelect.value;
+  const voice = currentVoice;
 
   if (!text) {
     setStatus("Please enter some text to generate audio.", { isError: true });
@@ -423,8 +423,8 @@ if (textInput) {
 }
 document.body.setAttribute("data-theme", "dark");
 
-if (voiceSelect) {
-  setVoice(voiceSelect.value);
+if (voiceLabel) {
+  setVoice(currentVoice);
 }
 
 initUser();
