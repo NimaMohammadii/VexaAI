@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import express from "express";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -12,11 +13,133 @@ const ADMIN_SESSION_COOKIE = "admin_session";
 const ADMIN_SESSION_TTL_MS = 30 * 60 * 1000;
 const adminSessions = new Map();
 const users = new Map();
+const SETTINGS_FILE = path.join(__dirname, "data", "site-settings.json");
+const defaultSiteSettings = {
+  layout: {
+    pageMaxWidth: 1120,
+    ttsMaxWidth: 1200,
+    homeGridMaxWidth: 1100,
+  },
+  colors: {
+    bg: "#0b0c0f",
+    bgAlt: "#111216",
+    surface: "#14151a",
+    panel: "#101115",
+    primary: "#8f92ff",
+    headerBg: "rgba(9, 10, 12, 0.92)",
+  },
+  buttons: {
+    baseFontSize: 0.95,
+    basePaddingY: 12,
+    basePaddingX: 18,
+    ctaFontSize: 1,
+    ctaPaddingY: 14,
+    ctaPaddingX: 24,
+  },
+  stickers: {
+    homeTextToSpeech: "",
+    homeVoices: "",
+    homeAbout: "",
+    ttsHeader: "",
+    aboutHero: "",
+  },
+};
 
 const USER_STARTING_CREDITS = 500;
 const USER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "6mb" }));
+
+const clampNumber = (value, min, max, fallback) => {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, value));
+};
+
+const sanitizeString = (value, fallback) =>
+  typeof value === "string" && value.trim().length ? value.trim() : fallback;
+
+const sanitizeSticker = (value, fallback) => {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+  if (!trimmed.startsWith("data:image/")) {
+    return fallback;
+  }
+  if (trimmed.length > 200000) {
+    return fallback;
+  }
+  return trimmed;
+};
+
+const sanitizeSettings = (raw) => {
+  const layout = raw?.layout ?? {};
+  const colors = raw?.colors ?? {};
+  const buttons = raw?.buttons ?? {};
+  const stickers = raw?.stickers ?? {};
+
+  return {
+    layout: {
+      pageMaxWidth: clampNumber(layout.pageMaxWidth, 720, 1600, defaultSiteSettings.layout.pageMaxWidth),
+      ttsMaxWidth: clampNumber(layout.ttsMaxWidth, 720, 1600, defaultSiteSettings.layout.ttsMaxWidth),
+      homeGridMaxWidth: clampNumber(
+        layout.homeGridMaxWidth,
+        720,
+        1600,
+        defaultSiteSettings.layout.homeGridMaxWidth
+      ),
+    },
+    colors: {
+      bg: sanitizeString(colors.bg, defaultSiteSettings.colors.bg),
+      bgAlt: sanitizeString(colors.bgAlt, defaultSiteSettings.colors.bgAlt),
+      surface: sanitizeString(colors.surface, defaultSiteSettings.colors.surface),
+      panel: sanitizeString(colors.panel, defaultSiteSettings.colors.panel),
+      primary: sanitizeString(colors.primary, defaultSiteSettings.colors.primary),
+      headerBg: sanitizeString(colors.headerBg, defaultSiteSettings.colors.headerBg),
+    },
+    buttons: {
+      baseFontSize: clampNumber(
+        buttons.baseFontSize,
+        0.7,
+        1.4,
+        defaultSiteSettings.buttons.baseFontSize
+      ),
+      basePaddingY: clampNumber(buttons.basePaddingY, 6, 24, defaultSiteSettings.buttons.basePaddingY),
+      basePaddingX: clampNumber(buttons.basePaddingX, 10, 36, defaultSiteSettings.buttons.basePaddingX),
+      ctaFontSize: clampNumber(buttons.ctaFontSize, 0.7, 1.5, defaultSiteSettings.buttons.ctaFontSize),
+      ctaPaddingY: clampNumber(buttons.ctaPaddingY, 8, 32, defaultSiteSettings.buttons.ctaPaddingY),
+      ctaPaddingX: clampNumber(buttons.ctaPaddingX, 12, 48, defaultSiteSettings.buttons.ctaPaddingX),
+    },
+    stickers: {
+      homeTextToSpeech: sanitizeSticker(stickers.homeTextToSpeech, defaultSiteSettings.stickers.homeTextToSpeech),
+      homeVoices: sanitizeSticker(stickers.homeVoices, defaultSiteSettings.stickers.homeVoices),
+      homeAbout: sanitizeSticker(stickers.homeAbout, defaultSiteSettings.stickers.homeAbout),
+      ttsHeader: sanitizeSticker(stickers.ttsHeader, defaultSiteSettings.stickers.ttsHeader),
+      aboutHero: sanitizeSticker(stickers.aboutHero, defaultSiteSettings.stickers.aboutHero),
+    },
+  };
+};
+
+const loadSiteSettings = () => {
+  try {
+    const data = fs.readFileSync(SETTINGS_FILE, "utf-8");
+    return sanitizeSettings(JSON.parse(data));
+  } catch (error) {
+    return { ...defaultSiteSettings };
+  }
+};
+
+const saveSiteSettings = (settings) => {
+  fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+};
+
+let siteSettings = loadSiteSettings();
 
 const parseCookies = (cookieHeader = "") =>
   cookieHeader
@@ -208,6 +331,33 @@ app.post("/api/admin/login", (req, res) => {
 
   res.setHeader("Set-Cookie", cookieParts.join("; "));
   return res.json({ success: true });
+});
+
+app.get("/api/site-settings", (req, res) => {
+  res.json(siteSettings);
+});
+
+app.get("/api/admin/site-settings", adminAuth, (req, res) => {
+  res.json(siteSettings);
+});
+
+app.put("/api/admin/site-settings", adminAuth, (req, res) => {
+  const incoming = req.body || {};
+  const merged = {
+    layout: { ...siteSettings.layout, ...(incoming.layout || {}) },
+    colors: { ...siteSettings.colors, ...(incoming.colors || {}) },
+    buttons: { ...siteSettings.buttons, ...(incoming.buttons || {}) },
+    stickers: { ...siteSettings.stickers, ...(incoming.stickers || {}) },
+  };
+  siteSettings = sanitizeSettings(merged);
+  saveSiteSettings(siteSettings);
+  res.json(siteSettings);
+});
+
+app.post("/api/admin/site-settings/reset", adminAuth, (req, res) => {
+  siteSettings = { ...defaultSiteSettings };
+  saveSiteSettings(siteSettings);
+  res.json(siteSettings);
 });
 
 app.get("/admin-login", (req, res) => {

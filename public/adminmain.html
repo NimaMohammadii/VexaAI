@@ -56,6 +56,146 @@
           </table>
         </div>
       </section>
+
+      <section class="panel settings-panel" id="siteSettingsPanel" hidden>
+        <div class="panel-header">
+          <div>
+            <h2>Site customization</h2>
+            <p class="muted">Adjust page sizes, background colors, stickers, and button sizing.</p>
+          </div>
+          <button class="btn" id="resetSettingsBtn" type="button">Reset to defaults</button>
+        </div>
+
+        <form id="siteSettingsForm" class="settings-form">
+          <div class="settings-grid">
+            <div class="settings-block">
+              <h3>Layout sizes (px)</h3>
+              <label>
+                Page max width
+                <input id="pageMaxWidth" type="number" min="720" max="1600" step="10" />
+              </label>
+              <label>
+                Home grid max width
+                <input id="homeGridMaxWidth" type="number" min="720" max="1600" step="10" />
+              </label>
+              <label>
+                Text-to-speech max width
+                <input id="ttsMaxWidth" type="number" min="720" max="1600" step="10" />
+              </label>
+            </div>
+
+            <div class="settings-block">
+              <h3>Background colors</h3>
+              <label>
+                Main background
+                <input id="bgColor" type="color" />
+              </label>
+              <label>
+                Alt background
+                <input id="bgAltColor" type="color" />
+              </label>
+              <label>
+                Surface
+                <input id="surfaceColor" type="color" />
+              </label>
+              <label>
+                Panel
+                <input id="panelColor" type="color" />
+              </label>
+              <label>
+                Primary accent
+                <input id="primaryColor" type="color" />
+              </label>
+              <label>
+                Header background (RGBA)
+                <input id="headerBg" type="text" placeholder="rgba(9, 10, 12, 0.92)" />
+              </label>
+            </div>
+
+            <div class="settings-block">
+              <h3>Button sizes</h3>
+              <label>
+                Base font size (rem)
+                <input id="baseFontSize" type="number" min="0.7" max="1.4" step="0.05" />
+              </label>
+              <label>
+                Base padding Y (px)
+                <input id="basePaddingY" type="number" min="6" max="24" step="1" />
+              </label>
+              <label>
+                Base padding X (px)
+                <input id="basePaddingX" type="number" min="10" max="36" step="1" />
+              </label>
+              <label>
+                CTA font size (rem)
+                <input id="ctaFontSize" type="number" min="0.7" max="1.5" step="0.05" />
+              </label>
+              <label>
+                CTA padding Y (px)
+                <input id="ctaPaddingY" type="number" min="8" max="32" step="1" />
+              </label>
+              <label>
+                CTA padding X (px)
+                <input id="ctaPaddingX" type="number" min="12" max="48" step="1" />
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-block">
+            <h3>Sticker uploads</h3>
+            <p class="muted">Upload custom sticker images for the highlighted spots.</p>
+            <div class="sticker-grid">
+              <div class="sticker-card" data-sticker-slot="homeTextToSpeech">
+                <div class="sticker-preview"></div>
+                <div class="sticker-meta">
+                  <span>Home: Text to Speech</span>
+                  <input type="file" accept="image/*" />
+                  <button class="btn ghost" type="button" data-sticker-clear="homeTextToSpeech">
+                    Remove
+                  </button>
+                </div>
+              </div>
+              <div class="sticker-card" data-sticker-slot="homeVoices">
+                <div class="sticker-preview"></div>
+                <div class="sticker-meta">
+                  <span>Home: Voices</span>
+                  <input type="file" accept="image/*" />
+                  <button class="btn ghost" type="button" data-sticker-clear="homeVoices">Remove</button>
+                </div>
+              </div>
+              <div class="sticker-card" data-sticker-slot="homeAbout">
+                <div class="sticker-preview"></div>
+                <div class="sticker-meta">
+                  <span>Home: About</span>
+                  <input type="file" accept="image/*" />
+                  <button class="btn ghost" type="button" data-sticker-clear="homeAbout">Remove</button>
+                </div>
+              </div>
+              <div class="sticker-card" data-sticker-slot="ttsHeader">
+                <div class="sticker-preview"></div>
+                <div class="sticker-meta">
+                  <span>Text-to-speech header</span>
+                  <input type="file" accept="image/*" />
+                  <button class="btn ghost" type="button" data-sticker-clear="ttsHeader">Remove</button>
+                </div>
+              </div>
+              <div class="sticker-card" data-sticker-slot="aboutHero">
+                <div class="sticker-preview"></div>
+                <div class="sticker-meta">
+                  <span>About hero</span>
+                  <input type="file" accept="image/*" />
+                  <button class="btn ghost" type="button" data-sticker-clear="aboutHero">Remove</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <button class="btn primary" type="submit">Save settings</button>
+            <span class="muted" id="settingsStatus" role="status"></span>
+          </div>
+        </form>
+      </section>
     </main>
 
     <script src="adminmain.js"></script>

@@ -8,6 +8,29 @@ const userRows = document.getElementById("userRows");
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("searchInput");
 const refreshBtn = document.getElementById("refreshBtn");
+const siteSettingsPanel = document.getElementById("siteSettingsPanel");
+const siteSettingsForm = document.getElementById("siteSettingsForm");
+const settingsStatus = document.getElementById("settingsStatus");
+const resetSettingsBtn = document.getElementById("resetSettingsBtn");
+const pageMaxWidthInput = document.getElementById("pageMaxWidth");
+const homeGridMaxWidthInput = document.getElementById("homeGridMaxWidth");
+const ttsMaxWidthInput = document.getElementById("ttsMaxWidth");
+const bgColorInput = document.getElementById("bgColor");
+const bgAltColorInput = document.getElementById("bgAltColor");
+const surfaceColorInput = document.getElementById("surfaceColor");
+const panelColorInput = document.getElementById("panelColor");
+const primaryColorInput = document.getElementById("primaryColor");
+const headerBgInput = document.getElementById("headerBg");
+const baseFontSizeInput = document.getElementById("baseFontSize");
+const basePaddingYInput = document.getElementById("basePaddingY");
+const basePaddingXInput = document.getElementById("basePaddingX");
+const ctaFontSizeInput = document.getElementById("ctaFontSize");
+const ctaPaddingYInput = document.getElementById("ctaPaddingY");
+const ctaPaddingXInput = document.getElementById("ctaPaddingX");
+const stickerCards = document.querySelectorAll(".sticker-card");
+
+let currentSiteSettings = null;
+const pendingStickers = {};
 
 const formatDate = (timestamp) => {
   if (!timestamp) {
@@ -32,6 +55,9 @@ const setDashboardVisible = (visible) => {
   if (refreshBtn) {
     refreshBtn.hidden = !visible;
   }
+  if (siteSettingsPanel) {
+    siteSettingsPanel.hidden = !visible;
+  }
 };
 
 const fetchSummary = async () => {
@@ -50,6 +76,14 @@ const fetchUsers = async (search = "") => {
   const response = await fetch(`/api/admin/users?${params.toString()}`);
   if (!response.ok) {
     throw new Error("Unauthorized");
+  }
+  return response.json();
+};
+
+const fetchSiteSettings = async () => {
+  const response = await fetch("/api/admin/site-settings");
+  if (!response.ok) {
+    throw new Error("Unable to load settings.");
   }
   return response.json();
 };
@@ -94,6 +128,66 @@ const loadDashboard = async (search = "") => {
   setDashboardVisible(true);
 };
 
+const setSettingsStatus = (message, isError = false) => {
+  if (!settingsStatus) {
+    return;
+  }
+  settingsStatus.textContent = message;
+  settingsStatus.classList.toggle("error", isError);
+};
+
+const setStickerPreview = (card, src) => {
+  const preview = card.querySelector(".sticker-preview");
+  if (!preview) {
+    return;
+  }
+  preview.innerHTML = "";
+  if (src) {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "Sticker preview";
+    preview.appendChild(img);
+  } else {
+    const fallback = document.createElement("span");
+    fallback.textContent = "—";
+    preview.appendChild(fallback);
+  }
+};
+
+const populateSettingsForm = (settings) => {
+  currentSiteSettings = settings;
+  if (pageMaxWidthInput) pageMaxWidthInput.value = settings.layout.pageMaxWidth;
+  if (homeGridMaxWidthInput) homeGridMaxWidthInput.value = settings.layout.homeGridMaxWidth;
+  if (ttsMaxWidthInput) ttsMaxWidthInput.value = settings.layout.ttsMaxWidth;
+  if (bgColorInput) bgColorInput.value = settings.colors.bg;
+  if (bgAltColorInput) bgAltColorInput.value = settings.colors.bgAlt;
+  if (surfaceColorInput) surfaceColorInput.value = settings.colors.surface;
+  if (panelColorInput) panelColorInput.value = settings.colors.panel;
+  if (primaryColorInput) primaryColorInput.value = settings.colors.primary;
+  if (headerBgInput) headerBgInput.value = settings.colors.headerBg;
+  if (baseFontSizeInput) baseFontSizeInput.value = settings.buttons.baseFontSize;
+  if (basePaddingYInput) basePaddingYInput.value = settings.buttons.basePaddingY;
+  if (basePaddingXInput) basePaddingXInput.value = settings.buttons.basePaddingX;
+  if (ctaFontSizeInput) ctaFontSizeInput.value = settings.buttons.ctaFontSize;
+  if (ctaPaddingYInput) ctaPaddingYInput.value = settings.buttons.ctaPaddingY;
+  if (ctaPaddingXInput) ctaPaddingXInput.value = settings.buttons.ctaPaddingX;
+
+  stickerCards.forEach((card) => {
+    const key = card.dataset.stickerSlot;
+    setStickerPreview(card, settings.stickers?.[key]);
+  });
+
+  Object.keys(pendingStickers).forEach((key) => {
+    delete pendingStickers[key];
+  });
+  setSettingsStatus("");
+};
+
+const loadSiteSettings = async () => {
+  const settings = await fetchSiteSettings();
+  populateSettingsForm(settings);
+};
+
 const sendCreditUpdate = async (userId, delta) => {
   const response = await fetch(`/api/admin/users/${userId}/credits`, {
     method: "PATCH",
@@ -122,6 +216,7 @@ if (loginForm) {
       }
       adminCodeInput.value = "";
       await loadDashboard();
+      await loadSiteSettings();
     } catch (error) {
       setLoginError(error.message);
       setDashboardVisible(false);
@@ -143,7 +238,7 @@ if (searchForm) {
 
 if (refreshBtn) {
   refreshBtn.addEventListener("click", () => {
-    loadDashboard(searchInput.value.trim()).catch(() => {
+    Promise.all([loadDashboard(searchInput.value.trim()), loadSiteSettings()]).catch(() => {
       setLoginError("Session expired. Please log in again.");
       setDashboardVisible(false);
     });
@@ -174,6 +269,121 @@ if (userRows) {
   });
 }
 
-loadDashboard().catch(() => {
-  setDashboardVisible(false);
-});
+if (siteSettingsForm) {
+  siteSettingsForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!currentSiteSettings) {
+      return;
+    }
+    const readNumber = (input) => {
+      const value = Number(input?.value);
+      return Number.isFinite(value) ? value : null;
+    };
+    const payload = {
+      layout: {
+        pageMaxWidth: readNumber(pageMaxWidthInput),
+        homeGridMaxWidth: readNumber(homeGridMaxWidthInput),
+        ttsMaxWidth: readNumber(ttsMaxWidthInput),
+      },
+      colors: {
+        bg: bgColorInput?.value,
+        bgAlt: bgAltColorInput?.value,
+        surface: surfaceColorInput?.value,
+        panel: panelColorInput?.value,
+        primary: primaryColorInput?.value,
+        headerBg: headerBgInput?.value,
+      },
+      buttons: {
+        baseFontSize: readNumber(baseFontSizeInput),
+        basePaddingY: readNumber(basePaddingYInput),
+        basePaddingX: readNumber(basePaddingXInput),
+        ctaFontSize: readNumber(ctaFontSizeInput),
+        ctaPaddingY: readNumber(ctaPaddingYInput),
+        ctaPaddingX: readNumber(ctaPaddingXInput),
+      },
+      stickers: {
+        ...currentSiteSettings.stickers,
+        ...pendingStickers,
+      },
+    };
+
+    try {
+      setSettingsStatus("Saving...");
+      const response = await fetch("/api/admin/site-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Unable to save settings.");
+      }
+      const data = await response.json();
+      populateSettingsForm(data);
+      setSettingsStatus("Settings saved.");
+    } catch (error) {
+      setSettingsStatus(error.message, true);
+    }
+  });
+}
+
+if (resetSettingsBtn) {
+  resetSettingsBtn.addEventListener("click", async () => {
+    try {
+      setSettingsStatus("Resetting...");
+      const response = await fetch("/api/admin/site-settings/reset", { method: "POST" });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Unable to reset settings.");
+      }
+      const data = await response.json();
+      populateSettingsForm(data);
+      setSettingsStatus("Defaults restored.");
+    } catch (error) {
+      setSettingsStatus(error.message, true);
+    }
+  });
+}
+
+if (stickerCards.length) {
+  stickerCards.forEach((card) => {
+    const fileInput = card.querySelector("input[type=\"file\"]");
+    const key = card.dataset.stickerSlot;
+    if (fileInput) {
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files?.[0];
+        if (!file) {
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const src = String(reader.result || "");
+          pendingStickers[key] = src;
+          setStickerPreview(card, src);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  });
+}
+
+if (siteSettingsPanel) {
+  siteSettingsPanel.addEventListener("click", (event) => {
+    const clearButton = event.target.closest("[data-sticker-clear]");
+    if (!clearButton) {
+      return;
+    }
+    const key = clearButton.dataset.stickerClear;
+    pendingStickers[key] = "";
+    const card = siteSettingsPanel.querySelector(`[data-sticker-slot="${key}"]`);
+    if (card) {
+      setStickerPreview(card, "");
+    }
+  });
+}
+
+loadDashboard()
+  .then(() => loadSiteSettings())
+  .catch(() => {
+    setDashboardVisible(false);
+  });
