@@ -31,6 +31,8 @@ const CREDIT_FILL_MAX = 100;
 let currentCredits = null;
 let totalCredits = null;
 const historyEntries = [];
+let hasAudioOutput = false;
+let currentAudioUrl = null;
 
 const readCookie = (name) => {
   const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
@@ -153,9 +155,6 @@ const updateCharCount = () => {
   if (statusMessage && statusMessage.classList.contains("error")) {
     setStatus("");
   }
-  if (playerWrap && !playerWrap.hidden) {
-    playerWrap.hidden = true;
-  }
   if (audioPlayer && !audioPlayer.paused) {
     audioPlayer.pause();
   }
@@ -238,6 +237,26 @@ const toggleLoading = (isLoading) => {
   generateBtn.textContent = isLoading ? "Generating Speech..." : "Generate Speech";
 };
 
+const setAudioOutputVisible = (isVisible) => {
+  if (!playerWrap) {
+    return;
+  }
+  if (!isVisible) {
+    playerWrap.classList.remove("is-visible");
+    playerWrap.hidden = true;
+    return;
+  }
+  playerWrap.hidden = false;
+  requestAnimationFrame(() => {
+    playerWrap.classList.add("is-visible");
+  });
+};
+
+const setHasAudioOutput = (value) => {
+  hasAudioOutput = value;
+  setAudioOutputVisible(hasAudioOutput);
+};
+
 const handleGenerate = async () => {
   if (!textInput) {
     return;
@@ -257,11 +276,17 @@ const handleGenerate = async () => {
 
   setStatus("Generating your voice...", { isLoading: true });
   toggleLoading(true);
-  if (playerWrap) {
-    playerWrap.hidden = true;
-  }
+  setHasAudioOutput(false);
   if (audioPlay) {
     audioPlay.classList.remove("is-playing");
+  }
+  if (audioPlayer) {
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+  }
+  if (currentAudioUrl) {
+    URL.revokeObjectURL(currentAudioUrl);
+    currentAudioUrl = null;
   }
 
   try {
@@ -288,6 +313,7 @@ const handleGenerate = async () => {
 
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
+    currentAudioUrl = audioUrl;
 
     if (audioPlayer) {
       audioPlayer.src = audioUrl;
@@ -295,9 +321,7 @@ const handleGenerate = async () => {
     if (audioDownload) {
       audioDownload.href = audioUrl;
     }
-    if (playerWrap) {
-      playerWrap.hidden = false;
-    }
+    setHasAudioOutput(true);
     updateCharCount();
     setStatus("Your audio is ready.");
 
