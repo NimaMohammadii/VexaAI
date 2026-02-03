@@ -163,7 +163,9 @@ const updateCharCount = () => {
     audioPlay.classList.remove("is-playing");
   }
   if (generateBtn) {
-    generateBtn.classList.toggle("is-ready", textInput.value.trim().length > 0);
+    const hasText = textInput.value.trim().length > 0;
+    generateBtn.classList.toggle("is-ready", hasText);
+    generateBtn.disabled = generateBtn.classList.contains("is-loading") || !hasText;
   }
 };
 
