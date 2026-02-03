@@ -90,6 +90,7 @@ const sanitizeSettings = (raw) => {
   const sanitizeElement = (element = {}) => {
     const x = clampNumber(element.x, -320, 320, 0);
     const y = clampNumber(element.y, -320, 320, 0);
+    const rotate = clampNumber(element.rotate, -180, 180, 0);
     const width =
       Number.isFinite(element.width) && element.width > 0
         ? clampNumber(element.width, 24, 1400, null)
@@ -98,7 +99,7 @@ const sanitizeSettings = (raw) => {
       Number.isFinite(element.height) && element.height > 0
         ? clampNumber(element.height, 24, 1400, null)
         : null;
-    return { x, y, width, height };
+    return { x, y, rotate, width, height };
   };
 
   const sanitizeLayoutEditor = (rawEditor = {}) => {
@@ -126,8 +127,8 @@ const sanitizeSettings = (raw) => {
         },
         elements: cleanedElements,
         frame: {
-          width: clampNumber(frame.width, 320, 1600, 1100),
-          height: clampNumber(frame.height, 420, 1200, 720),
+          width: clampNumber(frame.width, 320, 1600, 390),
+          height: clampNumber(frame.height, 420, 1200, 844),
         },
       };
     });

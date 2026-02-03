@@ -317,6 +317,7 @@ td {
   background: #05060a;
   padding: 12px;
   overflow: hidden;
+  margin: 0 auto;
 }
 
 .layout-frame iframe {
