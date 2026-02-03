@@ -190,6 +190,10 @@ const setVoice = (voice) => {
   });
 };
 
+const closeVoiceMenu = () => {
+  toggleVoiceMenu(false);
+};
+
 const toggleVoiceMenu = (isOpen) => {
   if (!voiceMenu || !voiceTrigger) {
     return;
@@ -380,6 +384,7 @@ if (voiceTrigger && voiceMenu) {
       if (voice) {
         setVoice(voice);
       }
+      closeVoiceMenu();
     });
   });
 }
@@ -420,6 +425,7 @@ if (menuOverlay) {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     toggleHistoryPanel(false);
+    closeVoiceMenu();
     closeMenu();
   }
 });
@@ -428,6 +434,9 @@ document.addEventListener("click", (event) => {
   const target = event.target;
   if (historyPanel && historyToggle && !historyPanel.contains(target) && !historyToggle.contains(target)) {
     toggleHistoryPanel(false);
+  }
+  if (voiceMenu && voiceTrigger && !voiceMenu.contains(target) && !voiceTrigger.contains(target)) {
+    closeVoiceMenu();
   }
 });
 
