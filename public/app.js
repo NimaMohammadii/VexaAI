@@ -11,10 +11,6 @@ const menuToggle = document.getElementById("menuToggle");
 const menuClose = document.getElementById("menuClose");
 const sideMenu = document.getElementById("sideMenu");
 const menuOverlay = document.getElementById("menuOverlay");
-const voiceTrigger = document.getElementById("voiceTrigger");
-const voiceMenu = document.getElementById("voiceMenu");
-const voiceLabel = document.getElementById("voiceLabel");
-const voiceOptions = document.querySelectorAll(".voice-option");
 const historyToggle = document.getElementById("historyToggle");
 const historyPanel = document.getElementById("historyPanel");
 const historyClose = document.getElementById("historyClose");
@@ -26,7 +22,7 @@ const creditsTotal = document.getElementById("creditsTotal");
 const creditsFill = document.getElementById("creditsFill");
 
 const maxChars = textInput ? Number(textInput.getAttribute("maxlength")) || 1000 : 0;
-let currentVoice = voiceLabel ? voiceLabel.textContent.trim() : "Rachel";
+let currentVoice = window.VEXA_SELECTED_VOICE || "Rachel";
 
 const formatNumber = (value) => value.toLocaleString("en-US");
 const USER_ID_STORAGE_KEY = "vexa_user_id";
@@ -180,26 +176,10 @@ const setStatus = (message, { isError = false, isLoading = false } = {}) => {
   statusMessage.classList.toggle("loading", isLoading);
 };
 
-const setVoice = (voice) => {
-  if (voiceLabel) {
-    voiceLabel.textContent = voice;
+const handleVoiceChange = (event) => {
+  if (event?.detail?.voice) {
+    currentVoice = event.detail.voice;
   }
-  currentVoice = voice;
-  voiceOptions.forEach((option) => {
-    option.classList.toggle("is-active", option.dataset.voice === voice);
-  });
-};
-
-const closeVoiceMenu = () => {
-  toggleVoiceMenu(false);
-};
-
-const toggleVoiceMenu = (isOpen) => {
-  if (!voiceMenu || !voiceTrigger) {
-    return;
-  }
-  voiceMenu.hidden = !isOpen;
-  voiceTrigger.setAttribute("aria-expanded", String(isOpen));
 };
 
 const toggleHistoryPanel = (isOpen) => {
@@ -373,21 +353,7 @@ if (generateBtn) {
   generateBtn.addEventListener("click", handleGenerate);
 }
 
-if (voiceTrigger && voiceMenu) {
-  voiceTrigger.addEventListener("click", () => {
-    toggleVoiceMenu(voiceMenu.hidden);
-  });
-
-  voiceOptions.forEach((option) => {
-    option.addEventListener("click", () => {
-      const voice = option.dataset.voice;
-      if (voice) {
-        setVoice(voice);
-      }
-      closeVoiceMenu();
-    });
-  });
-}
+window.addEventListener("vexa:voice-change", handleVoiceChange);
 
 if (historyToggle) {
   historyToggle.addEventListener("click", () => {
@@ -425,7 +391,6 @@ if (menuOverlay) {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     toggleHistoryPanel(false);
-    closeVoiceMenu();
     closeMenu();
   }
 });
@@ -434,9 +399,6 @@ document.addEventListener("click", (event) => {
   const target = event.target;
   if (historyPanel && historyToggle && !historyPanel.contains(target) && !historyToggle.contains(target)) {
     toggleHistoryPanel(false);
-  }
-  if (voiceMenu && voiceTrigger && !voiceMenu.contains(target) && !voiceTrigger.contains(target)) {
-    closeVoiceMenu();
   }
 });
 
@@ -448,8 +410,8 @@ if (textInput) {
 }
 document.body.setAttribute("data-theme", "dark");
 
-if (voiceLabel) {
-  setVoice(currentVoice);
+if (window.VEXA_SELECTED_VOICE) {
+  currentVoice = window.VEXA_SELECTED_VOICE;
 }
 
 initUser();
