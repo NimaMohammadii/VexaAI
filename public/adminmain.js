@@ -36,6 +36,7 @@ const layoutOffsetYInput = document.getElementById("layoutOffsetY");
 const layoutElementHint = document.getElementById("layoutElementHint");
 const layoutElementXInput = document.getElementById("layoutElementX");
 const layoutElementYInput = document.getElementById("layoutElementY");
+const layoutElementRotateInput = document.getElementById("layoutElementRotate");
 const layoutElementWidthInput = document.getElementById("layoutElementWidth");
 const layoutElementHeightInput = document.getElementById("layoutElementHeight");
 const layoutResetElementBtn = document.getElementById("layoutResetElementBtn");
@@ -139,7 +140,7 @@ const getPageSettings = (pageKey) => {
     editor.pages[pageKey] = {
       canvas: { scale: 1, offsetX: 0, offsetY: 0 },
       elements: {},
-      frame: { width: 1100, height: 720 },
+      frame: { width: 390, height: 844 },
     };
   }
   return editor.pages[pageKey];
@@ -201,17 +202,30 @@ const ensureFrameStyles = (doc) => {
 };
 
 const ensureFrameAdminIds = (doc) => {
-  const candidates = doc.querySelectorAll(
-    "[data-admin-id], button, .menu-toggle, .menu-close, .menu-link, .side-menu, .menu-bar, .home-card"
-  );
+  const main = doc.querySelector("main");
+  const candidates = main ? main.querySelectorAll("*") : doc.querySelectorAll("[data-admin-id], main *");
   const existingIds = new Set();
   candidates.forEach((element) => {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    const tag = element.tagName;
+    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
+      return;
+    }
     if (element.dataset.adminId) {
       existingIds.add(element.dataset.adminId);
     }
   });
   let index = existingIds.size;
   candidates.forEach((element) => {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    const tag = element.tagName;
+    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
+      return;
+    }
     if (element.dataset.adminId) {
       return;
     }
@@ -230,7 +244,10 @@ const applyElementOverrideToFrame = (element, override) => {
   const baseTransform = element.dataset.adminBaseTransform;
   const x = Number.isFinite(override?.x) ? override.x : 0;
   const y = Number.isFinite(override?.y) ? override.y : 0;
-  const transform = [baseTransform, `translate(${x}px, ${y}px)`].filter(Boolean).join(" ");
+  const rotate = Number.isFinite(override?.rotate) ? override.rotate : 0;
+  const transform = [baseTransform, `translate(${x}px, ${y}px)`, `rotate(${rotate}deg)`]
+    .filter(Boolean)
+    .join(" ");
   element.style.transform = transform;
   element.style.width = Number.isFinite(override?.width) ? `${override.width}px` : "";
   element.style.height = Number.isFinite(override?.height) ? `${override.height}px` : "";
@@ -284,6 +301,7 @@ const selectLayoutElement = (element, pageSettings) => {
   const rect = element.getBoundingClientRect();
   if (layoutElementXInput) layoutElementXInput.value = override.x ?? 0;
   if (layoutElementYInput) layoutElementYInput.value = override.y ?? 0;
+  if (layoutElementRotateInput) layoutElementRotateInput.value = override.rotate ?? 0;
   if (layoutElementWidthInput)
     layoutElementWidthInput.value = Number.isFinite(override.width) ? override.width : Math.round(rect.width);
   if (layoutElementHeightInput)
@@ -313,6 +331,7 @@ const clearSelectedOverride = (pageSettings) => {
   layoutSelectedElement.style.height = "";
   if (layoutElementXInput) layoutElementXInput.value = 0;
   if (layoutElementYInput) layoutElementYInput.value = 0;
+  if (layoutElementRotateInput) layoutElementRotateInput.value = 0;
   if (layoutElementWidthInput)
     layoutElementWidthInput.value = Math.round(layoutSelectedElement.getBoundingClientRect().width);
   if (layoutElementHeightInput)
@@ -728,7 +747,7 @@ if (layoutFrame) {
     });
     setupFrameInteractions(doc, pageSettings);
     if (layoutElementHint) {
-      layoutElementHint.textContent = "Click a button or menu inside the preview.";
+      layoutElementHint.textContent = "Click any element inside the preview.";
     }
   });
 }
@@ -782,6 +801,7 @@ const bindElementInput = (input, key) => {
 
 bindElementInput(layoutElementXInput, "x");
 bindElementInput(layoutElementYInput, "y");
+bindElementInput(layoutElementRotateInput, "rotate");
 bindElementInput(layoutElementWidthInput, "width");
 bindElementInput(layoutElementHeightInput, "height");
 
@@ -798,7 +818,7 @@ if (layoutResetPageBtn) {
     const pageSettings = getPageSettings(pageKey);
     pageSettings.canvas = { scale: 1, offsetX: 0, offsetY: 0 };
     pageSettings.elements = {};
-    pageSettings.frame = { width: 1100, height: 720 };
+    pageSettings.frame = { width: 390, height: 844 };
     applyLayoutControls(pageSettings);
     updateFrameSize(pageSettings);
     if (frameReady) {

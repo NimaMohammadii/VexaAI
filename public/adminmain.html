@@ -201,7 +201,9 @@
         <div class="panel-header">
           <div>
             <h2>Layout studio</h2>
-            <p class="muted">Simulate every page, drag buttons/menus, and resize page canvas.</p>
+            <p class="muted">
+              Simulate every page, drag any element in the preview, rotate, and resize the page canvas.
+            </p>
           </div>
           <div class="form-row compact">
             <label>
@@ -240,7 +242,7 @@
 
             <div class="settings-block">
               <h3>Selected element</h3>
-              <p class="muted" id="layoutElementHint">Click a button or menu inside the preview.</p>
+              <p class="muted" id="layoutElementHint">Click any element inside the preview.</p>
               <label>
                 X (px)
                 <input id="layoutElementX" type="number" min="-320" max="320" step="2" />
@@ -248,6 +250,10 @@
               <label>
                 Y (px)
                 <input id="layoutElementY" type="number" min="-320" max="320" step="2" />
+              </label>
+              <label>
+                Rotate (deg)
+                <input id="layoutElementRotate" type="number" min="-180" max="180" step="1" />
               </label>
               <label>
                 Width (px)
