@@ -14,6 +14,15 @@
   --chip-bg: #191a21;
   --header-bg: rgba(9, 10, 12, 0.92);
   --radius: 22px;
+  --container-width: 1120px;
+  --page-padding: 32px;
+  --section-spacing: 60px;
+  --button-radius: 999px;
+  --card-radius: 22px;
+  --input-height: 48px;
+  --base-font-size: 16px;
+  --heading-scale: 1;
+  --font-family: "Inter", "Vazirmatn", "Segoe UI", system-ui, sans-serif;
 }
 
 body[data-theme="light"] {
@@ -35,12 +44,13 @@ body[data-theme="light"] {
 
 * {
   box-sizing: border-box;
-  font-family: "Inter", "Vazirmatn", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-family, "Inter", "Vazirmatn", "Segoe UI", system-ui, sans-serif);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  font-size: var(--base-font-size, 16px);
   background: radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 45%),
     linear-gradient(180deg, #0b0c0f 0%, #0e0f14 40%, #0a0b0e 100%);
   color: var(--text);
@@ -70,7 +80,7 @@ a {
 }
 
 .container {
-  width: min(1120px, 92%);
+  width: min(var(--container-width, 1120px), 92%);
   margin: 0 auto;
 }
 
@@ -334,7 +344,7 @@ a {
 .cta,
 .outline-btn,
 .chip-btn {
-  border-radius: 999px;
+  border-radius: var(--button-radius, 999px);
   padding: 12px 18px;
   font-weight: 600;
   font-size: 0.95rem;
@@ -365,7 +375,7 @@ a {
 }
 
 .hero {
-  padding: 70px 0 30px;
+  padding: var(--section-spacing, 60px) 0 30px;
 }
 
 .hero-content {
@@ -384,7 +394,7 @@ a {
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-size: calc(clamp(2rem, 4vw, 3.2rem) * var(--heading-scale, 1));
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
@@ -396,12 +406,12 @@ a {
 }
 
 .app {
-  padding: 20px 0 40px;
+  padding: var(--page-padding, 32px) 0 40px;
 }
 
 .card {
   background: var(--bg-alt);
-  border-radius: var(--radius);
+  border-radius: var(--card-radius, var(--radius));
   padding: clamp(24px, 4vw, 36px);
   box-shadow: var(--shadow);
   display: flex;
@@ -419,7 +429,7 @@ a {
 
 .card-header h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: calc(1.4rem * var(--heading-scale, 1));
 }
 
 .card-meta {
@@ -440,7 +450,7 @@ label {
 
 textarea {
   min-height: 160px;
-  border-radius: 18px;
+  border-radius: var(--card-radius, 18px);
   border: 1px solid var(--border);
   padding: 16px 18px;
   font-size: 1rem;
@@ -464,11 +474,16 @@ select {
   width: 100%;
   appearance: none;
   padding: 14px 44px 14px 16px;
-  border-radius: 14px;
+  border-radius: var(--card-radius, 14px);
   border: 1px solid var(--border);
   background: var(--surface);
   font-size: 1rem;
   color: var(--text);
+}
+
+input,
+select {
+  min-height: var(--input-height, 48px);
 }
 
 .select-wrap::after {
@@ -595,7 +610,7 @@ select {
 .how,
 .voices,
 .pricing {
-  padding: 50px 0;
+  padding: var(--section-spacing, 60px) 0;
 }
 
 .section-header {
@@ -604,7 +619,7 @@ select {
 
 .section-header h2 {
   margin: 0 0 6px;
-  font-size: 1.8rem;
+  font-size: calc(1.8rem * var(--heading-scale, 1));
 }
 
 .section-header p {
@@ -738,12 +753,12 @@ select {
 }
 
 .page-hero {
-  padding: 80px 0 40px;
+  padding: calc(var(--section-spacing, 60px) + 20px) 0 40px;
 }
 
 .page-hero h1 {
   margin: 0 0 12px;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: calc(clamp(2rem, 4vw, 3rem) * var(--heading-scale, 1));
 }
 
 .page-hero p {
@@ -753,7 +768,7 @@ select {
 }
 
 .page-section {
-  padding: 30px 0 60px;
+  padding: 30px 0 var(--section-spacing, 60px);
 }
 
 .info-grid {

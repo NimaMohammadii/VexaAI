@@ -25,7 +25,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--tts-topbar-padding-x);
-  background: rgba(9, 10, 12, 0.92);
+  background: var(--header-bg, rgba(9, 10, 12, 0.92));
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
@@ -57,7 +57,7 @@
   display: block;
   width: 18px;
   height: 2px;
-  background: #f4f4f6;
+  background: var(--text);
   border-radius: 999px;
   opacity: 0.9;
 }
@@ -209,7 +209,7 @@
   justify-content: center;
   font-size: 1rem;
   padding: 14px 24px;
-  border-radius: 16px;
+  border-radius: var(--button-radius, 16px);
   background: rgba(143, 146, 255, 0.18);
   color: rgba(240, 242, 255, 0.7);
   box-shadow: none;
@@ -246,7 +246,7 @@
   align-items: center;
   gap: var(--tts-audio-output-gap);
   padding: var(--tts-audio-output-padding);
-  border-radius: var(--tts-audio-output-radius);
+  border-radius: var(--card-radius, var(--tts-audio-output-radius));
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -366,7 +366,7 @@
   width: var(--tts-history-width);
   background: #0c0e13;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  border-radius: var(--card-radius, 20px);
   padding: var(--tts-history-padding);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   z-index: 25;
