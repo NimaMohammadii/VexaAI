@@ -616,6 +616,20 @@ a {
   padding: 0 6px;
 }
 
+.credits-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.credit-dot {
+  width: 0.65em;
+  height: 0.65em;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 2px rgba(143, 146, 255, 0.2);
+}
+
 .history-panel {
   position: fixed;
   top: 96px;
