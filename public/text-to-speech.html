@@ -41,36 +41,7 @@
       <section class="tts-shell" aria-labelledby="tts-title">
         <div class="tts-editor-card">
           <div class="tts-editor-header">
-            <div class="voice-selector" id="voiceSelector">
-              <button
-                class="voice-trigger"
-                id="voiceTrigger"
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded="false"
-              >
-                <span id="voiceLabel">Rachel</span>
-                <span class="chevron" aria-hidden="true">▾</span>
-              </button>
-              <div class="voice-menu" id="voiceMenu" role="listbox" aria-label="Select a voice" hidden>
-                <button class="voice-option is-active" type="button" role="option" data-voice="Rachel">
-                  <span class="voice-avatar" aria-hidden="true">🎧</span>
-                  <span>Rachel</span>
-                </button>
-                <button class="voice-option" type="button" role="option" data-voice="Maya">
-                  <span class="voice-avatar" aria-hidden="true">🎧</span>
-                  <span>Maya</span>
-                </button>
-                <button class="voice-option" type="button" role="option" data-voice="Arman">
-                  <span class="voice-avatar" aria-hidden="true">🎧</span>
-                  <span>Arman</span>
-                </button>
-                <button class="voice-option" type="button" role="option" data-voice="Noah">
-                  <span class="voice-avatar" aria-hidden="true">🎧</span>
-                  <span>Noah</span>
-                </button>
-              </div>
-            </div>
+            <div class="voice-selector" id="voiceSelectorRoot" data-default-voice="Rachel"></div>
             <button class="history-toggle" id="historyToggle" type="button">
               <span class="history-dot" aria-hidden="true"></span>
               History
@@ -137,6 +108,9 @@
 
     </main>
 
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="voice-selector.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
