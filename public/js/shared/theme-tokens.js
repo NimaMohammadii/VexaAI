@@ -98,9 +98,14 @@ const applySectionVisibility = (sections = DEFAULT_THEME.sections) => {
   }
   if (sideMenu) {
     sideMenu.hidden = !sections.showMenu;
+    if (!sections.showMenu) {
+      sideMenu.classList.remove("is-open");
+    }
   }
   if (menuOverlay) {
-    menuOverlay.hidden = !sections.showMenu;
+    if (!sections.showMenu) {
+      menuOverlay.hidden = true;
+    }
   }
 };
 
