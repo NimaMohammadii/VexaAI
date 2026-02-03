@@ -18,6 +18,7 @@ const themeStreamClients = new Set();
 
 const THEME_STORE_PATH = path.join(__dirname, "theme-store.json");
 const THEME_VERSION_LIMIT = 25;
+const LAYOUT_STORE_PATH = path.join(__dirname, "layout-store.json");
 
 const DEFAULT_THEME = {
   colors: {
@@ -54,6 +55,28 @@ const ALLOWED_FONTS = ["Inter", "Roboto", "Poppins", "Manrope", "Arial", "Vazirm
 let themeStore = {
   versions: [],
   publishedVersionId: null,
+};
+
+const DEFAULT_LAYOUT = [
+  {
+    id: "header",
+    type: "Header",
+    props: { title: "Text to Speech" },
+  },
+  {
+    id: "voiceSelector",
+    type: "VoiceSelector",
+    props: { selectedVoice: "Rachel" },
+  },
+  {
+    id: "welcomeText",
+    type: "TextBlock",
+    props: { text: "Generate instant voice from any script." },
+  },
+];
+
+let layoutStore = {
+  layout: DEFAULT_LAYOUT,
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -126,6 +149,44 @@ const sanitizeTheme = (input, fallback = DEFAULT_THEME) => {
   return safe;
 };
 
+const allowedLayoutTypes = new Set(["Header", "VoiceSelector", "Menu", "Button", "TextBlock"]);
+
+const sanitizeText = (value, fallback, maxLength = 120) => {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  return value.trim().slice(0, maxLength) || fallback;
+};
+
+const sanitizeLayout = (input, fallback = DEFAULT_LAYOUT) => {
+  if (!Array.isArray(input)) {
+    return JSON.parse(JSON.stringify(fallback));
+  }
+  return input
+    .filter((item) => item && allowedLayoutTypes.has(item.type))
+    .map((item) => {
+      const id = typeof item.id === "string" && item.id.trim() ? item.id.trim() : crypto.randomUUID();
+      const safeItem = { id, type: item.type, props: {} };
+      if (item.type === "Header") {
+        safeItem.props.title = sanitizeText(item.props?.title, "Page title", 80);
+      }
+      if (item.type === "VoiceSelector") {
+        safeItem.props.selectedVoice = sanitizeText(item.props?.selectedVoice, "Rachel", 40);
+      }
+      if (item.type === "Menu") {
+        const items = Array.isArray(item.props?.items) ? item.props.items : [];
+        safeItem.props.items = items.slice(0, 5).map((entry, index) => sanitizeText(entry, `Menu ${index + 1}`, 30));
+      }
+      if (item.type === "Button") {
+        safeItem.props.label = sanitizeText(item.props?.label, "Click me", 40);
+      }
+      if (item.type === "TextBlock") {
+        safeItem.props.text = sanitizeText(item.props?.text, "Editable text block", 240);
+      }
+      return safeItem;
+    });
+};
+
 const loadThemeStore = async () => {
   try {
     const raw = await fs.readFile(THEME_STORE_PATH, "utf8");
@@ -157,6 +218,24 @@ const loadThemeStore = async () => {
   }
 };
 
+const loadLayoutStore = async () => {
+  try {
+    const raw = await fs.readFile(LAYOUT_STORE_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Invalid layout store");
+    }
+    layoutStore = {
+      layout: sanitizeLayout(parsed.layout, DEFAULT_LAYOUT),
+    };
+  } catch (error) {
+    layoutStore = {
+      layout: DEFAULT_LAYOUT,
+    };
+    await persistLayoutStore();
+  }
+};
+
 const persistThemeStore = async () => {
   const payload = {
     versions: themeStore.versions.slice(-THEME_VERSION_LIMIT),
@@ -164,6 +243,13 @@ const persistThemeStore = async () => {
   };
   themeStore.versions = payload.versions;
   await fs.writeFile(THEME_STORE_PATH, JSON.stringify(payload, null, 2));
+};
+
+const persistLayoutStore = async () => {
+  const payload = {
+    layout: layoutStore.layout,
+  };
+  await fs.writeFile(LAYOUT_STORE_PATH, JSON.stringify(payload, null, 2));
 };
 
 const createThemeVersion = (theme, label = "Theme update") => ({
@@ -566,6 +652,17 @@ app.post("/api/admin/theme/rollback", adminAuth, async (req, res) => {
   return res.json({ version });
 });
 
+app.get("/api/admin/layout", adminAuth, (req, res) => {
+  return res.json({ layout: layoutStore.layout });
+});
+
+app.put("/api/admin/layout", adminAuth, async (req, res) => {
+  const nextLayout = sanitizeLayout(req.body?.layout, layoutStore.layout);
+  layoutStore.layout = nextLayout;
+  await persistLayoutStore();
+  return res.json({ layout: layoutStore.layout });
+});
+
 app.use("/admin", adminAuth, express.static(path.join(__dirname, "public", "admin")));
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -582,6 +679,7 @@ setInterval(() => {
 
 const startServer = async () => {
   await loadThemeStore();
+  await loadLayoutStore();
   app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
   });
