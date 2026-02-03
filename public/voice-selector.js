@@ -58,8 +58,6 @@
       setIsOpen(false);
     };
 
-    const selectedVoiceData = voices.find((voice) => voice.name === selectedVoice) || voices[0];
-
     return React.createElement(
       React.Fragment,
       null,
@@ -73,16 +71,8 @@
           onClick: handleToggle,
           ref: triggerRef,
         },
-        React.createElement(
-          React.Fragment,
-          null,
-          React.createElement(
-            "span",
-            { className: "voice-avatar", "aria-hidden": "true" },
-            selectedVoiceData.icon
-          ),
-          React.createElement("span", null, selectedVoice)
-        )
+        React.createElement("span", null, selectedVoice),
+        React.createElement("span", { className: "chevron", "aria-hidden": "true" }, "▾")
       ),
       isOpen
         ? React.createElement(

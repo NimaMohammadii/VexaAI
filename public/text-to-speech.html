@@ -40,15 +40,19 @@
 
       <section class="tts-shell" aria-labelledby="tts-title">
         <div class="tts-editor-card">
+          <div class="tts-editor-header">
+            <div class="voice-selector" id="voiceSelectorRoot" data-default-voice="Rachel"></div>
+            <button class="history-toggle" id="historyToggle" type="button">
+              <span class="history-dot" aria-hidden="true"></span>
+              History
+            </button>
+          </div>
+
           <div class="tts-editor">
-            <div class="tts-editor-bar">
-              <div class="voice-selector" id="voiceSelectorRoot" data-default-voice="Rachel"></div>
-            </div>
-            <p class="tts-guidance">Paste your script, adjust the voice, and generate a calm studio-quality read.</p>
             <label for="textInput" class="sr-only">Your text</label>
             <textarea
               id="textInput"
-              placeholder="Start typing your script here…"
+              placeholder="Type or paste text here to generate speech. You can add pauses, emotions, and emphasis as needed."
               maxlength="1000"
             ></textarea>
           </div>
@@ -91,6 +95,16 @@
           <span class="char-inline"><span id="charCount">0</span> / <span id="charTotal">1,000</span></span>
         </div>
       </section>
+
+      <aside class="history-panel" id="historyPanel" hidden aria-label="History">
+        <div class="history-header">
+          <span>History</span>
+          <button class="history-close" id="historyClose" type="button" aria-label="Close history">✕</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <p class="history-empty">No generations yet.</p>
+        </div>
+      </aside>
 
     </main>
 
