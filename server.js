@@ -43,6 +43,9 @@ const defaultSiteSettings = {
     ttsHeader: "",
     aboutHero: "",
   },
+  layoutEditor: {
+    pages: {},
+  },
 };
 
 const USER_STARTING_CREDITS = 500;
@@ -82,6 +85,54 @@ const sanitizeSettings = (raw) => {
   const colors = raw?.colors ?? {};
   const buttons = raw?.buttons ?? {};
   const stickers = raw?.stickers ?? {};
+  const layoutEditor = raw?.layoutEditor ?? {};
+
+  const sanitizeElement = (element = {}) => {
+    const x = clampNumber(element.x, -320, 320, 0);
+    const y = clampNumber(element.y, -320, 320, 0);
+    const width =
+      Number.isFinite(element.width) && element.width > 0
+        ? clampNumber(element.width, 24, 1400, null)
+        : null;
+    const height =
+      Number.isFinite(element.height) && element.height > 0
+        ? clampNumber(element.height, 24, 1400, null)
+        : null;
+    return { x, y, width, height };
+  };
+
+  const sanitizeLayoutEditor = (rawEditor = {}) => {
+    const pages = rawEditor?.pages ?? {};
+    const cleanedPages = {};
+    Object.entries(pages).forEach(([pageKey, pageData]) => {
+      if (typeof pageKey !== "string") {
+        return;
+      }
+      const canvas = pageData?.canvas ?? {};
+      const elements = pageData?.elements ?? {};
+      const frame = pageData?.frame ?? {};
+      const cleanedElements = {};
+      Object.entries(elements).forEach(([elementId, elementValue]) => {
+        if (typeof elementId !== "string") {
+          return;
+        }
+        cleanedElements[elementId] = sanitizeElement(elementValue);
+      });
+      cleanedPages[pageKey] = {
+        canvas: {
+          scale: clampNumber(canvas.scale, 0.6, 1.4, 1),
+          offsetX: clampNumber(canvas.offsetX, -200, 200, 0),
+          offsetY: clampNumber(canvas.offsetY, -200, 200, 0),
+        },
+        elements: cleanedElements,
+        frame: {
+          width: clampNumber(frame.width, 320, 1600, 1100),
+          height: clampNumber(frame.height, 420, 1200, 720),
+        },
+      };
+    });
+    return { pages: cleanedPages };
+  };
 
   return {
     layout: {
@@ -122,6 +173,7 @@ const sanitizeSettings = (raw) => {
       ttsHeader: sanitizeSticker(stickers.ttsHeader, defaultSiteSettings.stickers.ttsHeader),
       aboutHero: sanitizeSticker(stickers.aboutHero, defaultSiteSettings.stickers.aboutHero),
     },
+    layoutEditor: sanitizeLayoutEditor(layoutEditor),
   };
 };
 
@@ -348,6 +400,7 @@ app.put("/api/admin/site-settings", adminAuth, (req, res) => {
     colors: { ...siteSettings.colors, ...(incoming.colors || {}) },
     buttons: { ...siteSettings.buttons, ...(incoming.buttons || {}) },
     stickers: { ...siteSettings.stickers, ...(incoming.stickers || {}) },
+    layoutEditor: { ...siteSettings.layoutEditor, ...(incoming.layoutEditor || {}) },
   };
   siteSettings = sanitizeSettings(merged);
   saveSiteSettings(siteSettings);
