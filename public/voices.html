@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voices - Vexa AI</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body dir="ltr" data-theme="dark">
+    <div class="menu-overlay" id="menuOverlay" hidden></div>
+    <aside class="side-menu" id="sideMenu" aria-hidden="true">
+      <div class="side-menu-header">
+        <div class="side-menu-brand">
+          <span class="home-icon" aria-hidden="true">▢</span>
+          <span>VexaAI</span>
+        </div>
+        <button class="icon-btn menu-close" id="menuClose" type="button" aria-label="Close menu">
+          ✕
+        </button>
+      </div>
+
+      <div class="side-menu-section">
+        <p class="side-menu-title">Menu</p>
+        <a class="menu-link" href="index.html">Home</a>
+        <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
+        <a class="menu-link is-active" href="voices.html">Voices</a>
+        <a class="menu-link" href="about.html">About</a>
+      </div>
+    </aside>
+
+    <main>
+      <div class="menu-bar">
+        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
+          ☰ <span>Voices</span>
+        </button>
+      </div>
+      <section class="page-hero">
+        <div class="container">
+          <p class="eyebrow">Voice Library</p>
+          <h1>Expressive voices tuned for clarity.</h1>
+          <p>Preview voices built for ads, narration, and product experiences.</p>
+        </div>
+      </section>
+
+      <section class="page-section">
+        <div class="container voice-grid">
+          <article class="voice-card">
+            <div class="voice-avatar">A</div>
+            <h3>Ava</h3>
+            <p class="voice-meta">Female • EN</p>
+            <div class="tags">
+              <span>Warm</span>
+              <span>Natural</span>
+              <span>Calm</span>
+            </div>
+            <button class="outline-btn" type="button">▶ Play Demo</button>
+          </article>
+          <article class="voice-card">
+            <div class="voice-avatar">L</div>
+            <h3>Liam</h3>
+            <p class="voice-meta">Male • EN</p>
+            <div class="tags">
+              <span>Clear</span>
+              <span>Friendly</span>
+              <span>Studio</span>
+            </div>
+            <button class="outline-btn" type="button">▶ Play Demo</button>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
