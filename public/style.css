@@ -255,9 +255,10 @@ a {
 }
 
 .tts-page {
-  min-height: 100vh;
+  height: 100svh;
   background: var(--bg);
-  padding: 96px 0 80px;
+  padding: 96px 0 32px;
+  overflow: hidden;
 }
 
 .tts-shell {
@@ -268,7 +269,8 @@ a {
   flex-direction: column;
   gap: 26px;
   position: relative;
-  min-height: calc(100svh - 96px);
+  height: 100%;
+  min-height: 0;
 }
 
 .tts-topbar {
