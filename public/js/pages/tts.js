@@ -1,3 +1,6 @@
+import { initSideMenu } from "../shared/menu.js";
+import { setTheme } from "../shared/theme.js";
+
 const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
 const charTotal = document.getElementById("charTotal");
@@ -7,10 +10,6 @@ const audioPlayer = document.getElementById("audioPlayer");
 const playerWrap = document.getElementById("playerWrap");
 const audioPlay = document.getElementById("audioPlay");
 const audioDownload = document.getElementById("audioDownload");
-const menuToggle = document.getElementById("menuToggle");
-const menuClose = document.getElementById("menuClose");
-const sideMenu = document.getElementById("sideMenu");
-const menuOverlay = document.getElementById("menuOverlay");
 const historyToggle = document.getElementById("historyToggle");
 const historyPanel = document.getElementById("historyPanel");
 const historyClose = document.getElementById("historyClose");
@@ -315,115 +314,11 @@ const handleGenerate = async () => {
   }
 };
 
-const openMenu = () => {
-  if (!sideMenu || !menuOverlay) {
+const initAudioControls = () => {
+  if (!audioPlay || !audioPlayer) {
     return;
   }
-  sideMenu.classList.add("is-open");
-  menuOverlay.hidden = false;
-  menuToggle?.setAttribute("aria-expanded", "true");
-};
 
-const closeMenu = () => {
-  if (!sideMenu || !menuOverlay) {
-    return;
-  }
-  sideMenu.classList.remove("is-open");
-  menuOverlay.hidden = true;
-  menuToggle?.setAttribute("aria-expanded", "false");
-};
-
-const toggleMenu = () => {
-  if (!sideMenu) {
-    return;
-  }
-  const isOpen = sideMenu.classList.contains("is-open");
-  if (isOpen) {
-    closeMenu();
-  } else {
-    openMenu();
-  }
-};
-
-if (textInput) {
-  textInput.addEventListener("input", updateCharCount);
-}
-
-if (generateBtn) {
-  generateBtn.addEventListener("click", handleGenerate);
-}
-
-window.addEventListener("vexa:voice-change", handleVoiceChange);
-
-if (historyToggle) {
-  historyToggle.addEventListener("click", () => {
-    toggleHistoryPanel(historyPanel?.hidden ?? true);
-  });
-}
-
-if (historyClose) {
-  historyClose.addEventListener("click", () => {
-    toggleHistoryPanel(false);
-  });
-}
-
-if (historyList) {
-  historyList.addEventListener("click", (event) => {
-    const target = event.target.closest(".history-item");
-    if (!target || !textInput) {
-      return;
-    }
-    textInput.value = target.dataset.text || "";
-    updateCharCount();
-    toggleHistoryPanel(false);
-  });
-}
-
-if (menuToggle) {
-  menuToggle.addEventListener("click", toggleMenu);
-}
-if (menuClose) {
-  menuClose.addEventListener("click", closeMenu);
-}
-if (menuOverlay) {
-  menuOverlay.addEventListener("click", closeMenu);
-}
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    toggleHistoryPanel(false);
-    closeMenu();
-  }
-});
-
-document.addEventListener("click", (event) => {
-  const target = event.target;
-  if (historyPanel && historyToggle && !historyPanel.contains(target) && !historyToggle.contains(target)) {
-    toggleHistoryPanel(false);
-  }
-});
-
-if (charTotal) {
-  charTotal.textContent = formatNumber(maxChars);
-}
-if (textInput) {
-  updateCharCount();
-}
-document.body.setAttribute("data-theme", "dark");
-
-if (window.VEXA_SELECTED_VOICE) {
-  currentVoice = window.VEXA_SELECTED_VOICE;
-}
-
-initUser();
-sendHeartbeat();
-setInterval(sendHeartbeat, 60 * 1000);
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    sendHeartbeat();
-  }
-});
-
-if (audioPlay && audioPlayer) {
   audioPlay.addEventListener("click", () => {
     if (audioPlayer.paused) {
       audioPlayer.play();
@@ -449,4 +344,85 @@ if (audioPlay && audioPlayer) {
       icon.textContent = "▶";
     }
   });
-}
+};
+
+const initHistory = () => {
+  if (historyToggle) {
+    historyToggle.addEventListener("click", () => {
+      toggleHistoryPanel(historyPanel?.hidden ?? true);
+    });
+  }
+
+  if (historyClose) {
+    historyClose.addEventListener("click", () => {
+      toggleHistoryPanel(false);
+    });
+  }
+
+  if (historyList) {
+    historyList.addEventListener("click", (event) => {
+      const target = event.target.closest(".history-item");
+      if (!target || !textInput) {
+        return;
+      }
+      textInput.value = target.dataset.text || "";
+      updateCharCount();
+      toggleHistoryPanel(false);
+    });
+  }
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (historyPanel && historyToggle && !historyPanel.contains(target) && !historyToggle.contains(target)) {
+      toggleHistoryPanel(false);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      toggleHistoryPanel(false);
+    }
+  });
+};
+
+const initVoiceSelection = () => {
+  window.addEventListener("vexa:voice-change", handleVoiceChange);
+
+  if (window.VEXA_SELECTED_VOICE) {
+    currentVoice = window.VEXA_SELECTED_VOICE;
+  }
+};
+
+const initTextInput = () => {
+  if (textInput) {
+    textInput.addEventListener("input", updateCharCount);
+    updateCharCount();
+  }
+
+  if (charTotal) {
+    charTotal.textContent = formatNumber(maxChars);
+  }
+
+  if (generateBtn) {
+    generateBtn.addEventListener("click", handleGenerate);
+  }
+};
+
+const initCredits = () => {
+  initUser();
+  sendHeartbeat();
+  setInterval(sendHeartbeat, 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      sendHeartbeat();
+    }
+  });
+};
+
+setTheme("dark");
+initSideMenu();
+initTextInput();
+initVoiceSelection();
+initHistory();
+initAudioControls();
+initCredits();
