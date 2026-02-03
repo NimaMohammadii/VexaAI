@@ -375,7 +375,11 @@ const setupFrameInteractions = (doc, pageSettings) => {
   doc.addEventListener(
     "mousedown",
     (event) => {
-      const target = event.target instanceof Element ? event.target : null;
+      let target = event.target;
+      if (target && target.nodeType === Node.TEXT_NODE) {
+        target = target.parentElement;
+      }
+      target = target instanceof Element ? target : null;
       if (!target) {
         return;
       }
