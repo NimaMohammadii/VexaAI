@@ -254,21 +254,30 @@ a {
   gap: 24px;
 }
 
+.tts-body {
+  overflow: hidden;
+  height: 100svh;
+}
+
+.tts-body .tts-page {
+  height: 100%;
+}
+
 .tts-page {
   min-height: 100vh;
   background: var(--bg);
-  padding: 96px 0 80px;
+  padding: 80px 0 48px;
 }
 
 .tts-shell {
   width: min(1200px, 100%);
   margin: 0 auto;
-  padding: 24px clamp(16px, 4vw, 36px) 40px;
+  padding: 16px clamp(16px, 4vw, 36px) 24px;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 20px;
   position: relative;
-  min-height: calc(100svh - 96px);
+  min-height: calc(100svh - 80px);
 }
 
 .tts-topbar {
@@ -440,7 +449,7 @@ a {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: clamp(320px, 52vh, 560px);
+  min-height: clamp(240px, 42vh, 480px);
 }
 
 .tts-editor textarea {
@@ -694,7 +703,7 @@ a {
   }
 
   .tts-page {
-    padding: 88px 0 48px;
+    padding: 72px 0 32px;
   }
 
   .tts-editor-card {
@@ -702,12 +711,12 @@ a {
   }
 
   .tts-shell {
-    gap: 20px;
-    min-height: calc(100svh - 88px);
+    gap: 16px;
+    min-height: calc(100svh - 72px);
   }
 
   .tts-editor {
-    min-height: clamp(220px, 38vh, 360px);
+    min-height: clamp(200px, 34vh, 320px);
   }
 
   .tts-actions {
