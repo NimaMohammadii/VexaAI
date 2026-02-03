@@ -23,6 +23,7 @@
         <p class="side-menu-title">Menu</p>
         <a class="menu-link is-active" href="index.html">Home</a>
         <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
+        <a class="menu-link" href="#vexa-assistant">Vexa Assistant</a>
         <a class="menu-link" href="voices.html">Voices</a>
         <a class="menu-link" href="about.html">About</a>
       </div>
@@ -43,6 +44,14 @@
           <h2>Text to Speech</h2>
           <p>Generate instant voice from any script.</p>
         </a>
+        <a class="home-card" href="#vexa-assistant">
+          <div class="home-card-icon" data-sticker-key="homeAssistant">
+            <span class="sticker-fallback" aria-hidden="true">💬</span>
+            <img class="sticker-image" alt="Vexa assistant sticker" />
+          </div>
+          <h2>Vexa Assistant</h2>
+          <p>Chat with Vexa to plan and refine your audio ideas.</p>
+        </a>
         <a class="home-card" href="voices.html">
           <div class="home-card-icon" data-sticker-key="homeVoices">
             <span class="sticker-fallback" aria-hidden="true">🎙️</span>
@@ -59,6 +68,31 @@
           <h2>About</h2>
           <p>Learn how Vexa AI helps you ship audio fast.</p>
         </a>
+      </section>
+      <section class="vexa-chat-section" id="vexa-assistant" aria-label="Chat with Vexa">
+        <div class="vexa-chat-header">
+          <div>
+            <p class="home-label">Assistant</p>
+            <h2>گفتگو با دستیار Vexa</h2>
+          </div>
+          <span class="vexa-chat-badge">Online</span>
+        </div>
+        <div class="vexa-chat-window" role="log" aria-live="polite">
+          <div class="vexa-chat-message is-vexa">
+            <p>سلام! چطور می‌تونم در ساخت متن یا صدای شما کمک کنم؟</p>
+          </div>
+          <div class="vexa-chat-message is-user">
+            <p>یک ایده برای معرفی پادکست جدیدم می‌خوام.</p>
+          </div>
+          <div class="vexa-chat-message is-vexa">
+            <p>عالیه! موضوع پادکست و حال‌وهوای صدا رو برام توضیح بده تا شروع کنیم.</p>
+          </div>
+        </div>
+        <form class="vexa-chat-input" action="#" aria-label="Send message to Vexa">
+          <label class="sr-only" for="vexaMessage">Message</label>
+          <textarea id="vexaMessage" name="message" rows="2" placeholder="پیام خود را بنویسید..."></textarea>
+          <button type="submit">ارسال</button>
+        </form>
       </section>
     </main>
 
