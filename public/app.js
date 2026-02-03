@@ -32,6 +32,91 @@ let currentCredits = null;
 let totalCredits = null;
 const historyEntries = [];
 
+const applyStickerSettings = (stickers = {}) => {
+  const stickerSlots = document.querySelectorAll("[data-sticker-key]");
+  stickerSlots.forEach((slot) => {
+    const key = slot.dataset.stickerKey;
+    const src = stickers?.[key];
+    const image = slot.querySelector(".sticker-image");
+    if (image) {
+      image.src = src || "";
+      image.alt = image.alt || `${key} sticker`;
+    }
+    slot.classList.toggle("has-sticker", Boolean(src));
+  });
+};
+
+const applySiteSettings = (settings = {}) => {
+  const root = document.documentElement;
+  const layout = settings.layout || {};
+  const colors = settings.colors || {};
+  const buttons = settings.buttons || {};
+
+  if (layout.pageMaxWidth) {
+    root.style.setProperty("--page-max-width", `${layout.pageMaxWidth}px`);
+  }
+  if (layout.ttsMaxWidth) {
+    root.style.setProperty("--tts-max-width", `${layout.ttsMaxWidth}px`);
+  }
+  if (layout.homeGridMaxWidth) {
+    root.style.setProperty("--home-grid-max-width", `${layout.homeGridMaxWidth}px`);
+  }
+
+  if (colors.bg) {
+    root.style.setProperty("--bg", colors.bg);
+  }
+  if (colors.bgAlt) {
+    root.style.setProperty("--bg-alt", colors.bgAlt);
+  }
+  if (colors.surface) {
+    root.style.setProperty("--surface", colors.surface);
+  }
+  if (colors.panel) {
+    root.style.setProperty("--panel", colors.panel);
+  }
+  if (colors.primary) {
+    root.style.setProperty("--primary", colors.primary);
+    root.style.setProperty("--primary-dark", colors.primary);
+  }
+  if (colors.headerBg) {
+    root.style.setProperty("--header-bg", colors.headerBg);
+  }
+
+  if (buttons.baseFontSize) {
+    root.style.setProperty("--button-font-size", `${buttons.baseFontSize}rem`);
+  }
+  if (buttons.basePaddingY) {
+    root.style.setProperty("--button-padding-y", `${buttons.basePaddingY}px`);
+  }
+  if (buttons.basePaddingX) {
+    root.style.setProperty("--button-padding-x", `${buttons.basePaddingX}px`);
+  }
+  if (buttons.ctaFontSize) {
+    root.style.setProperty("--cta-font-size", `${buttons.ctaFontSize}rem`);
+  }
+  if (buttons.ctaPaddingY) {
+    root.style.setProperty("--cta-padding-y", `${buttons.ctaPaddingY}px`);
+  }
+  if (buttons.ctaPaddingX) {
+    root.style.setProperty("--cta-padding-x", `${buttons.ctaPaddingX}px`);
+  }
+
+  applyStickerSettings(settings.stickers);
+};
+
+const loadSiteSettings = async () => {
+  try {
+    const response = await fetch("/api/site-settings");
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    applySiteSettings(data);
+  } catch (error) {
+    console.warn("Unable to load site settings.", error);
+  }
+};
+
 const readCookie = (name) => {
   const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
   return match ? decodeURIComponent(match[2]) : null;
@@ -414,6 +499,7 @@ if (window.VEXA_SELECTED_VOICE) {
   currentVoice = window.VEXA_SELECTED_VOICE;
 }
 
+loadSiteSettings();
 initUser();
 sendHeartbeat();
 setInterval(sendHeartbeat, 60 * 1000);
