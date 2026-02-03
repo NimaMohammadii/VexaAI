@@ -27,6 +27,89 @@
       </section>
 
       <section class="panel" id="dashboard" hidden>
+        <div class="theme-toolbar">
+          <div>
+            <p class="eyebrow">Design tokens</p>
+            <h2>Theme control center</h2>
+          </div>
+          <div class="theme-actions">
+            <button class="btn" id="previewTabBtn" type="button">Open preview</button>
+            <label class="toggle">
+              <input type="checkbox" id="previewToggle" />
+              <span>Preview mode</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="panel theme-panel" id="themePanel">
+          <div class="theme-grid">
+            <div class="theme-section">
+              <h3>Colors</h3>
+              <div class="theme-row">
+                <label>Background<input type="color" id="colorBackground" /></label>
+                <label>Primary<input type="color" id="colorPrimary" /></label>
+                <label>Secondary<input type="color" id="colorSecondary" /></label>
+                <label>Text<input type="color" id="colorText" /></label>
+                <label>Muted<input type="color" id="colorMuted" /></label>
+              </div>
+            </div>
+
+            <div class="theme-section">
+              <h3>Typography</h3>
+              <div class="theme-row">
+                <label>Font family
+                  <select id="fontFamily">
+                    <option value="Inter">Inter</option>
+                    <option value="Roboto">Roboto</option>
+                    <option value="Poppins">Poppins</option>
+                    <option value="Manrope">Manrope</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Vazirmatn">Vazirmatn</option>
+                  </select>
+                </label>
+                <label>Base size <input type="range" id="baseFontSize" min="14" max="20" step="1" /></label>
+                <label>Heading scale <input type="range" id="headingScale" min="0.85" max="1.3" step="0.05" /></label>
+              </div>
+            </div>
+
+            <div class="theme-section">
+              <h3>Layout</h3>
+              <div class="theme-row">
+                <label>Page padding <input type="range" id="pagePadding" min="16" max="72" step="2" /></label>
+                <label>Section spacing <input type="range" id="sectionSpacing" min="32" max="120" step="4" /></label>
+                <label>Container width <input type="range" id="containerWidth" min="900" max="1400" step="10" /></label>
+              </div>
+            </div>
+
+            <div class="theme-section">
+              <h3>Components</h3>
+              <div class="theme-row">
+                <label>Button radius <input type="range" id="buttonRadius" min="8" max="999" step="1" /></label>
+                <label>Card radius <input type="range" id="cardRadius" min="8" max="40" step="1" /></label>
+                <label>Input height <input type="range" id="inputHeight" min="36" max="64" step="1" /></label>
+              </div>
+            </div>
+
+            <div class="theme-section">
+              <h3>Sections</h3>
+              <div class="theme-row toggles">
+                <label class="toggle"><input type="checkbox" id="toggleHistory" />History panel</label>
+                <label class="toggle"><input type="checkbox" id="toggleCredits" />Credits footer</label>
+                <label class="toggle"><input type="checkbox" id="toggleMenu" />Side menu</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="theme-footer">
+            <div class="theme-status" id="themeStatus">Draft ready.</div>
+            <div class="theme-actions">
+              <button class="btn" id="rollbackBtn" type="button">Rollback</button>
+              <select id="rollbackSelect"></select>
+              <button class="btn primary" id="publishBtn" type="button">Publish changes</button>
+            </div>
+          </div>
+        </div>
+
         <div class="stats">
           <div class="stat-card">
             <p class="stat-label">Total users</p>
@@ -58,6 +141,6 @@
       </section>
     </main>
 
-    <script src="adminmain.js"></script>
+    <script type="module" src="adminmain.js"></script>
   </body>
 </html>

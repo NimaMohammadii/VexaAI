@@ -1,5 +1,6 @@
 import { initSideMenu } from "../shared/menu.js";
 import { setTheme } from "../shared/theme.js";
+import { initThemeTokens } from "../shared/theme-tokens.js";
 
 const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
@@ -421,6 +422,9 @@ const initCredits = () => {
 
 setTheme("dark");
 initSideMenu();
+const searchParams = new URLSearchParams(window.location.search);
+const previewMode = searchParams.get("preview") === "1";
+initThemeTokens({ preview: previewMode });
 initTextInput();
 initVoiceSelection();
 initHistory();
