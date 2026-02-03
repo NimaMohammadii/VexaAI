@@ -1,18 +1,18 @@
 .tts-page {
   min-height: 100vh;
   background: var(--bg);
-  padding: 96px 0 80px;
+  padding: var(--tts-page-padding-top) 0 var(--tts-page-padding-bottom);
 }
 
 .tts-shell {
-  width: min(1200px, 100%);
+  width: min(var(--tts-shell-max-width), 100%);
   margin: 0 auto;
-  padding: 24px clamp(16px, 4vw, 36px) 40px;
+  padding: var(--tts-shell-padding-top) var(--tts-shell-padding-x) var(--tts-shell-padding-bottom);
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: var(--tts-shell-gap);
   position: relative;
-  min-height: calc(100svh - 96px);
+  min-height: calc(100svh - var(--tts-shell-min-height-offset));
 }
 
 .tts-topbar {
@@ -20,11 +20,11 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 72px;
+  height: var(--tts-topbar-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding: 0 var(--tts-topbar-padding-x);
   background: rgba(9, 10, 12, 0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -184,7 +184,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: clamp(320px, 52vh, 560px);
+  min-height: var(--tts-editor-min-height);
 }
 
 .tts-editor textarea {
@@ -205,7 +205,7 @@
 }
 
 .tts-primary {
-  width: min(320px, 100%);
+  width: var(--tts-primary-width);
   justify-content: center;
   font-size: 1rem;
   padding: 14px 24px;
@@ -230,30 +230,30 @@
 .tts-actions {
   display: flex;
   justify-content: flex-start;
-  padding-left: 6px;
+  padding-left: var(--tts-actions-padding-left);
 }
 
 .player {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-left: 6px;
+  padding-left: var(--tts-player-padding-left);
 }
 
 .audio-output {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
-  border-radius: 999px;
+  gap: var(--tts-audio-output-gap);
+  padding: var(--tts-audio-output-padding);
+  border-radius: var(--tts-audio-output-radius);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .audio-play {
-  width: 44px;
-  height: 44px;
+  width: var(--tts-audio-play-size);
+  height: var(--tts-audio-play-size);
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.08);
@@ -339,8 +339,8 @@
 }
 
 .audio-download {
-  width: 36px;
-  height: 36px;
+  width: var(--tts-audio-download-size);
+  height: var(--tts-audio-download-size);
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
@@ -355,18 +355,19 @@
   align-items: center;
   font-size: 0.85rem;
   color: var(--muted);
-  padding: 0 6px;
+  padding: 0 var(--tts-footer-padding-x);
 }
 
 .history-panel {
   position: fixed;
-  top: 96px;
-  right: 32px;
-  width: min(320px, 90vw);
+  top: var(--tts-history-top);
+  right: var(--tts-history-right);
+  left: var(--tts-history-left);
+  width: var(--tts-history-width);
   background: #0c0e13;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 16px;
+  padding: var(--tts-history-padding);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   z-index: 25;
 }
@@ -438,44 +439,12 @@
 }
 
 @media (max-width: 768px) {
-  .tts-topbar {
-    padding: 0 20px;
-  }
-
-  .tts-page {
-    padding: 88px 0 48px;
-  }
-
   .tts-editor-card {
     min-height: auto;
   }
 
-  .tts-shell {
-    gap: 20px;
-    min-height: calc(100svh - 88px);
-  }
-
-  .tts-editor {
-    min-height: clamp(220px, 38vh, 360px);
-  }
-
   .tts-actions {
     justify-content: center;
-    padding-left: 0;
-  }
-
-  .player {
-    padding-left: 0;
-  }
-
-  .audio-output {
-    border-radius: 18px;
-  }
-
-  .history-panel {
-    right: 16px;
-    left: 16px;
-    width: auto;
   }
 
   .tts-footer {
