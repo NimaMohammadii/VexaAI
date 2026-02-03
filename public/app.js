@@ -46,6 +46,75 @@ const applyStickerSettings = (stickers = {}) => {
   });
 };
 
+const pageKeyMap = {
+  "index.html": "home",
+  "text-to-speech.html": "text-to-speech",
+  "voices.html": "voices",
+  "about.html": "about",
+  "pricing.html": "pricing",
+  "credits.html": "credits",
+  "how-it-works.html": "how-it-works",
+};
+
+const resolvePageKey = () => {
+  const path = window.location.pathname.split("/").pop() || "index.html";
+  return pageKeyMap[path] || path.replace(".html", "");
+};
+
+const ensureAdminIds = () => {
+  const candidates = document.querySelectorAll(
+    "[data-admin-id], button, .menu-toggle, .menu-close, .menu-link, .side-menu, .menu-bar, .home-card"
+  );
+  const existingIds = new Set();
+  candidates.forEach((element) => {
+    if (element.dataset.adminId) {
+      existingIds.add(element.dataset.adminId);
+    }
+  });
+  let index = existingIds.size;
+  candidates.forEach((element) => {
+    if (element.dataset.adminId) {
+      return;
+    }
+    element.dataset.adminId = `auto-${index}`;
+    index += 1;
+  });
+};
+
+const applyElementOverrides = (pageSettings) => {
+  if (!pageSettings?.elements) {
+    return;
+  }
+  Object.entries(pageSettings.elements).forEach(([elementId, override]) => {
+    const target = document.querySelector(`[data-admin-id="${elementId}"]`);
+    if (!target) {
+      return;
+    }
+    if (!target.dataset.adminBaseTransform) {
+      target.dataset.adminBaseTransform = target.style.transform || "";
+    }
+    const baseTransform = target.dataset.adminBaseTransform;
+    const x = Number.isFinite(override?.x) ? override.x : 0;
+    const y = Number.isFinite(override?.y) ? override.y : 0;
+    const transform = [baseTransform, `translate(${x}px, ${y}px)`].filter(Boolean).join(" ");
+    target.style.transform = transform;
+    target.style.width = Number.isFinite(override?.width) ? `${override.width}px` : "";
+    target.style.height = Number.isFinite(override?.height) ? `${override.height}px` : "";
+  });
+};
+
+const applyCanvasOverrides = (pageSettings) => {
+  const main = document.querySelector("main");
+  if (!main) {
+    return;
+  }
+  const scale = Number.isFinite(pageSettings?.canvas?.scale) ? pageSettings.canvas.scale : 1;
+  const offsetX = Number.isFinite(pageSettings?.canvas?.offsetX) ? pageSettings.canvas.offsetX : 0;
+  const offsetY = Number.isFinite(pageSettings?.canvas?.offsetY) ? pageSettings.canvas.offsetY : 0;
+  main.style.transformOrigin = "top center";
+  main.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+};
+
 const applySiteSettings = (settings = {}) => {
   const root = document.documentElement;
   const layout = settings.layout || {};
@@ -102,6 +171,12 @@ const applySiteSettings = (settings = {}) => {
   }
 
   applyStickerSettings(settings.stickers);
+
+  const pageKey = resolvePageKey();
+  ensureAdminIds();
+  const pageSettings = settings.layoutEditor?.pages?.[pageKey];
+  applyCanvasOverrides(pageSettings);
+  applyElementOverrides(pageSettings);
 };
 
 const loadSiteSettings = async () => {

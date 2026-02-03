@@ -196,6 +196,98 @@
           </div>
         </form>
       </section>
+
+      <section class="panel layout-studio" id="layoutStudioPanel" hidden>
+        <div class="panel-header">
+          <div>
+            <h2>Layout studio</h2>
+            <p class="muted">Simulate every page, drag buttons/menus, and resize page canvas.</p>
+          </div>
+          <div class="form-row compact">
+            <label>
+              Page
+              <select id="layoutPageSelect">
+                <option value="home">Home</option>
+                <option value="text-to-speech">Text to speech</option>
+                <option value="voices">Voices</option>
+                <option value="about">About</option>
+                <option value="pricing">Pricing</option>
+                <option value="credits">Credits</option>
+                <option value="how-it-works">How it works</option>
+              </select>
+            </label>
+            <button class="btn" id="layoutResetPageBtn" type="button">Reset page</button>
+          </div>
+        </div>
+
+        <div class="layout-studio-body">
+          <div class="layout-controls">
+            <div class="settings-block">
+              <h3>Canvas</h3>
+              <label>
+                Scale
+                <input id="layoutScale" type="number" min="0.6" max="1.4" step="0.05" />
+              </label>
+              <label>
+                Offset X (px)
+                <input id="layoutOffsetX" type="number" min="-200" max="200" step="4" />
+              </label>
+              <label>
+                Offset Y (px)
+                <input id="layoutOffsetY" type="number" min="-200" max="200" step="4" />
+              </label>
+            </div>
+
+            <div class="settings-block">
+              <h3>Selected element</h3>
+              <p class="muted" id="layoutElementHint">Click a button or menu inside the preview.</p>
+              <label>
+                X (px)
+                <input id="layoutElementX" type="number" min="-320" max="320" step="2" />
+              </label>
+              <label>
+                Y (px)
+                <input id="layoutElementY" type="number" min="-320" max="320" step="2" />
+              </label>
+              <label>
+                Width (px)
+                <input id="layoutElementWidth" type="number" min="24" max="1400" step="4" />
+              </label>
+              <label>
+                Height (px)
+                <input id="layoutElementHeight" type="number" min="24" max="1400" step="4" />
+              </label>
+              <button class="btn ghost" id="layoutResetElementBtn" type="button">Reset element</button>
+            </div>
+
+            <div class="settings-block">
+              <h3>Preview frame</h3>
+              <label>
+                Width (px)
+                <input id="layoutFrameWidth" type="number" min="320" max="1600" step="10" />
+              </label>
+              <label>
+                Height (px)
+                <input id="layoutFrameHeight" type="number" min="420" max="1200" step="10" />
+              </label>
+              <div class="form-row">
+                <button class="btn primary" id="layoutSaveBtn" type="button">Save layout</button>
+                <span class="muted" id="layoutStatus" role="status"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="layout-preview">
+            <div class="layout-preview-toolbar">
+              <span class="muted">Interactive preview</span>
+              <button class="btn ghost" id="layoutRefreshBtn" type="button">Reload preview</button>
+            </div>
+            <div class="layout-frame" id="layoutFrameWrap">
+              <iframe id="layoutFrame" title="Site preview"></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script src="adminmain.js"></script>
