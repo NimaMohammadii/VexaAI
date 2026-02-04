@@ -1905,12 +1905,22 @@ select {
   gap: 8px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .mic-button:active,
+.mic-button.is-pressed,
 .mic-button.is-recording {
   transform: scale(0.98);
   box-shadow: 0 10px 26px rgba(143, 146, 255, 0.3);
+}
+
+.no-text-select,
+.no-text-select * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .mic-icon {

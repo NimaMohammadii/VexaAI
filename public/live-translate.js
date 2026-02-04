@@ -11,6 +11,8 @@ let mediaRecorder = null;
 let activeStream = null;
 let audioChunks = [];
 let isProcessing = false;
+let isPressing = false;
+let recordingMimeType = "";
 
 const setStatus = (message, { loading = false } = {}) => {
   if (!liveStatus) {
@@ -26,6 +28,14 @@ const setButtonState = (state) => {
   }
   micButton.classList.toggle("is-recording", state === "recording");
   micButton.disabled = state === "processing";
+};
+
+const setPressedState = (pressed) => {
+  if (!micButton) {
+    return;
+  }
+  micButton.classList.toggle("is-pressed", pressed);
+  document.body?.classList.toggle("no-text-select", pressed);
 };
 
 const resetAudio = () => {
@@ -66,20 +76,55 @@ const stopRecording = () => {
   setStatus("Processing...", { loading: true });
 };
 
-const getMediaRecorder = async () => {
+const pickSupportedMimeType = () => {
+  if (!window.MediaRecorder) {
+    return "";
+  }
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/mpeg",
+  ];
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+};
+
+const requestMicrophoneStream = () => {
   if (activeStream) {
-    return new MediaRecorder(activeStream);
+    return Promise.resolve(activeStream);
   }
   if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error("Microphone access is not supported in this browser.");
+    return Promise.reject(
+      new Error("Microphone access is not supported in this browser.")
+    );
   }
-  activeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  return new MediaRecorder(activeStream);
+  return navigator.mediaDevices.getUserMedia({ audio: true });
+};
+
+const createMediaRecorder = (stream) => {
+  if (!window.MediaRecorder) {
+    throw new Error("Recording is not supported in this browser.");
+  }
+  recordingMimeType = pickSupportedMimeType();
+  return new MediaRecorder(
+    stream,
+    recordingMimeType ? { mimeType: recordingMimeType } : undefined
+  );
+};
+
+const getRecordingFilename = () => {
+  if (recordingMimeType.includes("mp4")) {
+    return "recording.mp4";
+  }
+  if (recordingMimeType.includes("mpeg")) {
+    return "recording.mp3";
+  }
+  return "recording.webm";
 };
 
 const sendToBackend = async (audioBlob) => {
   const formData = new FormData();
-  formData.append("audio", audioBlob, "recording.webm");
+  formData.append("audio", audioBlob, getRecordingFilename());
   formData.append("sourceLanguage", sourceLanguage?.value || "en-US");
   formData.append("targetLanguage", targetLanguage?.value || "es-ES");
 
@@ -127,14 +172,27 @@ const processAudio = async (audioBlob) => {
 };
 
 const handlePointerDown = async (event) => {
-  event.preventDefault();
-  if (!micButton || isProcessing) {
+  if (event.type === "touchstart" && window.PointerEvent) {
     return;
   }
+  event.preventDefault();
+  if (!micButton || isProcessing || isPressing) {
+    return;
+  }
+  isPressing = true;
+  setPressedState(true);
+  if (event.pointerId != null && micButton.setPointerCapture) {
+    micButton.setPointerCapture(event.pointerId);
+  }
+
+  const streamPromise = requestMicrophoneStream();
   try {
-    mediaRecorder = await getMediaRecorder();
+    const stream = await streamPromise;
+    mediaRecorder = createMediaRecorder(stream);
   } catch (error) {
     setStatus("Microphone access is unavailable.");
+    setPressedState(false);
+    isPressing = false;
     return;
   }
 
@@ -147,7 +205,9 @@ const handlePointerDown = async (event) => {
   mediaRecorder.addEventListener(
     "stop",
     () => {
-      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+      const audioBlob = new Blob(audioChunks, {
+        type: recordingMimeType || "audio/webm",
+      });
       processAudio(audioBlob);
     },
     { once: true }
@@ -159,7 +219,15 @@ const handlePointerDown = async (event) => {
 };
 
 const handlePointerUp = (event) => {
+  if (event.type === "touchend" && window.PointerEvent) {
+    return;
+  }
   event.preventDefault();
+  if (!isPressing) {
+    return;
+  }
+  isPressing = false;
+  setPressedState(false);
   stopRecording();
 };
 
@@ -168,6 +236,9 @@ if (micButton) {
   micButton.addEventListener("pointerup", handlePointerUp);
   micButton.addEventListener("pointerleave", handlePointerUp);
   micButton.addEventListener("pointercancel", handlePointerUp);
+  micButton.addEventListener("touchstart", handlePointerDown, { passive: false });
+  micButton.addEventListener("touchend", handlePointerUp, { passive: false });
+  micButton.addEventListener("touchcancel", handlePointerUp, { passive: false });
 }
 
 window.addEventListener("beforeunload", () => {
