@@ -293,7 +293,9 @@ a {
   min-height: calc(100dvh - var(--tts-topbar-height));
   height: calc(100dvh - var(--tts-topbar-height));
   flex: 1;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .tts-topbar {
