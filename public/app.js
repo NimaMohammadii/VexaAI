@@ -556,7 +556,7 @@ const handleChatSubmit = async (event) => {
   addToChatHistory("user", message);
   vexaChatInput.value = "";
   vexaChatInput.focus();
-  setChatStatus("در حال اتصال به GPT-4o mini...");
+  setChatStatus("Connecting to GPT-4o mini...");
   if (vexaChatSubmit) {
     vexaChatSubmit.disabled = true;
   }
@@ -575,16 +575,16 @@ const handleChatSubmit = async (event) => {
       throw new Error(errorPayload.error || "Chat request failed.");
     }
     const data = await response.json();
-    const reply = data?.message || "پاسخی دریافت نشد. دوباره تلاش کن.";
+    const reply = data?.message || "No response received. Please try again.";
     appendChatMessage(reply, "assistant");
     addToChatHistory("assistant", reply);
-    setChatStatus("آماده برای گفتگو");
+    setChatStatus("Ready to chat");
   } catch (error) {
     appendChatMessage(
-      "متاسفانه الان به GPT وصل نیستم. دوباره تلاش کن یا بعداً برگردیم.",
+      "Sorry, I can't reach GPT right now. Please try again or come back later.",
       "assistant"
     );
-    setChatStatus("مشکل اتصال به سرور");
+    setChatStatus("Server connection issue");
   } finally {
     if (vexaChatSubmit) {
       vexaChatSubmit.disabled = false;
