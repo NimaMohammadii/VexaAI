@@ -20,6 +20,11 @@ const creditsAvailable = document.getElementById("creditsAvailable");
 const creditsRemaining = document.getElementById("creditsRemaining");
 const creditsTotal = document.getElementById("creditsTotal");
 const creditsFill = document.getElementById("creditsFill");
+const vexaChatForm = document.querySelector(".vexa-chat-input");
+const vexaChatInput = document.getElementById("vexaMessage");
+const vexaChatWindow = document.querySelector(".vexa-chat-window");
+const vexaChatStatus = document.getElementById("vexaChatStatus");
+const vexaChatSubmit = document.getElementById("vexaChatSubmit");
 
 const maxChars = textInput ? Number(textInput.getAttribute("maxlength")) || 1000 : 0;
 let currentVoice = window.VEXA_SELECTED_VOICE || "Rachel";
@@ -505,6 +510,88 @@ const toggleMenu = () => {
   }
 };
 
+const chatHistory = [];
+
+const setChatStatus = (message) => {
+  if (!vexaChatStatus) {
+    return;
+  }
+  vexaChatStatus.textContent = message;
+};
+
+const appendChatMessage = (content, role = "assistant") => {
+  if (!vexaChatWindow) {
+    return;
+  }
+  const wrapper = document.createElement("div");
+  wrapper.className = `vexa-chat-message ${role === "user" ? "is-user" : "is-vexa"}`;
+  wrapper.dataset.role = role;
+
+  const text = document.createElement("p");
+  text.textContent = content;
+  wrapper.appendChild(text);
+
+  vexaChatWindow.appendChild(wrapper);
+  vexaChatWindow.scrollTop = vexaChatWindow.scrollHeight;
+};
+
+const addToChatHistory = (role, content) => {
+  chatHistory.push({ role, content });
+  if (chatHistory.length > 12) {
+    chatHistory.shift();
+  }
+};
+
+const handleChatSubmit = async (event) => {
+  if (!vexaChatInput || !vexaChatForm) {
+    return;
+  }
+  event.preventDefault();
+  const message = vexaChatInput.value.trim();
+  if (!message) {
+    return;
+  }
+
+  appendChatMessage(message, "user");
+  addToChatHistory("user", message);
+  vexaChatInput.value = "";
+  vexaChatInput.focus();
+  setChatStatus("در حال اتصال به GPT-4o mini...");
+  if (vexaChatSubmit) {
+    vexaChatSubmit.disabled = true;
+  }
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        history: chatHistory,
+      }),
+    });
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => ({}));
+      throw new Error(errorPayload.error || "Chat request failed.");
+    }
+    const data = await response.json();
+    const reply = data?.message || "پاسخی دریافت نشد. دوباره تلاش کن.";
+    appendChatMessage(reply, "assistant");
+    addToChatHistory("assistant", reply);
+    setChatStatus("آماده برای گفتگو");
+  } catch (error) {
+    appendChatMessage(
+      "متاسفانه الان به GPT وصل نیستم. دوباره تلاش کن یا بعداً برگردیم.",
+      "assistant"
+    );
+    setChatStatus("مشکل اتصال به سرور");
+  } finally {
+    if (vexaChatSubmit) {
+      vexaChatSubmit.disabled = false;
+    }
+  }
+};
+
 if (textInput) {
   textInput.addEventListener("input", updateCharCount);
 }
@@ -547,6 +634,9 @@ if (menuClose) {
 }
 if (menuOverlay) {
   menuOverlay.addEventListener("click", closeMenu);
+}
+if (vexaChatForm) {
+  vexaChatForm.addEventListener("submit", handleChatSubmit);
 }
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {

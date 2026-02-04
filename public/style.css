@@ -880,6 +880,16 @@ a {
   gap: 18px;
 }
 
+.vexa-chat-section.is-fullscreen {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  margin: 24px 0 0;
+  padding: 32px clamp(18px, 4vw, 48px);
+  border-radius: 28px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+}
+
 .vexa-chat-header {
   display: flex;
   align-items: center;
@@ -890,6 +900,19 @@ a {
 .vexa-chat-header h2 {
   margin: 6px 0 0;
   font-size: clamp(1.2rem, 3vw, 1.6rem);
+}
+
+.vexa-chat-subtitle {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.vexa-chat-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .vexa-chat-badge {
@@ -903,6 +926,17 @@ a {
   letter-spacing: 0.12em;
 }
 
+.vexa-chat-model {
+  background: rgba(143, 146, 255, 0.18);
+  color: #c7c9ff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .vexa-chat-window {
   background: rgba(12, 13, 16, 0.7);
   border-radius: 20px;
@@ -911,6 +945,9 @@ a {
   flex-direction: column;
   gap: 12px;
   min-height: 220px;
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 .vexa-chat-message {
@@ -940,6 +977,12 @@ a {
   align-items: stretch;
 }
 
+.vexa-chat-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
 .vexa-chat-input textarea {
   flex: 1;
   resize: vertical;
@@ -961,6 +1004,11 @@ a {
   font-weight: 600;
   cursor: pointer;
   min-width: 110px;
+}
+
+.vexa-chat-input button:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .vexa-chat-input button:hover {
@@ -1627,6 +1675,12 @@ select {
   .vexa-chat-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .vexa-chat-meta {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .vexa-chat-input {

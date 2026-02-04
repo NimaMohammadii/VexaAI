@@ -356,6 +356,64 @@ app.post("/api/users/heartbeat", (req, res) => {
   return res.json({ success: true });
 });
 
+app.post("/api/chat", async (req, res) => {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "Server API key is missing." });
+    }
+
+    const { message, history = [] } = req.body || {};
+    const userMessage = typeof message === "string" ? message.trim() : "";
+    if (!userMessage) {
+      return res.status(400).json({ error: "Message is required." });
+    }
+
+    const safeHistory = Array.isArray(history)
+      ? history
+          .slice(-10)
+          .map((item) => ({
+            role: item?.role === "user" ? "user" : "assistant",
+            content: typeof item?.content === "string" ? item.content.slice(0, 800) : "",
+          }))
+          .filter((item) => item.content)
+      : [];
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are Vexa, a stylish Persian-speaking assistant for audio creators. Be concise, creative, and helpful.",
+          },
+          ...safeHistory,
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.7,
+        max_tokens: 300,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(500).json({ error: errorText || "Chat request failed." });
+    }
+
+    const data = await response.json();
+    const reply = data?.choices?.[0]?.message?.content?.trim();
+    return res.json({ message: reply || "پاسخی دریافت نشد." });
+  } catch (error) {
+    return res.status(500).json({ error: "Unexpected server error." });
+  }
+});
+
 app.post("/api/admin/login", (req, res) => {
   const { key } = req.body;
   const adminKey = process.env.ADMIN_KEY;
