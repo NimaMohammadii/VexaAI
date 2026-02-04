@@ -553,14 +553,14 @@ a {
   width: min(480px, 100%);
   justify-content: center;
   font-size: clamp(0.9rem, 2.4vw, 1rem);
-  padding: clamp(12px, 2.8vw, 16px) clamp(18px, 4vw, 26px);
-  border-radius: 10px;
+  padding: clamp(8px, 2.4vw, 12px) clamp(16px, 3.6vw, 22px);
+  border-radius: 6px;
   background: linear-gradient(135deg, rgba(105, 110, 255, 0.85), rgba(88, 94, 235, 0.92));
   color: rgba(248, 249, 255, 0.96);
   box-shadow: 0 6px 12px rgba(73, 80, 216, 0.2);
   letter-spacing: 0.01em;
   font-weight: 700;
-  min-height: 48px;
+  min-height: 42px;
   transition: box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
@@ -590,7 +590,7 @@ a {
   padding: 0 6px;
   margin-top: auto;
   position: sticky;
-  bottom: calc(var(--tts-bottom-safe) + 40px);
+  bottom: calc(var(--tts-bottom-safe) + 56px);
   z-index: 5;
   width: 100%;
 }
@@ -848,7 +848,7 @@ a {
   .tts-actions {
     justify-content: center;
     padding-left: 0;
-    bottom: calc(var(--tts-bottom-safe) + 22px);
+    bottom: calc(var(--tts-bottom-safe) + 32px);
   }
 
   .player {
