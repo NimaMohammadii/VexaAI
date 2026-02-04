@@ -6,7 +6,7 @@
     <title>Vexa AI Voice Studio | Vexa Assistant</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body dir="ltr" data-theme="dark">
+  <body dir="ltr" data-theme="dark" class="assistant-body">
     <div class="menu-overlay" id="menuOverlay" hidden></div>
     <aside class="side-menu" id="sideMenu" aria-hidden="true">
       <div class="side-menu-header">
@@ -29,19 +29,22 @@
       </div>
     </aside>
 
-    <main class="home assistant-page">
-      <div class="menu-bar">
-        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
-          ☰ <span>Vexa Assistant</span>
+    <main class="assistant-page">
+      <header class="assistant-topbar">
+        <div class="assistant-title-wrap">
+          <span class="assistant-title">Vexa Assistant</span>
+        </div>
+        <button class="menu-toggle assistant-menu-btn" id="menuToggle" type="button" aria-expanded="false">
+          ☰ <span>Menu</span>
         </button>
-      </div>
+      </header>
       <section class="vexa-chat-section is-fullscreen" aria-label="Chat with Vexa">
         <div class="vexa-chat-header">
           <div>
             <p class="home-label">Assistant</p>
             <h2>Chat with Vexa Assistant</h2>
             <p class="vexa-chat-subtitle">
-              Smart chat with GPT-4o mini for scripting, brainstorming, and tone tuning.
+              Smart chat for scripting, brainstorming, and tone tuning. Replies match your language.
             </p>
           </div>
           <div class="vexa-chat-meta">
@@ -50,20 +53,26 @@
           </div>
         </div>
         <div class="vexa-chat-window" role="log" aria-live="polite">
-          <div class="vexa-chat-message is-vexa" data-role="assistant">
-            <p>Hi! How can I help with your script or voice today?</p>
+          <div class="vexa-chat-message is-vexa" data-role="assistant" dir="auto">
+            <p dir="auto">Hi! I can reply in the same language you use. How can I help today?</p>
           </div>
-          <div class="vexa-chat-message is-user" data-role="user">
-            <p>I need an idea for introducing my new podcast.</p>
+          <div class="vexa-chat-message is-user" data-role="user" dir="auto">
+            <p dir="auto">I need an idea for introducing my new podcast.</p>
           </div>
-          <div class="vexa-chat-message is-vexa" data-role="assistant">
-            <p>Great! Share the podcast topic and vibe so we can get started.</p>
+          <div class="vexa-chat-message is-vexa" data-role="assistant" dir="auto">
+            <p dir="auto">Great! Share the podcast topic and vibe so we can get started.</p>
           </div>
         </div>
         <div class="vexa-chat-status" id="vexaChatStatus" aria-live="polite">Ready to chat</div>
         <form class="vexa-chat-input" action="#" aria-label="Send message to Vexa">
           <label class="sr-only" for="vexaMessage">Message</label>
-          <textarea id="vexaMessage" name="message" rows="2" placeholder="Write your message..."></textarea>
+          <textarea
+            id="vexaMessage"
+            name="message"
+            rows="2"
+            placeholder="Write your message... (reply matches your language)"
+            dir="auto"
+          ></textarea>
           <button type="submit" id="vexaChatSubmit">Send</button>
         </form>
       </section>

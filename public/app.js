@@ -552,9 +552,11 @@ const appendChatMessage = (content, role = "assistant") => {
   const wrapper = document.createElement("div");
   wrapper.className = `vexa-chat-message ${role === "user" ? "is-user" : "is-vexa"}`;
   wrapper.dataset.role = role;
+  wrapper.setAttribute("dir", "auto");
 
   const text = document.createElement("p");
   text.textContent = content;
+  text.setAttribute("dir", "auto");
   wrapper.appendChild(text);
 
   vexaChatWindow.appendChild(wrapper);
