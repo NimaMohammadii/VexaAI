@@ -74,6 +74,7 @@ const applyStickerSettings = (stickers = {}) => {
 const pageKeyMap = {
   "index.html": "home",
   "text-to-speech.html": "text-to-speech",
+  "live-translate.html": "live-translate",
   "vexa-assistant.html": "vexa-assistant",
   "voices.html": "voices",
   "about.html": "about",
