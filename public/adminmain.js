@@ -15,6 +15,7 @@ const resetSettingsBtn = document.getElementById("resetSettingsBtn");
 const pageMaxWidthInput = document.getElementById("pageMaxWidth");
 const homeGridMaxWidthInput = document.getElementById("homeGridMaxWidth");
 const ttsMaxWidthInput = document.getElementById("ttsMaxWidth");
+const gnOffsetInput = document.getElementById("gnOffset");
 const bgColorInput = document.getElementById("bgColor");
 const bgAltColorInput = document.getElementById("bgAltColor");
 const surfaceColorInput = document.getElementById("surfaceColor");
@@ -485,6 +486,7 @@ const populateSettingsForm = (settings) => {
   if (pageMaxWidthInput) pageMaxWidthInput.value = settings.layout.pageMaxWidth;
   if (homeGridMaxWidthInput) homeGridMaxWidthInput.value = settings.layout.homeGridMaxWidth;
   if (ttsMaxWidthInput) ttsMaxWidthInput.value = settings.layout.ttsMaxWidth;
+  if (gnOffsetInput) gnOffsetInput.value = settings.layout.gn;
   if (bgColorInput) bgColorInput.value = settings.colors.bg;
   if (bgAltColorInput) bgAltColorInput.value = settings.colors.bgAlt;
   if (surfaceColorInput) surfaceColorInput.value = settings.colors.surface;
@@ -620,6 +622,7 @@ if (siteSettingsForm) {
         pageMaxWidth: readNumber(pageMaxWidthInput),
         homeGridMaxWidth: readNumber(homeGridMaxWidthInput),
         ttsMaxWidth: readNumber(ttsMaxWidthInput),
+        gn: readNumber(gnOffsetInput),
       },
       colors: {
         bg: bgColorInput?.value,

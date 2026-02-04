@@ -155,6 +155,9 @@ const applySiteSettings = (settings = {}) => {
   if (layout.homeGridMaxWidth) {
     root.style.setProperty("--home-grid-max-width", `${layout.homeGridMaxWidth}px`);
   }
+  if (Number.isFinite(layout.gn)) {
+    root.style.setProperty("--tts-gn-offset", `${layout.gn}px`);
+  }
 
   if (colors.bg) {
     root.style.setProperty("--bg", colors.bg);
