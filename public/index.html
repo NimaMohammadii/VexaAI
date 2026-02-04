@@ -69,29 +69,36 @@
           <p>Learn how Vexa AI helps you ship audio fast.</p>
         </a>
       </section>
-      <section class="vexa-chat-section" id="vexa-assistant" aria-label="Chat with Vexa">
+      <section class="vexa-chat-section is-fullscreen" id="vexa-assistant" aria-label="Chat with Vexa">
         <div class="vexa-chat-header">
           <div>
             <p class="home-label">Assistant</p>
             <h2>گفتگو با دستیار Vexa</h2>
+            <p class="vexa-chat-subtitle">
+              چت هوشمند با GPT-4o mini برای ساخت سناریو، ایده‌پردازی و تنظیم لحن.
+            </p>
           </div>
-          <span class="vexa-chat-badge">Online</span>
+          <div class="vexa-chat-meta">
+            <span class="vexa-chat-badge">Online</span>
+            <span class="vexa-chat-model" id="vexaModelLabel">GPT-4o mini</span>
+          </div>
         </div>
         <div class="vexa-chat-window" role="log" aria-live="polite">
-          <div class="vexa-chat-message is-vexa">
+          <div class="vexa-chat-message is-vexa" data-role="assistant">
             <p>سلام! چطور می‌تونم در ساخت متن یا صدای شما کمک کنم؟</p>
           </div>
-          <div class="vexa-chat-message is-user">
+          <div class="vexa-chat-message is-user" data-role="user">
             <p>یک ایده برای معرفی پادکست جدیدم می‌خوام.</p>
           </div>
-          <div class="vexa-chat-message is-vexa">
+          <div class="vexa-chat-message is-vexa" data-role="assistant">
             <p>عالیه! موضوع پادکست و حال‌وهوای صدا رو برام توضیح بده تا شروع کنیم.</p>
           </div>
         </div>
+        <div class="vexa-chat-status" id="vexaChatStatus" aria-live="polite">آماده برای گفتگو</div>
         <form class="vexa-chat-input" action="#" aria-label="Send message to Vexa">
           <label class="sr-only" for="vexaMessage">Message</label>
           <textarea id="vexaMessage" name="message" rows="2" placeholder="پیام خود را بنویسید..."></textarea>
-          <button type="submit">ارسال</button>
+          <button type="submit" id="vexaChatSubmit">ارسال</button>
         </form>
       </section>
     </main>
