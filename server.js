@@ -19,6 +19,7 @@ const defaultSiteSettings = {
     pageMaxWidth: 1120,
     ttsMaxWidth: 1200,
     homeGridMaxWidth: 1100,
+    gn: 0,
   },
   colors: {
     bg: "#0b0c0f",
@@ -145,6 +146,7 @@ const sanitizeSettings = (raw) => {
         1600,
         defaultSiteSettings.layout.homeGridMaxWidth
       ),
+      gn: clampNumber(layout.gn, -40, 140, defaultSiteSettings.layout.gn),
     },
     colors: {
       bg: sanitizeString(colors.bg, defaultSiteSettings.colors.bg),
