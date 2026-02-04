@@ -23,7 +23,7 @@
         <p class="side-menu-title">Menu</p>
         <a class="menu-link is-active" href="index.html">Home</a>
         <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
-        <a class="menu-link" href="#vexa-assistant">Vexa Assistant</a>
+        <a class="menu-link" href="vexa-assistant.html">Vexa Assistant</a>
         <a class="menu-link" href="voices.html">Voices</a>
         <a class="menu-link" href="about.html">About</a>
       </div>
@@ -44,7 +44,7 @@
           <h2>Text to Speech</h2>
           <p>Generate instant voice from any script.</p>
         </a>
-        <a class="home-card" href="#vexa-assistant">
+        <a class="home-card" href="vexa-assistant.html">
           <div class="home-card-icon" data-sticker-key="homeAssistant">
             <span class="sticker-fallback" aria-hidden="true">💬</span>
             <img class="sticker-image" alt="Vexa assistant sticker" />
@@ -68,38 +68,6 @@
           <h2>About</h2>
           <p>Learn how Vexa AI helps you ship audio fast.</p>
         </a>
-      </section>
-      <section class="vexa-chat-section is-fullscreen" id="vexa-assistant" aria-label="Chat with Vexa">
-        <div class="vexa-chat-header">
-          <div>
-            <p class="home-label">Assistant</p>
-            <h2>Chat with Vexa Assistant</h2>
-            <p class="vexa-chat-subtitle">
-              Smart chat with GPT-4o mini for scripting, brainstorming, and tone tuning.
-            </p>
-          </div>
-          <div class="vexa-chat-meta">
-            <span class="vexa-chat-badge">Online</span>
-            <span class="vexa-chat-model" id="vexaModelLabel">GPT-4o mini</span>
-          </div>
-        </div>
-        <div class="vexa-chat-window" role="log" aria-live="polite">
-          <div class="vexa-chat-message is-vexa" data-role="assistant">
-            <p>Hi! How can I help with your script or voice today?</p>
-          </div>
-          <div class="vexa-chat-message is-user" data-role="user">
-            <p>I need an idea for introducing my new podcast.</p>
-          </div>
-          <div class="vexa-chat-message is-vexa" data-role="assistant">
-            <p>Great! Share the podcast topic and vibe so we can get started.</p>
-          </div>
-        </div>
-        <div class="vexa-chat-status" id="vexaChatStatus" aria-live="polite">Ready to chat</div>
-        <form class="vexa-chat-input" action="#" aria-label="Send message to Vexa">
-          <label class="sr-only" for="vexaMessage">Message</label>
-          <textarea id="vexaMessage" name="message" rows="2" placeholder="Write your message..."></textarea>
-          <button type="submit" id="vexaChatSubmit">Send</button>
-        </form>
       </section>
     </main>
 
