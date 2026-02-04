@@ -541,22 +541,22 @@ a {
 .player {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   padding-left: 6px;
-  position: fixed;
-  left: 50%;
-  bottom: calc(var(--tts-bottom-safe) + 52px);
-  transform: translate(-50%, 32px) scale(0.92);
+  align-self: flex-end;
+  position: relative;
+  margin-bottom: 6px;
+  transform: translateY(10px) scale(0.95);
   opacity: 0;
   pointer-events: none;
   transition: transform 1.2s ease, opacity 1.2s ease;
-  width: min(360px, calc(100% - 32px));
-  z-index: 20;
+  width: min(280px, calc(100% - 32px));
+  z-index: 5;
 }
 
 .player.is-visible {
   opacity: 1;
-  transform: translate(-50%, 0) scale(1);
+  transform: translateY(0) scale(1);
   pointer-events: auto;
 }
 
@@ -564,16 +564,16 @@ a {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 8px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .audio-play {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.08);
@@ -591,30 +591,30 @@ a {
 .audio-wave {
   display: grid;
   grid-auto-flow: column;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
 }
 
 .audio-wave span {
-  width: 4px;
-  height: 18px;
+  width: 3px;
+  height: 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.3);
   animation: wave 1.2s ease-in-out infinite;
 }
 
 .audio-wave span:nth-child(2) {
-  height: 26px;
+  height: 18px;
   animation-delay: 0.1s;
 }
 
 .audio-wave span:nth-child(3) {
-  height: 34px;
+  height: 24px;
   animation-delay: 0.2s;
 }
 
 .audio-wave span:nth-child(4) {
-  height: 22px;
+  height: 16px;
   animation-delay: 0.3s;
 }
 
@@ -796,7 +796,7 @@ a {
 
   .player {
     padding-left: 0;
-    bottom: calc(var(--tts-bottom-safe) + 48px);
+    width: min(260px, calc(100% - 24px));
   }
 
   .audio-output {
