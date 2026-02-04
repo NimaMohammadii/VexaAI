@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vexa AI Voice Studio | Vexa Assistant</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body dir="ltr" data-theme="dark">
+    <div class="menu-overlay" id="menuOverlay" hidden></div>
+    <aside class="side-menu" id="sideMenu" aria-hidden="true">
+      <div class="side-menu-header">
+        <div class="side-menu-brand">
+          <span class="home-icon" aria-hidden="true">▢</span>
+          <span>VexaAI</span>
+        </div>
+        <button class="icon-btn menu-close" id="menuClose" type="button" aria-label="Close menu">
+          ✕
+        </button>
+      </div>
+
+      <div class="side-menu-section">
+        <p class="side-menu-title">Menu</p>
+        <a class="menu-link" href="index.html">Home</a>
+        <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
+        <a class="menu-link is-active" href="vexa-assistant.html">Vexa Assistant</a>
+        <a class="menu-link" href="voices.html">Voices</a>
+        <a class="menu-link" href="about.html">About</a>
+      </div>
+    </aside>
+
+    <main class="home assistant-page">
+      <div class="menu-bar">
+        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">
+          ☰ <span>Vexa Assistant</span>
+        </button>
+      </div>
+      <section class="vexa-chat-section is-fullscreen" aria-label="Chat with Vexa">
+        <div class="vexa-chat-header">
+          <div>
+            <p class="home-label">Assistant</p>
+            <h2>Chat with Vexa Assistant</h2>
+            <p class="vexa-chat-subtitle">
+              Smart chat with GPT-4o mini for scripting, brainstorming, and tone tuning.
+            </p>
+          </div>
+          <div class="vexa-chat-meta">
+            <span class="vexa-chat-badge">Online</span>
+            <span class="vexa-chat-model" id="vexaModelLabel">GPT-4o mini</span>
+          </div>
+        </div>
+        <div class="vexa-chat-window" role="log" aria-live="polite">
+          <div class="vexa-chat-message is-vexa" data-role="assistant">
+            <p>Hi! How can I help with your script or voice today?</p>
+          </div>
+          <div class="vexa-chat-message is-user" data-role="user">
+            <p>I need an idea for introducing my new podcast.</p>
+          </div>
+          <div class="vexa-chat-message is-vexa" data-role="assistant">
+            <p>Great! Share the podcast topic and vibe so we can get started.</p>
+          </div>
+        </div>
+        <div class="vexa-chat-status" id="vexaChatStatus" aria-live="polite">Ready to chat</div>
+        <form class="vexa-chat-input" action="#" aria-label="Send message to Vexa">
+          <label class="sr-only" for="vexaMessage">Message</label>
+          <textarea id="vexaMessage" name="message" rows="2" placeholder="Write your message..."></textarea>
+          <button type="submit" id="vexaChatSubmit">Send</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
