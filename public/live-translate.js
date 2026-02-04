@@ -42,6 +42,21 @@ const ensureSecureMicrophoneContext = () => {
   return true;
 };
 
+const getMicrophonePermissionState = async () => {
+  if (!navigator.permissions?.query) {
+    return "unknown";
+  }
+  try {
+    const permissionStatus = await navigator.permissions.query({
+      name: "microphone",
+    });
+    return permissionStatus.state;
+  } catch (error) {
+    console.warn("Microphone permission query failed:", error);
+    return "unknown";
+  }
+};
+
 const logMicrophoneError = (error) => {
   const name = error?.name || "UnknownError";
   const message = error?.message || "Unknown error.";
@@ -57,7 +72,7 @@ const stopActiveStream = () => {
   activeStream = null;
 };
 
-const handlePointerDown = (event) => {
+const handlePointerDown = async (event) => {
   if (event.type === "touchstart" && window.PointerEvent) {
     return;
   }
@@ -76,6 +91,17 @@ const handlePointerDown = (event) => {
     return;
   }
 
+  const permissionState = await getMicrophonePermissionState();
+  if (permissionState === "denied") {
+    setStatus(
+      "Microphone access is blocked. Allow microphone permission in your browser settings and try again."
+    );
+    setPressedState(false);
+    isPressing = false;
+    return;
+  }
+
+  setStatus("Requesting microphone access...", { loading: true });
   const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
   streamPromise
     .then((stream) => {
@@ -106,10 +132,16 @@ const handlePointerUp = (event) => {
 };
 
 if (micButton) {
-  micButton.addEventListener("pointerdown", handlePointerDown);
-  micButton.addEventListener("pointerup", handlePointerUp);
-  micButton.addEventListener("pointerleave", handlePointerUp);
-  micButton.addEventListener("pointercancel", handlePointerUp);
+  if (window.PointerEvent) {
+    micButton.addEventListener("pointerdown", handlePointerDown);
+    micButton.addEventListener("pointerup", handlePointerUp);
+    micButton.addEventListener("pointerleave", handlePointerUp);
+    micButton.addEventListener("pointercancel", handlePointerUp);
+  } else {
+    micButton.addEventListener("mousedown", handlePointerDown);
+    micButton.addEventListener("mouseup", handlePointerUp);
+    micButton.addEventListener("mouseleave", handlePointerUp);
+  }
   micButton.addEventListener("touchstart", handlePointerDown, { passive: false });
   micButton.addEventListener("touchend", handlePointerUp, { passive: false });
   micButton.addEventListener("touchcancel", handlePointerUp, { passive: false });
