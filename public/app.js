@@ -37,6 +37,25 @@ let currentCredits = null;
 let totalCredits = null;
 const historyEntries = [];
 
+const showPlayer = () => {
+  if (!playerWrap) {
+    return;
+  }
+  playerWrap.hidden = false;
+  playerWrap.classList.remove("is-visible");
+  requestAnimationFrame(() => {
+    playerWrap.classList.add("is-visible");
+  });
+};
+
+const hidePlayer = () => {
+  if (!playerWrap) {
+    return;
+  }
+  playerWrap.classList.remove("is-visible");
+  playerWrap.hidden = true;
+};
+
 const applyStickerSettings = (stickers = {}) => {
   const stickerSlots = document.querySelectorAll("[data-sticker-key]");
   stickerSlots.forEach((slot) => {
@@ -320,7 +339,7 @@ const updateCharCount = () => {
     setStatus("");
   }
   if (playerWrap && !playerWrap.hidden) {
-    playerWrap.hidden = true;
+    hidePlayer();
   }
   if (audioPlayer && !audioPlayer.paused) {
     audioPlayer.pause();
@@ -424,7 +443,7 @@ const handleGenerate = async () => {
   setStatus("Generating your voice...", { isLoading: true });
   toggleLoading(true);
   if (playerWrap) {
-    playerWrap.hidden = true;
+    hidePlayer();
   }
   if (audioPlay) {
     audioPlay.classList.remove("is-playing");
@@ -462,7 +481,7 @@ const handleGenerate = async () => {
       audioDownload.href = audioUrl;
     }
     if (playerWrap) {
-      playerWrap.hidden = false;
+      showPlayer();
     }
     updateCharCount();
     setStatus("Your audio is ready.");
