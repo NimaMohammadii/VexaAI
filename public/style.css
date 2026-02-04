@@ -290,12 +290,10 @@ a {
   flex-direction: column;
   gap: 12px;
   position: relative;
-  min-height: calc(100dvh - var(--tts-topbar-height));
   height: calc(100dvh - var(--tts-topbar-height));
   flex: 1;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tts-topbar {
@@ -483,12 +481,13 @@ a {
   padding: 4px 0 0;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: clamp(160px, 32dvh, 320px);
+  flex: 1 1 clamp(160px, 32dvh, 320px);
+  min-height: 0;
 }
 
 .tts-editor textarea {
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   flex: 1;
   border: none;
   padding: 0;
@@ -497,6 +496,7 @@ a {
   resize: none;
   font-size: clamp(0.85rem, 2.6vw, 1rem);
   line-height: 1.5;
+  overflow-y: auto;
 }
 
 .tts-editor textarea:focus {
@@ -692,6 +692,8 @@ a {
   padding: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   z-index: 25;
+  max-height: calc(100dvh - var(--tts-topbar-height) - 32px);
+  overflow-y: auto;
 }
 
 .history-header {
@@ -776,13 +778,13 @@ a {
 
   .tts-shell {
     gap: 10px;
-    min-height: calc(100dvh - var(--tts-topbar-height));
     height: calc(100dvh - var(--tts-topbar-height));
+    min-height: 0;
     padding: 10px 14px 12px;
   }
 
   .tts-editor {
-    min-height: clamp(140px, 30dvh, 220px);
+    flex: 1 1 clamp(140px, 30dvh, 220px);
   }
 
   .tts-actions {
