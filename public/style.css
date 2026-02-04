@@ -64,6 +64,11 @@ body {
   min-height: 100dvh;
 }
 
+.assistant-body {
+  overflow: hidden;
+  min-height: 100dvh;
+}
+
 body[data-theme="light"] {
   background: linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 40%, var(--bg) 100%);
 }
@@ -271,6 +276,45 @@ a {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.assistant-page {
+  min-height: 100dvh;
+  height: 100dvh;
+  background: var(--bg);
+  padding: var(--tts-topbar-height) 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.assistant-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--tts-topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: var(--header-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+}
+
+.assistant-title {
+  font-size: clamp(0.95rem, 2.6vw, 1.15rem);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.assistant-menu-btn {
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
 }
 
 .tts-page {
@@ -973,11 +1017,15 @@ a {
 .vexa-chat-section.is-fullscreen {
   width: 100%;
   max-width: 100%;
-  min-height: 100vh;
-  margin: 24px 0 0;
-  padding: 32px clamp(18px, 4vw, 48px);
-  border-radius: 28px;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+  min-height: calc(100dvh - var(--tts-topbar-height));
+  margin: 0;
+  padding: 28px clamp(18px, 4vw, 48px) 32px;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+  flex: 1;
+  min-height: 0;
 }
 
 .vexa-chat-header {
@@ -1034,17 +1082,21 @@ a {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 220px;
+  min-height: 0;
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 .vexa-chat-message {
   padding: 12px 16px;
   border-radius: 18px;
   max-width: 75%;
-  line-height: 1.5;
+  line-height: 1.6;
+  text-align: start;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .vexa-chat-message p {
