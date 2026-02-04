@@ -32,6 +32,7 @@ let currentVoice = window.VEXA_SELECTED_VOICE || "Rachel";
 const formatNumber = (value) => value.toLocaleString("en-US");
 const USER_ID_STORAGE_KEY = "vexa_user_id";
 const CREDIT_FILL_MAX = 100;
+const GN_FIXED_VALUE = 90;
 
 let currentCredits = null;
 let totalCredits = null;
@@ -155,8 +156,10 @@ const applySiteSettings = (settings = {}) => {
   if (layout.homeGridMaxWidth) {
     root.style.setProperty("--home-grid-max-width", `${layout.homeGridMaxWidth}px`);
   }
+  root.style.setProperty("--tts-gn-offset", `${GN_FIXED_VALUE}px`);
+
   if (Number.isFinite(layout.gn)) {
-    root.style.setProperty("--tts-gn-offset", `${layout.gn}px`);
+    root.style.setProperty("--tts-gn-offset", `${GN_FIXED_VALUE}px`);
   }
 
   if (colors.bg) {
@@ -218,6 +221,19 @@ const loadSiteSettings = async () => {
   } catch (error) {
     console.warn("Unable to load site settings.", error);
   }
+};
+
+const lockTtsScroll = () => {
+  if (!document.body.classList.contains("tts-body")) {
+    return;
+  }
+  const resetScroll = () => {
+    if (window.scrollY !== 0 || window.scrollX !== 0) {
+      window.scrollTo(0, 0);
+    }
+  };
+  resetScroll();
+  window.addEventListener("scroll", resetScroll, { passive: true });
 };
 
 const readCookie = (name) => {
@@ -687,6 +703,7 @@ if (window.VEXA_SELECTED_VOICE) {
   currentVoice = window.VEXA_SELECTED_VOICE;
 }
 
+lockTtsScroll();
 loadSiteSettings();
 initUser();
 sendHeartbeat();
