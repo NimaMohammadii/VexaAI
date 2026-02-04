@@ -49,6 +49,7 @@ const layoutStatus = document.getElementById("layoutStatus");
 const layoutRefreshBtn = document.getElementById("layoutRefreshBtn");
 const layoutFrame = document.getElementById("layoutFrame");
 const layoutFrameWrap = document.getElementById("layoutFrameWrap");
+const GN_FIXED_VALUE = 90;
 
 let currentSiteSettings = null;
 const pendingStickers = {};
@@ -486,7 +487,10 @@ const populateSettingsForm = (settings) => {
   if (pageMaxWidthInput) pageMaxWidthInput.value = settings.layout.pageMaxWidth;
   if (homeGridMaxWidthInput) homeGridMaxWidthInput.value = settings.layout.homeGridMaxWidth;
   if (ttsMaxWidthInput) ttsMaxWidthInput.value = settings.layout.ttsMaxWidth;
-  if (gnOffsetInput) gnOffsetInput.value = settings.layout.gn;
+  if (gnOffsetInput) {
+    gnOffsetInput.value = GN_FIXED_VALUE;
+    gnOffsetInput.disabled = true;
+  }
   if (bgColorInput) bgColorInput.value = settings.colors.bg;
   if (bgAltColorInput) bgAltColorInput.value = settings.colors.bgAlt;
   if (surfaceColorInput) surfaceColorInput.value = settings.colors.surface;
@@ -622,7 +626,7 @@ if (siteSettingsForm) {
         pageMaxWidth: readNumber(pageMaxWidthInput),
         homeGridMaxWidth: readNumber(homeGridMaxWidthInput),
         ttsMaxWidth: readNumber(ttsMaxWidthInput),
-        gn: readNumber(gnOffsetInput),
+        gn: GN_FIXED_VALUE,
       },
       colors: {
         bg: bgColorInput?.value,
