@@ -358,7 +358,7 @@ app.post("/api/users/heartbeat", (req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GPT_API;
     if (!apiKey) {
       return res.status(500).json({ error: "Server API key is missing." });
     }
@@ -391,7 +391,7 @@ app.post("/api/chat", async (req, res) => {
           {
             role: "system",
             content:
-              "You are Vexa, a stylish Persian-speaking assistant for audio creators. Be concise, creative, and helpful.",
+              "You are Vexa, a stylish English-speaking assistant for audio creators. Be concise, creative, and helpful.",
           },
           ...safeHistory,
           { role: "user", content: userMessage },
@@ -408,7 +408,7 @@ app.post("/api/chat", async (req, res) => {
 
     const data = await response.json();
     const reply = data?.choices?.[0]?.message?.content?.trim();
-    return res.json({ message: reply || "پاسخی دریافت نشد." });
+    return res.json({ message: reply || "No response received." });
   } catch (error) {
     return res.status(500).json({ error: "Unexpected server error." });
   }
