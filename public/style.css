@@ -544,7 +544,6 @@ a {
   gap: 8px;
   padding-left: 6px;
   align-self: flex-start;
-  align-self: flex-end;
   position: relative;
   margin-bottom: 6px;
   transform: translateY(10px) scale(0.95);
