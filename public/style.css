@@ -59,8 +59,9 @@ body {
 }
 
 .tts-body {
-  overflow: hidden;
-  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  min-height: 100dvh;
 }
 
 body[data-theme="light"] {
@@ -494,7 +495,7 @@ a {
   background: transparent;
   color: var(--text);
   resize: none;
-  font-size: clamp(0.85rem, 2.6vw, 1rem);
+  font-size: clamp(1rem, 2.6vw, 1.1rem);
   line-height: 1.5;
   overflow-y: auto;
 }

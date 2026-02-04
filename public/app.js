@@ -223,19 +223,6 @@ const loadSiteSettings = async () => {
   }
 };
 
-const lockTtsScroll = () => {
-  if (!document.body.classList.contains("tts-body")) {
-    return;
-  }
-  const resetScroll = () => {
-    if (window.scrollY !== 0 || window.scrollX !== 0) {
-      window.scrollTo(0, 0);
-    }
-  };
-  resetScroll();
-  window.addEventListener("scroll", resetScroll, { passive: true });
-};
-
 const readCookie = (name) => {
   const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
   return match ? decodeURIComponent(match[2]) : null;
@@ -703,7 +690,6 @@ if (window.VEXA_SELECTED_VOICE) {
   currentVoice = window.VEXA_SELECTED_VOICE;
 }
 
-lockTtsScroll();
 loadSiteSettings();
 initUser();
 sendHeartbeat();
