@@ -1,18 +1,9 @@
 const micButton = document.getElementById("micButton");
+const micTestButton = document.getElementById("micTestButton");
 const liveStatus = document.getElementById("liveStatus");
-const transcriptText = document.getElementById("transcriptText");
-const translatedText = document.getElementById("translatedText");
-const translatedAudio = document.getElementById("translatedAudio");
-const audioHint = document.getElementById("audioHint");
-const sourceLanguage = document.getElementById("sourceLanguage");
-const targetLanguage = document.getElementById("targetLanguage");
 
-let mediaRecorder = null;
 let activeStream = null;
-let audioChunks = [];
-let isProcessing = false;
 let isPressing = false;
-let recordingMimeType = "";
 
 const setStatus = (message, { loading = false } = {}) => {
   if (!liveStatus) {
@@ -27,7 +18,7 @@ const setButtonState = (state) => {
     return;
   }
   micButton.classList.toggle("is-recording", state === "recording");
-  micButton.disabled = state === "processing";
+  micButton.disabled = false;
 };
 
 const setPressedState = (pressed) => {
@@ -38,145 +29,40 @@ const setPressedState = (pressed) => {
   document.body?.classList.toggle("no-text-select", pressed);
 };
 
-const resetAudio = () => {
-  if (!translatedAudio) {
-    return;
-  }
-  translatedAudio.removeAttribute("src");
-  translatedAudio.load();
-};
-
-const updateOutputs = ({ transcript, translation, audioUrl }) => {
-  if (transcriptText) {
-    transcriptText.textContent = transcript || "";
-  }
-  if (translatedText) {
-    translatedText.textContent = translation || "";
-  }
-  if (audioHint) {
-    audioHint.textContent = audioUrl
-      ? "Tap play to listen to the translated voice."
-      : "Awaiting audio output from the server.";
-  }
-  if (translatedAudio) {
-    if (audioUrl) {
-      translatedAudio.src = audioUrl;
-    } else {
-      resetAudio();
-    }
-  }
-};
-
-const stopRecording = () => {
-  if (!mediaRecorder || mediaRecorder.state !== "recording") {
-    return;
-  }
-  mediaRecorder.stop();
-  setButtonState("processing");
-  setStatus("Processing...", { loading: true });
-};
-
-const pickSupportedMimeType = () => {
-  if (!window.MediaRecorder) {
-    return "";
-  }
-  const candidates = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/mp4",
-    "audio/mpeg",
-  ];
-  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
-};
-
-const requestMicrophoneStream = () => {
-  if (activeStream) {
-    return Promise.resolve(activeStream);
-  }
+const ensureSecureMicrophoneContext = () => {
   if (!navigator.mediaDevices?.getUserMedia) {
-    return Promise.reject(
-      new Error("Microphone access is not supported in this browser.")
-    );
+    setStatus("Microphone access is not supported in this browser.");
+    return false;
   }
-  return navigator.mediaDevices.getUserMedia({ audio: true });
+  if (!window.isSecureContext) {
+    setStatus("Microphone access requires HTTPS.");
+    console.error("Microphone access blocked: insecure context.");
+    return false;
+  }
+  return true;
 };
 
-const createMediaRecorder = (stream) => {
-  if (!window.MediaRecorder) {
-    throw new Error("Recording is not supported in this browser.");
-  }
-  recordingMimeType = pickSupportedMimeType();
-  return new MediaRecorder(
-    stream,
-    recordingMimeType ? { mimeType: recordingMimeType } : undefined
-  );
+const logMicrophoneError = (error) => {
+  const name = error?.name || "UnknownError";
+  const message = error?.message || "Unknown error.";
+  console.error("Microphone permission failed:", error);
+  setStatus(`Microphone error: ${name} - ${message}`);
 };
 
-const getRecordingFilename = () => {
-  if (recordingMimeType.includes("mp4")) {
-    return "recording.mp4";
-  }
-  if (recordingMimeType.includes("mpeg")) {
-    return "recording.mp3";
-  }
-  return "recording.webm";
-};
-
-const sendToBackend = async (audioBlob) => {
-  const formData = new FormData();
-  formData.append("audio", audioBlob, getRecordingFilename());
-  formData.append("sourceLanguage", sourceLanguage?.value || "en-US");
-  formData.append("targetLanguage", targetLanguage?.value || "es-ES");
-
-  const response = await fetch("/api/live-translate", {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error("Live translate API unavailable.");
-  }
-
-  return response.json();
-};
-
-const runDemoFallback = () => ({
-  transcript: "Hello, can you help me with a quick question?",
-  translation: "Hola, ¿puedes ayudarme con una pregunta rápida?",
-  audioUrl: "",
-});
-
-const handleProcessingComplete = (payload) => {
-  updateOutputs(payload);
-  setStatus("Translation ready.");
-  setButtonState("idle");
-  isProcessing = false;
-};
-
-const processAudio = async (audioBlob) => {
-  if (isProcessing) {
+const stopActiveStream = () => {
+  if (!activeStream) {
     return;
   }
-  isProcessing = true;
-  try {
-    const data = await sendToBackend(audioBlob);
-    handleProcessingComplete({
-      transcript: data?.transcript || "",
-      translation: data?.translation || "",
-      audioUrl: data?.audioUrl || "",
-    });
-  } catch (error) {
-    const fallback = runDemoFallback();
-    handleProcessingComplete(fallback);
-  }
+  activeStream.getTracks().forEach((track) => track.stop());
+  activeStream = null;
 };
 
-const handlePointerDown = async (event) => {
+const handlePointerDown = (event) => {
   if (event.type === "touchstart" && window.PointerEvent) {
     return;
   }
   event.preventDefault();
-  if (!micButton || isProcessing || isPressing) {
+  if (!micButton || isPressing) {
     return;
   }
   isPressing = true;
@@ -184,38 +70,24 @@ const handlePointerDown = async (event) => {
   if (event.pointerId != null && micButton.setPointerCapture) {
     micButton.setPointerCapture(event.pointerId);
   }
-
-  const streamPromise = requestMicrophoneStream();
-  try {
-    const stream = await streamPromise;
-    mediaRecorder = createMediaRecorder(stream);
-  } catch (error) {
-    setStatus("Microphone access is unavailable.");
+  if (!ensureSecureMicrophoneContext()) {
     setPressedState(false);
     isPressing = false;
     return;
   }
 
-  audioChunks = [];
-  mediaRecorder.addEventListener("dataavailable", (eventRecord) => {
-    if (eventRecord.data.size > 0) {
-      audioChunks.push(eventRecord.data);
-    }
-  });
-  mediaRecorder.addEventListener(
-    "stop",
-    () => {
-      const audioBlob = new Blob(audioChunks, {
-        type: recordingMimeType || "audio/webm",
-      });
-      processAudio(audioBlob);
-    },
-    { once: true }
-  );
-
-  mediaRecorder.start();
-  setButtonState("recording");
-  setStatus("Listening... release to translate.");
+  const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
+  streamPromise
+    .then((stream) => {
+      activeStream = stream;
+      setButtonState("recording");
+      setStatus("Microphone live. Release to stop.");
+    })
+    .catch((error) => {
+      logMicrophoneError(error);
+      setPressedState(false);
+      isPressing = false;
+    });
 };
 
 const handlePointerUp = (event) => {
@@ -228,7 +100,9 @@ const handlePointerUp = (event) => {
   }
   isPressing = false;
   setPressedState(false);
-  stopRecording();
+  stopActiveStream();
+  setButtonState("idle");
+  setStatus("Microphone released.");
 };
 
 if (micButton) {
@@ -241,8 +115,37 @@ if (micButton) {
   micButton.addEventListener("touchcancel", handlePointerUp, { passive: false });
 }
 
-window.addEventListener("beforeunload", () => {
-  if (activeStream) {
-    activeStream.getTracks().forEach((track) => track.stop());
+const handleTestPress = (event) => {
+  if (event.type === "touchstart" && window.PointerEvent) {
+    return;
   }
+  event.preventDefault();
+  if (!ensureSecureMicrophoneContext()) {
+    return;
+  }
+  if (activeStream) {
+    setStatus("Microphone already active.");
+    return;
+  }
+  const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
+  streamPromise
+    .then((stream) => {
+      activeStream = stream;
+      setStatus("Microphone permission granted.");
+      stopActiveStream();
+    })
+    .catch((error) => {
+      logMicrophoneError(error);
+    });
+};
+
+if (micTestButton) {
+  micTestButton.addEventListener("pointerdown", handleTestPress);
+  micTestButton.addEventListener("touchstart", handleTestPress, {
+    passive: false,
+  });
+}
+
+window.addEventListener("beforeunload", () => {
+  stopActiveStream();
 });
