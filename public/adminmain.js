@@ -210,7 +210,7 @@ const ensureFrameStyles = (doc) => {
     .admin-edit-overlay {
       position: absolute;
       inset: 0;
-      z-index: 9998;
+      z-index: 9999;
       background: rgba(143, 146, 255, 0.08);
       cursor: grab;
       touch-action: none;
@@ -298,8 +298,15 @@ const VOID_ELEMENTS = new Set([
   "WBR",
 ]);
 
-const getOverlayForElement = (element) =>
-  element?.querySelector(":scope > .admin-edit-overlay") || null;
+const getOverlayForElement = (element) => {
+  if (!element) {
+    return null;
+  }
+  const wrapper = element.classList.contains("admin-edit-wrapper")
+    ? element
+    : element.closest(".admin-edit-wrapper");
+  return wrapper?.querySelector(":scope > .admin-edit-overlay") || null;
+};
 
 const createOverlay = (doc, adminId) => {
   const overlay = doc.createElement("div");
@@ -327,33 +334,25 @@ const enableEditMode = (doc) => {
     if (element.classList.contains("admin-edit-overlay") || element.classList.contains("admin-resize-handle")) {
       return;
     }
-    if (VOID_ELEMENTS.has(element.tagName)) {
-      const existingWrapper =
-        element.parentElement?.classList.contains("admin-edit-wrapper") ? element.parentElement : null;
-      const wrapper = existingWrapper || doc.createElement("span");
-      if (existingWrapper && !wrapper.dataset.adminId) {
-        wrapper.dataset.adminId = adminId;
-      }
-      if (!existingWrapper) {
-        const computedDisplay = doc.defaultView?.getComputedStyle(element).display || "inline-block";
-        wrapper.className = "admin-edit-wrapper";
-        wrapper.style.display = computedDisplay === "inline" ? "inline-block" : computedDisplay;
-        wrapper.dataset.adminId = adminId;
-        element.removeAttribute("data-admin-id");
-        element.parentElement?.insertBefore(wrapper, element);
-        wrapper.appendChild(element);
-        frameWrappedElements.set(adminId, wrapper);
-      }
-      if (!wrapper.querySelector(":scope > .admin-edit-overlay")) {
-        wrapper.appendChild(createOverlay(doc, adminId));
-      }
-      return;
+    const existingWrapper =
+      element.parentElement?.classList.contains("admin-edit-wrapper") ? element.parentElement : null;
+    const wrapper = existingWrapper || doc.createElement("span");
+    if (!existingWrapper) {
+      const computedDisplay = doc.defaultView?.getComputedStyle(element).display || "inline-block";
+      wrapper.className = "admin-edit-wrapper";
+      wrapper.style.display = computedDisplay === "inline" ? "inline-block" : computedDisplay;
+      wrapper.dataset.adminWrapper = adminId;
+      element.parentElement?.insertBefore(wrapper, element);
+      wrapper.appendChild(element);
+      frameWrappedElements.set(adminId, wrapper);
+    } else if (!wrapper.dataset.adminWrapper) {
+      wrapper.dataset.adminWrapper = adminId;
     }
-    if (!element.classList.contains("admin-edit-wrapper")) {
-      element.classList.add("admin-edit-wrapper");
+    if (!frameWrappedElements.has(adminId)) {
+      frameWrappedElements.set(adminId, wrapper);
     }
-    if (!getOverlayForElement(element)) {
-      element.appendChild(createOverlay(doc, adminId));
+    if (!wrapper.querySelector(":scope > .admin-edit-overlay")) {
+      wrapper.appendChild(createOverlay(doc, adminId));
     }
   });
 };
@@ -549,9 +548,10 @@ const setupFrameInteractions = (doc, pageSettings) => {
 
   doc.addEventListener("click", stopIfOverlay, true);
   doc.addEventListener("touchstart", stopIfOverlay, true);
+  doc.addEventListener("pointerdown", stopIfOverlay, true);
 
   const onPointerMove = (event) => {
-    if (!dragState) {
+    if (!dragState || dragState.pointerId !== event.pointerId) {
       return;
     }
     const deltaX = event.clientX - dragState.startX;
@@ -571,14 +571,20 @@ const setupFrameInteractions = (doc, pageSettings) => {
     }
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (event) => {
+    if (!dragState || dragState.pointerId !== event.pointerId) {
+      return;
+    }
+    if (dragState.overlayTarget?.hasPointerCapture?.(dragState.pointerId)) {
+      dragState.overlayTarget.releasePointerCapture(dragState.pointerId);
+    }
     dragState = null;
-    doc.removeEventListener("mousemove", onPointerMove);
-    doc.removeEventListener("mouseup", onPointerUp);
+    doc.removeEventListener("pointermove", onPointerMove);
+    doc.removeEventListener("pointerup", onPointerUp);
   };
 
   doc.addEventListener(
-    "mousedown",
+    "pointerdown",
     (event) => {
       if (!isEditMode) {
         return;
@@ -598,6 +604,7 @@ const setupFrameInteractions = (doc, pageSettings) => {
       }
       event.preventDefault();
       event.stopPropagation();
+      overlayTarget.setPointerCapture?.(event.pointerId);
       const adminId = overlayTarget.dataset.adminId;
       const selectedTarget = adminId ? doc.querySelector(`[data-admin-id="${adminId}"]`) : null;
       if (!selectedTarget) {
@@ -607,6 +614,8 @@ const setupFrameInteractions = (doc, pageSettings) => {
       const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
       dragState = {
         mode: resizeHandle ? "resize" : "drag",
+        pointerId: event.pointerId,
+        overlayTarget,
         startX: event.clientX,
         startY: event.clientY,
         startOffsetX: override.x ?? 0,
@@ -618,8 +627,8 @@ const setupFrameInteractions = (doc, pageSettings) => {
           ? override.height
           : Math.round(selectedTarget.getBoundingClientRect().height),
       };
-      doc.addEventListener("mousemove", onPointerMove);
-      doc.addEventListener("mouseup", onPointerUp);
+      doc.addEventListener("pointermove", onPointerMove);
+      doc.addEventListener("pointerup", onPointerUp);
     },
     true
   );
