@@ -88,18 +88,31 @@ const resolvePageKey = () => {
   return pageKeyMap[path] || path.replace(".html", "");
 };
 
+const ADMIN_SKIP_TAGS = new Set(["SCRIPT", "STYLE", "META", "LINK", "HEAD"]);
+
 const ensureAdminIds = () => {
-  const candidates = document.querySelectorAll(
-    "[data-admin-id], button, .menu-toggle, .menu-close, .menu-link, .side-menu, .menu-bar, .home-card"
-  );
+  const main = document.querySelector("main");
+  const candidates = main ? main.querySelectorAll("*") : document.querySelectorAll("[data-admin-id], main *");
   const existingIds = new Set();
   candidates.forEach((element) => {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    if (ADMIN_SKIP_TAGS.has(element.tagName)) {
+      return;
+    }
     if (element.dataset.adminId) {
       existingIds.add(element.dataset.adminId);
     }
   });
   let index = existingIds.size;
   candidates.forEach((element) => {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    if (ADMIN_SKIP_TAGS.has(element.tagName)) {
+      return;
+    }
     if (element.dataset.adminId) {
       return;
     }
@@ -123,7 +136,10 @@ const applyElementOverrides = (pageSettings) => {
     const baseTransform = target.dataset.adminBaseTransform;
     const x = Number.isFinite(override?.x) ? override.x : 0;
     const y = Number.isFinite(override?.y) ? override.y : 0;
-    const transform = [baseTransform, `translate(${x}px, ${y}px)`].filter(Boolean).join(" ");
+    const rotate = Number.isFinite(override?.rotate) ? override.rotate : 0;
+    const transform = [baseTransform, `translate(${x}px, ${y}px)`, `rotate(${rotate}deg)`]
+      .filter(Boolean)
+      .join(" ");
     target.style.transform = transform;
     target.style.width = Number.isFinite(override?.width) ? `${override.width}px` : "";
     target.style.height = Number.isFinite(override?.height) ? `${override.height}px` : "";
@@ -142,7 +158,10 @@ const applyCanvasOverrides = (pageSettings) => {
   main.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 };
 
+let cachedSiteSettings = null;
+
 const applySiteSettings = (settings = {}) => {
+  cachedSiteSettings = settings;
   const root = document.documentElement;
   const layout = settings.layout || {};
   const colors = settings.colors || {};
@@ -223,6 +242,26 @@ const loadSiteSettings = async () => {
     console.warn("Unable to load site settings.", error);
   }
 };
+
+const layoutChannel =
+  typeof window !== "undefined" && "BroadcastChannel" in window ? new BroadcastChannel("vexa-layout-editor") : null;
+
+if (layoutChannel) {
+  layoutChannel.addEventListener("message", (event) => {
+    if (!event?.data || event.data.type !== "layout-editor-update") {
+      return;
+    }
+    const nextLayoutEditor = event.data.layoutEditor;
+    if (!nextLayoutEditor) {
+      return;
+    }
+    const nextSettings = {
+      ...(cachedSiteSettings || {}),
+      layoutEditor: nextLayoutEditor,
+    };
+    applySiteSettings(nextSettings);
+  });
+}
 
 const readCookie = (name) => {
   const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
