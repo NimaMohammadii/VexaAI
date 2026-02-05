@@ -1,4 +1,8 @@
 const micButton = document.getElementById("micBtn");
+const transcriptText = document.getElementById("transcriptText");
+const translatedText = document.getElementById("translatedText");
+const sourceLanguageSelect = document.getElementById("sourceLanguage");
+const targetLanguageSelect = document.getElementById("targetLanguage");
 
 const TARGET_SAMPLE_RATE = 16000;
 let audioContext;
@@ -8,6 +12,7 @@ let processor;
 let isCapturing = false;
 let recordedChunks = [];
 let recordedLength = 0;
+let isProcessing = false;
 
 const stopStreamTracks = (stream) => {
   stream?.getTracks().forEach((track) => track.stop());
@@ -89,6 +94,20 @@ const encodeWav = (pcm16Buffer, sampleRate) => {
   return new Blob([arrayBuffer], { type: "audio/wav" });
 };
 
+const blobToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Failed to read audio data."));
+    reader.readAsDataURL(blob);
+  });
+
+const updateStatus = (message) => {
+  if (transcriptText) {
+    transcriptText.textContent = message;
+  }
+};
+
 const startCapture = async () => {
   if (isCapturing) {
     return;
@@ -104,6 +123,11 @@ const startCapture = async () => {
     recordedChunks = [];
     recordedLength = 0;
     isCapturing = true;
+    if (micButton) {
+      micButton.classList.add("is-recording");
+      micButton.textContent = "● Recording...";
+    }
+    updateStatus("Listening...");
 
     processor.onaudioprocess = (event) => {
       if (!isCapturing) {
@@ -121,15 +145,20 @@ const startCapture = async () => {
     console.log("CAPTURE STARTED");
   } catch (error) {
     console.error("MIC ACCESS DENIED", error);
+    updateStatus("Microphone access denied.");
   }
 };
 
-const stopCapture = () => {
+const stopCapture = async () => {
   if (!isCapturing) {
     return;
   }
 
   isCapturing = false;
+  if (micButton) {
+    micButton.classList.remove("is-recording");
+    micButton.textContent = "🎤 HOLD TO TALK";
+  }
   processor?.disconnect();
   mediaSource?.disconnect();
   stopStreamTracks(mediaStream);
@@ -144,6 +173,7 @@ const stopCapture = () => {
 
   if (mergedBuffer.length === 0) {
     console.warn("NO AUDIO CAPTURED");
+    updateStatus("No audio captured.");
     return;
   }
 
@@ -155,16 +185,72 @@ const stopCapture = () => {
     rawSamples: mergedBuffer.length,
     wavBytes: wavBlob.size,
   });
+
+  if (isProcessing) {
+    return;
+  }
+
+  try {
+    isProcessing = true;
+    updateStatus("Transcribing...");
+    if (translatedText) {
+      translatedText.textContent = "Translating...";
+    }
+
+    const sourceLabel = sourceLanguageSelect?.options[sourceLanguageSelect.selectedIndex]?.text || "";
+    const targetLabel = targetLanguageSelect?.options[targetLanguageSelect.selectedIndex]?.text || "";
+
+    const audioBase64 = await blobToBase64(wavBlob);
+    const response = await fetch("/api/live-translate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        audioBase64,
+        sourceLanguage: sourceLanguageSelect?.value,
+        targetLanguage: targetLanguageSelect?.value,
+        sourceLabel,
+        targetLabel,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || "Translation failed.");
+    }
+
+    updateStatus(data?.transcript || "No transcript returned.");
+    if (translatedText) {
+      translatedText.textContent = data?.translation || "No translation returned.";
+    }
+  } catch (error) {
+    console.error("LIVE TRANSLATE ERROR", error);
+    updateStatus("Unable to transcribe audio.");
+    if (translatedText) {
+      translatedText.textContent = "Unable to translate audio.";
+    }
+  } finally {
+    isProcessing = false;
+  }
 };
 
 if (micButton) {
-  micButton.addEventListener("touchstart", (event) => {
+  const handlePointerDown = (event) => {
     event.preventDefault();
+    if (isProcessing) {
+      return;
+    }
     startCapture();
-  });
+  };
 
-  micButton.addEventListener("touchend", (event) => {
+  const handlePointerUp = (event) => {
     event.preventDefault();
     stopCapture();
-  });
+  };
+
+  micButton.addEventListener("pointerdown", handlePointerDown);
+  micButton.addEventListener("pointerup", handlePointerUp);
+  micButton.addEventListener("pointerleave", handlePointerUp);
+  micButton.addEventListener("pointercancel", handlePointerUp);
 }
