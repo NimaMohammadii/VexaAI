@@ -1761,16 +1761,16 @@ select {
 }
 
 .live-translate-body {
-  overflow: hidden;
+  overflow-y: auto;
   min-height: 100dvh;
+  overscroll-behavior-y: contain;
 }
 
 .live-translate-page {
   min-height: 100dvh;
-  height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 0 0 12px;
+  padding: 0 0 8px;
   background: var(--bg);
 }
 
@@ -1840,8 +1840,8 @@ select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 18px 20px 16px;
+  gap: 12px;
+  padding: 14px 20px 12px;
 }
 
 .live-translate-controls {
@@ -1888,12 +1888,12 @@ select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .mic-button {
-  width: min(220px, 70vw);
+  width: min(190px, 62vw);
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   border: none;
@@ -1924,7 +1924,7 @@ select {
 }
 
 .mic-icon {
-  font-size: 2.2rem;
+  font-size: 2rem;
 }
 
 .mic-label {
@@ -1979,17 +1979,17 @@ select {
 .live-translate-output {
   width: min(520px, 100%);
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .live-output-card {
-  height: 150px;
+  height: 140px;
   display: flex;
   flex-direction: column;
   background: rgba(12, 13, 16, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   box-shadow: 0 0 0 1px rgba(132, 146, 255, 0.06), 0 18px 40px rgba(3, 6, 14, 0.5);
 }
 
@@ -2017,13 +2017,13 @@ select {
   width: min(520px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 10px 12px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(12, 13, 16, 0.75);
   box-shadow: 0 0 0 1px rgba(140, 148, 255, 0.08), 0 18px 40px rgba(3, 6, 14, 0.45);
-  min-height: 132px;
+  min-height: 122px;
 }
 
 .live-audio-title {
@@ -2052,11 +2052,11 @@ select {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px;
+  padding: 10px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(8, 10, 16, 0.65);
-  min-height: 72px;
+  min-height: 64px;
   position: relative;
   overflow: hidden;
 }
