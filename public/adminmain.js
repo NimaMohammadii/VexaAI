@@ -260,8 +260,8 @@ const ensureFrameStyles = (doc) => {
 };
 
 const ensureFrameAdminIds = (doc) => {
-  const main = doc.querySelector("main");
-  const candidates = main ? main.querySelectorAll("*") : doc.querySelectorAll("[data-admin-id], main *");
+  const root = doc.body || doc.documentElement;
+  const candidates = root ? root.querySelectorAll("*") : doc.querySelectorAll("*");
   const existingIds = new Set();
   candidates.forEach((element) => {
     if (!(element instanceof Element)) {
@@ -269,7 +269,7 @@ const ensureFrameAdminIds = (doc) => {
     }
     const tag = element.tagName;
     if (
-      ["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) ||
+      ["HTML", "BODY", "SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) ||
       element.classList.contains("admin-edit-overlay") ||
       element.classList.contains("admin-resize-handle")
     ) {
@@ -286,7 +286,7 @@ const ensureFrameAdminIds = (doc) => {
     }
     const tag = element.tagName;
     if (
-      ["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) ||
+      ["HTML", "BODY", "SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) ||
       element.classList.contains("admin-edit-overlay") ||
       element.classList.contains("admin-resize-handle")
     ) {
