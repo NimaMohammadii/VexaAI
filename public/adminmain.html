@@ -287,10 +287,16 @@
             </div>
           </div>
 
-          <div class="layout-preview">
+            <div class="layout-preview">
             <div class="layout-preview-toolbar">
               <span class="muted">Interactive preview</span>
-              <button class="btn ghost" id="layoutRefreshBtn" type="button">Reload preview</button>
+              <div class="form-row compact">
+                <label class="edit-toggle">
+                  <input id="layoutEditToggle" type="checkbox" checked />
+                  <span>Edit Mode</span>
+                </label>
+                <button class="btn ghost" id="layoutRefreshBtn" type="button">Reload preview</button>
+              </div>
             </div>
             <div class="layout-frame" id="layoutFrameWrap">
               <iframe id="layoutFrame" title="Site preview"></iframe>
