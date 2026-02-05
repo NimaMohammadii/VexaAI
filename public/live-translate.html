@@ -87,7 +87,38 @@
 
         <div class="live-translate-audio">
           <p class="live-audio-title">Translated Voice</p>
-          <audio id="translatedAudio" controls></audio>
+          <div class="live-audio-player" id="liveAudioPlayer" data-state="paused">
+            <button class="audio-play-btn" id="audioPlayBtn" type="button" aria-label="Play translated audio" disabled>
+              <span class="audio-play-icon" aria-hidden="true">▶</span>
+            </button>
+            <div class="audio-waveform" aria-hidden="true">
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+            </div>
+            <audio id="translatedAudio" class="live-audio-element"></audio>
+          </div>
           <p class="live-audio-hint" id="audioHint">Audio output will appear after processing.</p>
         </div>
       </section>
