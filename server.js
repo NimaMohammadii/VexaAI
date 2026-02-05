@@ -416,6 +416,88 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+app.post("/api/live-translate", async (req, res) => {
+  try {
+    const apiKey = process.env.GPT_API;
+    if (!apiKey) {
+      return res.status(500).json({ error: "Server API key is missing." });
+    }
+
+    const { audioBase64, sourceLabel, targetLabel } = req.body || {};
+    if (typeof audioBase64 !== "string" || !audioBase64.startsWith("data:audio/")) {
+      return res.status(400).json({ error: "Audio payload is required." });
+    }
+
+    const base64Data = audioBase64.split(",")[1];
+    if (!base64Data) {
+      return res.status(400).json({ error: "Audio payload is required." });
+    }
+
+    const audioBuffer = Buffer.from(base64Data, "base64");
+    const transcriptResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: (() => {
+        const form = new FormData();
+        const safeFilename = `capture-${Date.now()}.wav`;
+        form.append("file", new Blob([audioBuffer], { type: "audio/wav" }), safeFilename);
+        form.append("model", "gpt-4o-mini-transcribe");
+        return form;
+      })(),
+    });
+
+    if (!transcriptResponse.ok) {
+      const errorText = await transcriptResponse.text();
+      return res.status(500).json({ error: errorText || "Transcription failed." });
+    }
+
+    const transcriptData = await transcriptResponse.json();
+    const transcript = transcriptData?.text?.trim();
+    if (!transcript) {
+      return res.status(200).json({ transcript: "", translation: "" });
+    }
+
+    const targetHint = typeof targetLabel === "string" && targetLabel.trim().length ? targetLabel.trim() : "the target language";
+    const sourceHint = typeof sourceLabel === "string" && sourceLabel.trim().length ? sourceLabel.trim() : "the source language";
+
+    const translateResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You translate live speech from ${sourceHint} to ${targetHint}. Reply only with the translated text and nothing else.`,
+          },
+          {
+            role: "user",
+            content: transcript,
+          },
+        ],
+        temperature: 0.2,
+        max_tokens: 400,
+      }),
+    });
+
+    if (!translateResponse.ok) {
+      const errorText = await translateResponse.text();
+      return res.status(500).json({ error: errorText || "Translation failed." });
+    }
+
+    const translateData = await translateResponse.json();
+    const translation = translateData?.choices?.[0]?.message?.content?.trim() || "";
+    return res.json({ transcript, translation });
+  } catch (error) {
+    return res.status(500).json({ error: "Unexpected server error." });
+  }
+});
+
 app.post("/api/admin/login", (req, res) => {
   const { key } = req.body;
   const adminKey = process.env.ADMIN_KEY;
