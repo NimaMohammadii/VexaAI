@@ -3,6 +3,8 @@ const transcriptText = document.getElementById("transcriptText");
 const translatedText = document.getElementById("translatedText");
 const sourceLanguageSelect = document.getElementById("sourceLanguage");
 const targetLanguageSelect = document.getElementById("targetLanguage");
+const translatedAudio = document.getElementById("translatedAudio");
+const audioHint = document.getElementById("audioHint");
 
 const TARGET_SAMPLE_RATE = 16000;
 let audioContext;
@@ -108,6 +110,16 @@ const updateStatus = (message) => {
   }
 };
 
+const resetAudioOutput = () => {
+  if (translatedAudio) {
+    translatedAudio.removeAttribute("src");
+    translatedAudio.load();
+  }
+  if (audioHint) {
+    audioHint.textContent = "Audio output will appear after processing.";
+  }
+};
+
 const startCapture = async () => {
   if (isCapturing) {
     return;
@@ -196,6 +208,9 @@ const stopCapture = async () => {
     if (translatedText) {
       translatedText.textContent = "Translating...";
     }
+    if (audioHint) {
+      audioHint.textContent = "Generating translated voice...";
+    }
 
     const sourceLabel = sourceLanguageSelect?.options[sourceLanguageSelect.selectedIndex]?.text || "";
     const targetLabel = targetLanguageSelect?.options[targetLanguageSelect.selectedIndex]?.text || "";
@@ -224,16 +239,30 @@ const stopCapture = async () => {
     if (translatedText) {
       translatedText.textContent = data?.translation || "No translation returned.";
     }
+    if (translatedAudio) {
+      if (data?.audioBase64) {
+        translatedAudio.src = data.audioBase64;
+        translatedAudio.load();
+        if (audioHint) {
+          audioHint.textContent = "Translated audio is ready.";
+        }
+      } else {
+        resetAudioOutput();
+      }
+    }
   } catch (error) {
     console.error("LIVE TRANSLATE ERROR", error);
     updateStatus("Unable to transcribe audio.");
     if (translatedText) {
       translatedText.textContent = "Unable to translate audio.";
     }
+    resetAudioOutput();
   } finally {
     isProcessing = false;
   }
 };
+
+resetAudioOutput();
 
 if (micButton) {
   const handlePointerDown = (event) => {
