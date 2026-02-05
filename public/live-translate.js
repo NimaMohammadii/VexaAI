@@ -4,13 +4,7 @@ const translatedText = document.getElementById("translatedText");
 const sourceLanguageSelect = document.getElementById("sourceLanguage");
 const targetLanguageSelect = document.getElementById("targetLanguage");
 const translatedAudio = document.getElementById("translatedAudio");
-const translatedAudioWrap = document.getElementById("translatedAudioWrap");
-const statusText = document.getElementById("liveStatus");
-const originalCard = document.getElementById("originalCard");
-const translatedCard = document.getElementById("translatedCard");
-
-const transcriptPlaceholder = transcriptText?.textContent || "";
-const translatedPlaceholder = translatedText?.textContent || "";
+const audioHint = document.getElementById("audioHint");
 
 const TARGET_SAMPLE_RATE = 16000;
 let audioContext;
@@ -111,30 +105,9 @@ const blobToBase64 = (blob) =>
   });
 
 const updateStatus = (message) => {
-  if (statusText) {
-    statusText.textContent = message;
-  }
-};
-
-const setCardFilled = (card, isFilled) => {
-  if (!card) {
-    return;
-  }
-  card.classList.toggle("is-filled", Boolean(isFilled));
-};
-
-const setTranscript = (text, isFinal = false) => {
   if (transcriptText) {
-    transcriptText.textContent = text;
+    transcriptText.textContent = message;
   }
-  setCardFilled(originalCard, isFinal);
-};
-
-const setTranslation = (text, isFinal = false) => {
-  if (translatedText) {
-    translatedText.textContent = text;
-  }
-  setCardFilled(translatedCard, isFinal);
 };
 
 const resetAudioOutput = () => {
@@ -142,9 +115,8 @@ const resetAudioOutput = () => {
     translatedAudio.removeAttribute("src");
     translatedAudio.load();
   }
-  if (translatedAudioWrap) {
-    translatedAudioWrap.hidden = true;
-    translatedAudioWrap.classList.remove("is-visible");
+  if (audioHint) {
+    audioHint.textContent = "Audio output will appear after processing.";
   }
 };
 
@@ -165,9 +137,9 @@ const startCapture = async () => {
     isCapturing = true;
     if (micButton) {
       micButton.classList.add("is-recording");
-      micButton.classList.remove("is-holding");
+      micButton.textContent = "● Recording...";
     }
-    updateStatus("Listening…");
+    updateStatus("Listening...");
 
     processor.onaudioprocess = (event) => {
       if (!isCapturing) {
@@ -186,7 +158,6 @@ const startCapture = async () => {
   } catch (error) {
     console.error("MIC ACCESS DENIED", error);
     updateStatus("Microphone access denied.");
-    micButton?.classList.remove("is-holding", "is-recording", "is-processing");
   }
 };
 
@@ -198,8 +169,7 @@ const stopCapture = async () => {
   isCapturing = false;
   if (micButton) {
     micButton.classList.remove("is-recording");
-    micButton.classList.remove("is-holding");
-    micButton.classList.remove("is-processing");
+    micButton.textContent = "🎤 HOLD TO TALK";
   }
   processor?.disconnect();
   mediaSource?.disconnect();
@@ -216,7 +186,6 @@ const stopCapture = async () => {
   if (mergedBuffer.length === 0) {
     console.warn("NO AUDIO CAPTURED");
     updateStatus("No audio captured.");
-    setTranscript(transcriptPlaceholder, false);
     return;
   }
 
@@ -235,11 +204,13 @@ const stopCapture = async () => {
 
   try {
     isProcessing = true;
-    if (micButton) {
-      micButton.classList.add("is-processing");
+    updateStatus("Transcribing...");
+    if (translatedText) {
+      translatedText.textContent = "Translating...";
     }
-    updateStatus("Translating…");
-    setTranslation("Translating…", false);
+    if (audioHint) {
+      audioHint.textContent = "Generating translated voice...";
+    }
 
     const sourceLabel = sourceLanguageSelect?.options[sourceLanguageSelect.selectedIndex]?.text || "";
     const targetLabel = targetLanguageSelect?.options[targetLanguageSelect.selectedIndex]?.text || "";
@@ -264,40 +235,34 @@ const stopCapture = async () => {
       throw new Error(data?.error || "Translation failed.");
     }
 
-    setTranscript(data?.transcript || "No transcript returned.", Boolean(data?.transcript));
-    setTranslation(data?.translation || "No translation returned.", Boolean(data?.translation));
+    updateStatus(data?.transcript || "No transcript returned.");
+    if (translatedText) {
+      translatedText.textContent = data?.translation || "No translation returned.";
+    }
     if (translatedAudio) {
       if (data?.audioBase64) {
         translatedAudio.src = data.audioBase64;
         translatedAudio.load();
-        if (translatedAudioWrap) {
-          translatedAudioWrap.hidden = false;
-          requestAnimationFrame(() => {
-            translatedAudioWrap.classList.add("is-visible");
-          });
+        if (audioHint) {
+          audioHint.textContent = "Translated audio is ready.";
         }
       } else {
         resetAudioOutput();
       }
     }
-    updateStatus("Ready");
   } catch (error) {
     console.error("LIVE TRANSLATE ERROR", error);
-    updateStatus("Unable to translate audio.");
-    setTranscript(transcriptPlaceholder, false);
-    setTranslation("Unable to translate audio.", false);
+    updateStatus("Unable to transcribe audio.");
+    if (translatedText) {
+      translatedText.textContent = "Unable to translate audio.";
+    }
     resetAudioOutput();
   } finally {
     isProcessing = false;
-    if (micButton) {
-      micButton.classList.remove("is-processing");
-    }
   }
 };
 
 resetAudioOutput();
-setTranscript(transcriptPlaceholder, false);
-setTranslation(translatedPlaceholder, false);
 
 if (micButton) {
   const handlePointerDown = (event) => {
@@ -305,7 +270,6 @@ if (micButton) {
     if (isProcessing) {
       return;
     }
-    micButton.classList.add("is-holding");
     startCapture();
   };
 
@@ -318,21 +282,4 @@ if (micButton) {
   micButton.addEventListener("pointerup", handlePointerUp);
   micButton.addEventListener("pointerleave", handlePointerUp);
   micButton.addEventListener("pointercancel", handlePointerUp);
-}
-
-if (translatedAudio) {
-  translatedAudio.addEventListener("play", () => {
-    updateStatus("Speaking…");
-    micButton?.classList.add("is-speaking");
-  });
-
-  translatedAudio.addEventListener("pause", () => {
-    micButton?.classList.remove("is-speaking");
-    updateStatus("Ready");
-  });
-
-  translatedAudio.addEventListener("ended", () => {
-    micButton?.classList.remove("is-speaking");
-    updateStatus("Ready");
-  });
 }

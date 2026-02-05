@@ -33,23 +33,20 @@
     <main class="live-translate-page">
       <header class="live-translate-topbar">
         <div class="live-translate-title-wrap">
-          <span class="live-translate-title" id="live-translate-title">Live Translate</span>
+          <span class="live-translate-title">Live Voice Translate</span>
+          <span class="live-translate-tag">MVP 0.1</span>
         </div>
-        <button
-          class="menu-toggle live-translate-menu-btn"
-          id="menuToggle"
-          type="button"
-          aria-expanded="false"
-          aria-label="Settings"
-        >
-          ⚙️
+        <button class="menu-toggle live-translate-menu-btn" id="menuToggle" type="button" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
       </header>
 
       <section class="live-translate-shell" aria-labelledby="live-translate-title">
-        <div class="live-translate-controls" aria-label="Language selection">
+        <div class="live-translate-controls">
           <div class="language-picker">
-            <label class="sr-only" for="sourceLanguage">Source language</label>
+            <label class="language-label" for="sourceLanguage">Source</label>
             <select id="sourceLanguage" class="language-select">
               <option value="en-US">English (US)</option>
               <option value="es-ES">Spanish (ES)</option>
@@ -61,7 +58,7 @@
           </div>
           <div class="language-swap" aria-hidden="true">→</div>
           <div class="language-picker">
-            <label class="sr-only" for="targetLanguage">Target language</label>
+            <label class="language-label" for="targetLanguage">Target</label>
             <select id="targetLanguage" class="language-select">
               <option value="es-ES">Spanish (ES)</option>
               <option value="en-US">English (US)</option>
@@ -74,41 +71,24 @@
         </div>
 
         <div class="live-translate-action">
-          <button id="micBtn" class="mic-button" type="button" aria-label="Hold to talk">
-            <span class="mic-visual" aria-hidden="true">
-              <span class="mic-waveform">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-              </span>
-              <span class="mic-spinner"></span>
-            </span>
-            <span class="mic-content">
-              <span class="mic-label">Hold to talk</span>
-            </span>
-          </button>
-          <p class="live-status" id="liveStatus">Ready</p>
+          <button id="micBtn" class="mic-button" type="button">🎤 HOLD TO TALK</button>
         </div>
 
         <div class="live-translate-output">
-          <div class="live-output-card" id="originalCard">
+          <div class="live-output-card">
             <p class="live-output-title">Original</p>
             <p class="live-output-text" id="transcriptText">Press and hold to speak.</p>
           </div>
-          <div class="live-output-card" id="translatedCard">
+          <div class="live-output-card">
             <p class="live-output-title">Translated</p>
             <p class="live-output-text" id="translatedText">Translation will appear here.</p>
           </div>
         </div>
 
-        <div class="live-translate-audio" id="translatedAudioWrap" hidden>
+        <div class="live-translate-audio">
           <p class="live-audio-title">Translated Voice</p>
-          <div class="live-audio-player">
-            <span class="audio-waveform" aria-hidden="true"></span>
-            <audio id="translatedAudio" controls></audio>
-          </div>
+          <audio id="translatedAudio" controls></audio>
+          <p class="live-audio-hint" id="audioHint">Audio output will appear after processing.</p>
         </div>
       </section>
     </main>
