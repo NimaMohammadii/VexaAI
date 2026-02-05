@@ -26,6 +26,7 @@
   --tts-gn-offset: 0px;
   --tts-topbar-height: 60px;
   --tts-bottom-safe: calc(16px + env(safe-area-inset-bottom));
+  --live-topbar-height: 60px;
 }
 
 body[data-theme="light"] {
@@ -1761,22 +1762,25 @@ select {
 }
 
 .live-translate-body {
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
   min-height: 100dvh;
 }
 
 .live-translate-page {
   min-height: 100dvh;
-  height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 0 0 16px;
+  padding: var(--live-topbar-height) 0 16px;
   background: var(--bg);
 }
 
 .live-translate-topbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  height: var(--live-topbar-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1826,7 +1830,7 @@ select {
   align-items: center;
   gap: 24px;
   padding: 20px 20px 18px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .live-translate-controls {
@@ -1873,7 +1877,7 @@ select {
 }
 
 .mic-button {
-  width: min(240px, 72vw);
+  width: min(200px, 60vw);
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   border: none;
