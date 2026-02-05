@@ -240,6 +240,7 @@ const voiceMap = {
   Arman: "ErXwobaYiN019PkySvjV",
   Noah: "MF3mGyEYCl7XYWbV9V6O",
 };
+const LIVE_TRANSLATE_VOICE_ID = "BpjGufoPiobT79j2vtj4";
 
 const getOrCreateUser = (userId) => {
   if (!userId) {
@@ -492,7 +493,43 @@ app.post("/api/live-translate", async (req, res) => {
 
     const translateData = await translateResponse.json();
     const translation = translateData?.choices?.[0]?.message?.content?.trim() || "";
-    return res.json({ transcript, translation });
+    if (!translation) {
+      return res.json({ transcript, translation, audioBase64: "" });
+    }
+
+    const elevenApiKey = process.env.ELEVEN_API;
+    if (!elevenApiKey) {
+      return res.status(500).json({ error: "Server API key is missing." });
+    }
+
+    const ttsResponse = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${LIVE_TRANSLATE_VOICE_ID}`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "audio/mpeg",
+          "Content-Type": "application/json",
+          "xi-api-key": elevenApiKey,
+        },
+        body: JSON.stringify({
+          text: translation,
+          model_id: "eleven_v3",
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.7,
+          },
+        }),
+      }
+    );
+
+    if (!ttsResponse.ok) {
+      const errorText = await ttsResponse.text();
+      return res.status(500).json({ error: errorText || "TTS failed." });
+    }
+
+    const ttsBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+    const ttsAudioBase64 = `data:audio/mpeg;base64,${ttsBuffer.toString("base64")}`;
+    return res.json({ transcript, translation, audioBase64: ttsAudioBase64 });
   } catch (error) {
     return res.status(500).json({ error: "Unexpected server error." });
   }
