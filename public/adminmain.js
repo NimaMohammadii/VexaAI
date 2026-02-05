@@ -60,6 +60,8 @@ let layoutSelectedOverlay = null;
 let frameReady = false;
 let isEditMode = true;
 let frameWrappedElements = new Map();
+const layoutChannel =
+  typeof window !== "undefined" && "BroadcastChannel" in window ? new BroadcastChannel("vexa-layout-editor") : null;
 
 const formatDate = (timestamp) => {
   if (!timestamp) {
@@ -150,6 +152,16 @@ const getPageSettings = (pageKey) => {
     };
   }
   return editor.pages[pageKey];
+};
+
+const broadcastLayoutEditor = () => {
+  if (!layoutChannel || !currentSiteSettings?.layoutEditor) {
+    return;
+  }
+  layoutChannel.postMessage({
+    type: "layout-editor-update",
+    layoutEditor: currentSiteSettings.layoutEditor,
+  });
 };
 
 const setLayoutStatus = (message, isError = false) => {
@@ -494,6 +506,7 @@ const updateSelectedOverride = (pageSettings, updates) => {
   const next = { ...current, ...updates };
   pageSettings.elements[layoutSelectedId] = next;
   applyElementOverrideToFrame(layoutSelectedElement, next);
+  broadcastLayoutEditor();
 };
 
 const clearSelectedOverride = (pageSettings) => {
@@ -512,6 +525,7 @@ const clearSelectedOverride = (pageSettings) => {
   if (layoutElementHeightInput)
     layoutElementHeightInput.value = Math.round(layoutSelectedElement.getBoundingClientRect().height);
   setLayoutStatus("Element reset.");
+  broadcastLayoutEditor();
 };
 
 const setupFrameInteractions = (doc, pageSettings) => {
@@ -977,6 +991,7 @@ if (layoutScaleInput) {
     const pageSettings = getPageSettings(layoutPageSelect?.value || "home");
     pageSettings.canvas.scale = Number(layoutScaleInput.value) || 1;
     applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
+    broadcastLayoutEditor();
   });
 }
 
@@ -988,6 +1003,7 @@ if (layoutOffsetXInput) {
     const pageSettings = getPageSettings(layoutPageSelect?.value || "home");
     pageSettings.canvas.offsetX = Number(layoutOffsetXInput.value) || 0;
     applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
+    broadcastLayoutEditor();
   });
 }
 
@@ -999,6 +1015,7 @@ if (layoutOffsetYInput) {
     const pageSettings = getPageSettings(layoutPageSelect?.value || "home");
     pageSettings.canvas.offsetY = Number(layoutOffsetYInput.value) || 0;
     applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
+    broadcastLayoutEditor();
   });
 }
 
@@ -1043,6 +1060,7 @@ if (layoutResetPageBtn) {
       refreshLayoutPreview();
     }
     setLayoutStatus("Page reset.");
+    broadcastLayoutEditor();
   });
 }
 
