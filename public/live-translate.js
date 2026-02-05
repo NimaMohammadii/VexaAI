@@ -5,8 +5,6 @@ const sourceLanguageSelect = document.getElementById("sourceLanguage");
 const targetLanguageSelect = document.getElementById("targetLanguage");
 const translatedAudio = document.getElementById("translatedAudio");
 const audioHint = document.getElementById("audioHint");
-const audioToggle = document.getElementById("audioToggle");
-const audioPlayer = document.getElementById("waveformPlayer");
 
 const TARGET_SAMPLE_RATE = 16000;
 let audioContext;
@@ -120,21 +118,6 @@ const resetAudioOutput = () => {
   if (audioHint) {
     audioHint.textContent = "Audio output will appear after processing.";
   }
-  if (audioToggle) {
-    audioToggle.disabled = true;
-  }
-  if (audioPlayer) {
-    audioPlayer.classList.remove("is-ready", "is-playing");
-  }
-};
-
-const syncAudioPlayerState = () => {
-  if (!translatedAudio || !audioPlayer || !audioToggle) {
-    return;
-  }
-  const isPlaying = !translatedAudio.paused && !translatedAudio.ended;
-  audioPlayer.classList.toggle("is-playing", isPlaying);
-  audioToggle.setAttribute("aria-label", isPlaying ? "Pause translated audio" : "Play translated audio");
 };
 
 const startCapture = async () => {
@@ -263,13 +246,6 @@ const stopCapture = async () => {
         if (audioHint) {
           audioHint.textContent = "Translated audio is ready.";
         }
-        if (audioToggle) {
-          audioToggle.disabled = false;
-        }
-        if (audioPlayer) {
-          audioPlayer.classList.add("is-ready");
-        }
-        syncAudioPlayerState();
       } else {
         resetAudioOutput();
       }
@@ -287,23 +263,6 @@ const stopCapture = async () => {
 };
 
 resetAudioOutput();
-
-if (translatedAudio) {
-  translatedAudio.addEventListener("play", syncAudioPlayerState);
-  translatedAudio.addEventListener("pause", syncAudioPlayerState);
-  translatedAudio.addEventListener("ended", syncAudioPlayerState);
-  translatedAudio.addEventListener("loadeddata", syncAudioPlayerState);
-}
-
-if (audioToggle && translatedAudio) {
-  audioToggle.addEventListener("click", () => {
-    if (translatedAudio.paused) {
-      translatedAudio.play();
-    } else {
-      translatedAudio.pause();
-    }
-  });
-}
 
 if (micButton) {
   const handlePointerDown = (event) => {
