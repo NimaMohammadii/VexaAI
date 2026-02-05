@@ -5,6 +5,9 @@ const sourceLanguageSelect = document.getElementById("sourceLanguage");
 const targetLanguageSelect = document.getElementById("targetLanguage");
 const translatedAudio = document.getElementById("translatedAudio");
 const audioHint = document.getElementById("audioHint");
+const audioPlayBtn = document.getElementById("audioPlayBtn");
+const liveAudioPlayer = document.getElementById("liveAudioPlayer");
+const audioPlayIcon = audioPlayBtn?.querySelector(".audio-play-icon");
 
 const TARGET_SAMPLE_RATE = 16000;
 let audioContext;
@@ -115,8 +118,30 @@ const resetAudioOutput = () => {
     translatedAudio.removeAttribute("src");
     translatedAudio.load();
   }
+  if (audioPlayBtn) {
+    audioPlayBtn.disabled = true;
+  }
+  if (audioPlayIcon) {
+    audioPlayIcon.textContent = "▶";
+  }
+  if (liveAudioPlayer) {
+    liveAudioPlayer.classList.remove("is-playing");
+  }
   if (audioHint) {
     audioHint.textContent = "Audio output will appear after processing.";
+  }
+};
+
+const updateAudioPlayerState = () => {
+  if (!translatedAudio) {
+    return;
+  }
+  const isPlaying = !translatedAudio.paused && !translatedAudio.ended;
+  if (liveAudioPlayer) {
+    liveAudioPlayer.classList.toggle("is-playing", isPlaying);
+  }
+  if (audioPlayIcon) {
+    audioPlayIcon.textContent = isPlaying ? "❚❚" : "▶";
   }
 };
 
@@ -243,6 +268,10 @@ const stopCapture = async () => {
       if (data?.audioBase64) {
         translatedAudio.src = data.audioBase64;
         translatedAudio.load();
+        if (audioPlayBtn) {
+          audioPlayBtn.disabled = false;
+        }
+        updateAudioPlayerState();
         if (audioHint) {
           audioHint.textContent = "Translated audio is ready.";
         }
@@ -263,6 +292,22 @@ const stopCapture = async () => {
 };
 
 resetAudioOutput();
+
+if (translatedAudio) {
+  translatedAudio.addEventListener("play", updateAudioPlayerState);
+  translatedAudio.addEventListener("pause", updateAudioPlayerState);
+  translatedAudio.addEventListener("ended", updateAudioPlayerState);
+}
+
+if (audioPlayBtn && translatedAudio) {
+  audioPlayBtn.addEventListener("click", () => {
+    if (translatedAudio.paused) {
+      translatedAudio.play();
+    } else {
+      translatedAudio.pause();
+    }
+  });
+}
 
 if (micButton) {
   const handlePointerDown = (event) => {
