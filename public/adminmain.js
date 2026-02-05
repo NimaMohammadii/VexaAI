@@ -195,14 +195,16 @@ const ensureFrameStyles = (doc) => {
   const style = doc.createElement("style");
   style.id = "admin-layout-style";
   style.textContent = `
-    html[data-admin-edit-mode="true"] [data-admin-id] {
-      pointer-events: none;
-    }
+    html[data-admin-edit-mode="true"] [data-admin-id],
     html[data-admin-edit-mode="true"] .admin-edit-wrapper > :not(.admin-edit-overlay) {
       pointer-events: none;
     }
     html[data-admin-edit-mode="true"] .admin-edit-overlay {
       pointer-events: auto;
+      display: block;
+    }
+    html[data-admin-edit-mode="false"] .admin-edit-overlay {
+      display: none;
     }
     .admin-edit-wrapper {
       position: relative;
@@ -210,10 +212,16 @@ const ensureFrameStyles = (doc) => {
     .admin-edit-overlay {
       position: absolute;
       inset: 0;
-      z-index: 9999;
-      background: rgba(143, 146, 255, 0.08);
+      z-index: 100000;
+      background: transparent;
       cursor: grab;
       touch-action: none;
+    }
+    html[data-admin-edit-mode="true"] .admin-edit-overlay:not(.admin-selected) {
+      background: rgba(143, 146, 255, 0.12);
+    }
+    .admin-edit-overlay.admin-overlay-fallback {
+      background: rgba(143, 146, 255, 0.2);
     }
     [data-admin-id] {
       outline: 1px dashed rgba(143, 146, 255, 0.45);
@@ -532,6 +540,20 @@ const setupFrameInteractions = (doc, pageSettings) => {
     return;
   }
   let dragState = null;
+  const selectFromOverlay = (overlayTarget) => {
+    if (!overlayTarget) {
+      return null;
+    }
+    const adminId = overlayTarget.dataset.adminId;
+    const selectedTarget = adminId ? doc.querySelector(`[data-admin-id="${adminId}"]`) : null;
+    if (!selectedTarget) {
+      overlayTarget.classList.add("admin-overlay-fallback");
+      return null;
+    }
+    overlayTarget.classList.remove("admin-overlay-fallback");
+    selectLayoutElement(selectedTarget, pageSettings);
+    return selectedTarget;
+  };
   const stopIfOverlay = (event) => {
     if (!isEditMode) {
       return;
@@ -549,6 +571,26 @@ const setupFrameInteractions = (doc, pageSettings) => {
   doc.addEventListener("click", stopIfOverlay, true);
   doc.addEventListener("touchstart", stopIfOverlay, true);
   doc.addEventListener("pointerdown", stopIfOverlay, true);
+  doc.addEventListener(
+    "click",
+    (event) => {
+      if (!isEditMode) {
+        return;
+      }
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) {
+        return;
+      }
+      const overlayTarget = target.closest(".admin-edit-overlay");
+      if (!overlayTarget) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      selectFromOverlay(overlayTarget);
+    },
+    true
+  );
 
   const onPointerMove = (event) => {
     if (!dragState || dragState.pointerId !== event.pointerId) {
@@ -605,12 +647,10 @@ const setupFrameInteractions = (doc, pageSettings) => {
       event.preventDefault();
       event.stopPropagation();
       overlayTarget.setPointerCapture?.(event.pointerId);
-      const adminId = overlayTarget.dataset.adminId;
-      const selectedTarget = adminId ? doc.querySelector(`[data-admin-id="${adminId}"]`) : null;
+      const selectedTarget = selectFromOverlay(overlayTarget);
       if (!selectedTarget) {
         return;
       }
-      selectLayoutElement(selectedTarget, pageSettings);
       const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
       dragState = {
         mode: resizeHandle ? "resize" : "drag",
