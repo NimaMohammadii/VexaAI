@@ -240,7 +240,7 @@ const voiceMap = {
   Arman: "ErXwobaYiN019PkySvjV",
   Noah: "MF3mGyEYCl7XYWbV9V6O",
 };
-const LIVE_TRANSLATE_VOICE_ID = "BpjGufoPiobT79j2vtj4";
+const LIVE_TRANSLATE_VOICE_ID = "TX3LPaxmHKxFdv7VOQHJ";
 
 const getOrCreateUser = (userId) => {
   if (!userId) {
