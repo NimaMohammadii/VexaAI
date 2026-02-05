@@ -47,6 +47,7 @@ const layoutFrameHeightInput = document.getElementById("layoutFrameHeight");
 const layoutSaveBtn = document.getElementById("layoutSaveBtn");
 const layoutStatus = document.getElementById("layoutStatus");
 const layoutRefreshBtn = document.getElementById("layoutRefreshBtn");
+const layoutEditToggle = document.getElementById("layoutEditToggle");
 const layoutFrame = document.getElementById("layoutFrame");
 const layoutFrameWrap = document.getElementById("layoutFrameWrap");
 const GN_FIXED_VALUE = 90;
@@ -55,7 +56,10 @@ let currentSiteSettings = null;
 const pendingStickers = {};
 let layoutSelectedElement = null;
 let layoutSelectedId = null;
+let layoutSelectedOverlay = null;
 let frameReady = false;
+let isEditMode = true;
+let frameWrappedElements = new Map();
 
 const formatDate = (timestamp) => {
   if (!timestamp) {
@@ -179,12 +183,33 @@ const ensureFrameStyles = (doc) => {
   const style = doc.createElement("style");
   style.id = "admin-layout-style";
   style.textContent = `
+    html[data-admin-edit-mode="true"] [data-admin-id] {
+      pointer-events: none;
+    }
+    html[data-admin-edit-mode="true"] .admin-edit-wrapper > :not(.admin-edit-overlay) {
+      pointer-events: none;
+    }
+    html[data-admin-edit-mode="true"] .admin-edit-overlay {
+      pointer-events: auto;
+    }
+    .admin-edit-wrapper {
+      position: relative;
+    }
+    .admin-edit-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 9998;
+      background: rgba(143, 146, 255, 0.08);
+      cursor: grab;
+      touch-action: none;
+    }
     [data-admin-id] {
       outline: 1px dashed rgba(143, 146, 255, 0.45);
-      cursor: grab;
     }
     [data-admin-id].admin-selected {
       outline: 2px solid rgba(143, 146, 255, 0.95);
+    }
+    .admin-edit-overlay.admin-selected {
       cursor: grabbing;
     }
     .admin-resize-handle {
@@ -212,7 +237,11 @@ const ensureFrameAdminIds = (doc) => {
       return;
     }
     const tag = element.tagName;
-    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
+    if (
+      ["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) ||
+      element.classList.contains("admin-edit-overlay") ||
+      element.classList.contains("admin-resize-handle")
+    ) {
       return;
     }
     if (element.dataset.adminId) {
@@ -225,7 +254,11 @@ const ensureFrameAdminIds = (doc) => {
       return;
     }
     const tag = element.tagName;
-    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
+    if (
+      ["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) ||
+      element.classList.contains("admin-edit-overlay") ||
+      element.classList.contains("admin-resize-handle")
+    ) {
       return;
     }
     if (element.dataset.adminId) {
@@ -234,6 +267,110 @@ const ensureFrameAdminIds = (doc) => {
     element.dataset.adminId = `auto-${index}`;
     index += 1;
   });
+};
+
+const VOID_ELEMENTS = new Set([
+  "AREA",
+  "BASE",
+  "BR",
+  "COL",
+  "EMBED",
+  "HR",
+  "IMG",
+  "INPUT",
+  "LINK",
+  "META",
+  "PARAM",
+  "SOURCE",
+  "TRACK",
+  "WBR",
+]);
+
+const getOverlayForElement = (element) =>
+  element?.querySelector(":scope > .admin-edit-overlay") || null;
+
+const createOverlay = (doc, adminId) => {
+  const overlay = doc.createElement("div");
+  overlay.className = "admin-edit-overlay";
+  overlay.dataset.adminId = adminId;
+  overlay.setAttribute("role", "button");
+  overlay.setAttribute("aria-label", `Edit ${adminId}`);
+  return overlay;
+};
+
+const enableEditMode = (doc) => {
+  if (!doc) {
+    return;
+  }
+  doc.documentElement.dataset.adminEditMode = "true";
+  const elements = doc.querySelectorAll("[data-admin-id]");
+  elements.forEach((element) => {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    const adminId = element.dataset.adminId;
+    if (!adminId) {
+      return;
+    }
+    if (element.classList.contains("admin-edit-overlay") || element.classList.contains("admin-resize-handle")) {
+      return;
+    }
+    if (VOID_ELEMENTS.has(element.tagName)) {
+      const existingWrapper =
+        element.parentElement?.classList.contains("admin-edit-wrapper") ? element.parentElement : null;
+      const wrapper = existingWrapper || doc.createElement("span");
+      if (existingWrapper && !wrapper.dataset.adminId) {
+        wrapper.dataset.adminId = adminId;
+      }
+      if (!existingWrapper) {
+        const computedDisplay = doc.defaultView?.getComputedStyle(element).display || "inline-block";
+        wrapper.className = "admin-edit-wrapper";
+        wrapper.style.display = computedDisplay === "inline" ? "inline-block" : computedDisplay;
+        wrapper.dataset.adminId = adminId;
+        element.removeAttribute("data-admin-id");
+        element.parentElement?.insertBefore(wrapper, element);
+        wrapper.appendChild(element);
+        frameWrappedElements.set(adminId, wrapper);
+      }
+      if (!wrapper.querySelector(":scope > .admin-edit-overlay")) {
+        wrapper.appendChild(createOverlay(doc, adminId));
+      }
+      return;
+    }
+    if (!element.classList.contains("admin-edit-wrapper")) {
+      element.classList.add("admin-edit-wrapper");
+    }
+    if (!getOverlayForElement(element)) {
+      element.appendChild(createOverlay(doc, adminId));
+    }
+  });
+};
+
+const disableEditMode = (doc) => {
+  if (!doc) {
+    return;
+  }
+  doc.documentElement.dataset.adminEditMode = "false";
+  doc.querySelectorAll(".admin-selected").forEach((element) => {
+    element.classList.remove("admin-selected");
+  });
+  doc.querySelectorAll(".admin-edit-overlay").forEach((overlay) => overlay.remove());
+  doc.querySelectorAll(".admin-resize-handle").forEach((handle) => handle.remove());
+  doc.querySelectorAll(".admin-edit-wrapper").forEach((wrapper) => {
+    wrapper.classList.remove("admin-edit-wrapper");
+  });
+  frameWrappedElements.forEach((wrapper, adminId) => {
+    const target = wrapper.querySelector(`[data-admin-id="${adminId}"]`);
+    const innerTarget = target || wrapper.querySelector("*");
+    if (!innerTarget) {
+      return;
+    }
+    innerTarget.dataset.adminId = adminId;
+    wrapper.parentElement?.insertBefore(innerTarget, wrapper);
+    wrapper.remove();
+  });
+  frameWrappedElements = new Map();
+  layoutSelectedOverlay = null;
 };
 
 const applyElementOverrideToFrame = (element, override) => {
@@ -274,10 +411,38 @@ const refreshLayoutPreview = () => {
   updateFrameSize(pageSettings);
   layoutSelectedElement = null;
   layoutSelectedId = null;
+  layoutSelectedOverlay = null;
   setLayoutStatus("");
   if (layoutFrame) {
     frameReady = false;
     layoutFrame.src = layoutPages[pageKey] || "/index.html";
+  }
+};
+
+const setFrameEditMode = (doc, enabled, pageSettings = null) => {
+  if (!doc) {
+    return;
+  }
+  if (enabled) {
+    enableEditMode(doc);
+    if (pageSettings) {
+      Object.entries(pageSettings.elements).forEach(([elementId, override]) => {
+        const element = doc.querySelector(`[data-admin-id="${elementId}"]`);
+        if (element) {
+          applyElementOverrideToFrame(element, override);
+        }
+      });
+    }
+  } else {
+    disableEditMode(doc);
+  }
+  layoutSelectedElement = null;
+  layoutSelectedId = null;
+  layoutSelectedOverlay = null;
+  if (layoutElementHint) {
+    layoutElementHint.textContent = enabled
+      ? "Click any element inside the preview."
+      : "Edit mode is off. Toggle it on to select elements.";
   }
 };
 
@@ -287,17 +452,25 @@ const selectLayoutElement = (element, pageSettings) => {
   }
   if (layoutSelectedElement && layoutSelectedElement !== element) {
     layoutSelectedElement.classList.remove("admin-selected");
-    const handle = layoutSelectedElement.querySelector(".admin-resize-handle");
+  }
+  if (layoutSelectedOverlay && layoutSelectedOverlay !== getOverlayForElement(layoutSelectedElement)) {
+    layoutSelectedOverlay.classList.remove("admin-selected");
+    const handle = layoutSelectedOverlay.querySelector(".admin-resize-handle");
     handle?.remove();
   }
   layoutSelectedElement = element;
   layoutSelectedId = element.dataset.adminId;
   element.classList.add("admin-selected");
-  if (!element.querySelector(".admin-resize-handle")) {
-    const handle = element.ownerDocument.createElement("span");
-    handle.className = "admin-resize-handle";
-    element.style.position = element.style.position || "relative";
-    element.appendChild(handle);
+  layoutSelectedOverlay = getOverlayForElement(element) || element.ownerDocument.querySelector(
+    `.admin-edit-overlay[data-admin-id="${layoutSelectedId}"]`
+  );
+  if (layoutSelectedOverlay) {
+    layoutSelectedOverlay.classList.add("admin-selected");
+    if (!layoutSelectedOverlay.querySelector(".admin-resize-handle")) {
+      const handle = element.ownerDocument.createElement("span");
+      handle.className = "admin-resize-handle";
+      layoutSelectedOverlay.appendChild(handle);
+    }
   }
   const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
   const rect = element.getBoundingClientRect();
@@ -346,6 +519,22 @@ const setupFrameInteractions = (doc, pageSettings) => {
     return;
   }
   let dragState = null;
+  const stopIfOverlay = (event) => {
+    if (!isEditMode) {
+      return;
+    }
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) {
+      return;
+    }
+    if (target.closest(".admin-edit-overlay")) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  doc.addEventListener("click", stopIfOverlay, true);
+  doc.addEventListener("touchstart", stopIfOverlay, true);
 
   const onPointerMove = (event) => {
     if (!dragState) {
@@ -377,6 +566,9 @@ const setupFrameInteractions = (doc, pageSettings) => {
   doc.addEventListener(
     "mousedown",
     (event) => {
+      if (!isEditMode) {
+        return;
+      }
       let target = event.target;
       if (target && target.nodeType === Node.TEXT_NODE) {
         target = target.parentElement;
@@ -386,14 +578,17 @@ const setupFrameInteractions = (doc, pageSettings) => {
         return;
       }
       const resizeHandle = target.closest(".admin-resize-handle");
-      const selectedTarget = resizeHandle
-        ? resizeHandle.parentElement
-        : target.closest("[data-admin-id]");
-      if (!selectedTarget) {
+      const overlayTarget = resizeHandle ? resizeHandle.closest(".admin-edit-overlay") : target.closest(".admin-edit-overlay");
+      if (!overlayTarget) {
         return;
       }
       event.preventDefault();
       event.stopPropagation();
+      const adminId = overlayTarget.dataset.adminId;
+      const selectedTarget = adminId ? doc.querySelector(`[data-admin-id="${adminId}"]`) : null;
+      if (!selectedTarget) {
+        return;
+      }
       selectLayoutElement(selectedTarget, pageSettings);
       const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
       dragState = {
@@ -738,6 +933,18 @@ if (layoutRefreshBtn) {
   });
 }
 
+if (layoutEditToggle) {
+  layoutEditToggle.addEventListener("change", () => {
+    isEditMode = layoutEditToggle.checked;
+    if (frameReady) {
+      const pageKey = layoutPageSelect?.value || "home";
+      const pageSettings = getPageSettings(pageKey);
+      setFrameEditMode(layoutFrame?.contentDocument, isEditMode, pageSettings);
+      applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
+    }
+  });
+}
+
 if (layoutFrame) {
   layoutFrame.addEventListener("load", () => {
     const doc = layoutFrame.contentDocument;
@@ -745,6 +952,7 @@ if (layoutFrame) {
       return;
     }
     frameReady = true;
+    frameWrappedElements = new Map();
     const pageKey = layoutPageSelect?.value || "home";
     const pageSettings = getPageSettings(pageKey);
     ensureFrameStyles(doc);
@@ -757,9 +965,7 @@ if (layoutFrame) {
       }
     });
     setupFrameInteractions(doc, pageSettings);
-    if (layoutElementHint) {
-      layoutElementHint.textContent = "Click any element inside the preview.";
-    }
+    setFrameEditMode(doc, isEditMode, pageSettings);
   });
 }
 
