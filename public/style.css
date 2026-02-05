@@ -1764,7 +1764,8 @@ select {
   overflow: hidden;
   min-height: 100dvh;
   height: 100dvh;
-  overscroll-behavior: none;
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
 }
 
 .live-translate-page {
@@ -1843,7 +1844,7 @@ select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 18px 20px 16px;
 }
 
@@ -1892,11 +1893,11 @@ select {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  margin-top: 6px;
+  margin-top: 2px;
 }
 
 .mic-button {
-  width: min(220px, 70vw);
+  width: min(200px, 62vw);
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   border: none;
@@ -2008,6 +2009,7 @@ select {
   max-height: 38px;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
