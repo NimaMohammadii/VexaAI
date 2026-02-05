@@ -1772,6 +1772,8 @@ select {
   flex-direction: column;
   padding: 0 0 12px;
   background: var(--bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .live-translate-topbar {
@@ -1893,7 +1895,7 @@ select {
 }
 
 .mic-button {
-  width: min(220px, 70vw);
+  width: min(200px, 64vw);
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   border: none;
@@ -1908,6 +1910,48 @@ select {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.live-waveform {
+  width: min(240px, 78vw);
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.live-waveform span {
+  width: 10px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(143, 146, 255, 0.9), rgba(80, 250, 123, 0.6));
+  box-shadow: 0 0 12px rgba(143, 146, 255, 0.6);
+  animation: wave-pulse 1.2s ease-in-out infinite;
+}
+
+.live-waveform span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.live-waveform span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.live-waveform span:nth-child(4) {
+  animation-delay: 0.45s;
+}
+
+.live-waveform span:nth-child(5) {
+  animation-delay: 0.6s;
+}
+
+.mic-button.is-recording + .live-waveform {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .mic-button:active,
@@ -2036,6 +2080,20 @@ select {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes wave-pulse {
+  0%,
+  100% {
+    height: 10px;
+    opacity: 0.55;
+    transform: translateY(6px);
+  }
+  50% {
+    height: 36px;
+    opacity: 1;
+    transform: translateY(-6px);
   }
 }
 
