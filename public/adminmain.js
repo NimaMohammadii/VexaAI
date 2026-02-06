@@ -186,6 +186,10 @@ const ensureFrameStyles = (doc) => {
       outline: none;
       cursor: auto;
     }
+    [data-admin-id].admin-selected {
+      outline: none;
+      cursor: auto;
+    }
     .admin-resize-handle {
       display: none;
       position: absolute;
@@ -203,10 +207,8 @@ const ensureFrameStyles = (doc) => {
       outline: 1px dashed rgba(143, 146, 255, 0.45);
       cursor: grab;
     }
-    .admin-layout-edit-mode [data-admin-id].is-selected {
-      position: relative;
+    .admin-layout-edit-mode [data-admin-id].admin-selected {
       outline: 2px solid rgba(143, 146, 255, 0.95);
-      box-shadow: 0 0 0 3px rgba(143, 146, 255, 0.35);
       cursor: grabbing;
     }
     .admin-layout-edit-mode .admin-resize-handle {
@@ -226,7 +228,7 @@ const ensureFrameStyles = (doc) => {
     }
     .admin-layout-edit-mode [data-editable="true"],
     .admin-layout-edit-mode [data-editable="true"] * {
-      pointer-events: auto !important;
+      pointer-events: auto;
     }
   `;
   doc.head.appendChild(style);
@@ -310,16 +312,6 @@ const applyFrameEditMode = (doc) => {
     return;
   }
   doc.body.classList.toggle("admin-layout-edit-mode", EDIT_MODE);
-
-  const sideMenu = doc.getElementById("sideMenu");
-  const menuOverlay = doc.getElementById("menuOverlay");
-  if (EDIT_MODE) {
-    sideMenu?.classList.add("is-open");
-    sideMenu?.setAttribute("aria-hidden", "false");
-    if (menuOverlay) {
-      menuOverlay.hidden = true;
-    }
-  }
 };
 
 const refreshLayoutPreview = () => {
@@ -342,13 +334,13 @@ const selectLayoutElement = (element, pageSettings) => {
     return;
   }
   if (layoutSelectedElement && layoutSelectedElement !== element) {
-    layoutSelectedElement.classList.remove("is-selected");
+    layoutSelectedElement.classList.remove("admin-selected");
     const handle = layoutSelectedElement.querySelector(".admin-resize-handle");
     handle?.remove();
   }
   layoutSelectedElement = element;
   layoutSelectedId = element.dataset.adminId;
-  element.classList.add("is-selected");
+  element.classList.add("admin-selected");
   if (!element.querySelector(".admin-resize-handle")) {
     const handle = element.ownerDocument.createElement("span");
     handle.className = "admin-resize-handle";
@@ -401,34 +393,10 @@ const setupFrameInteractions = (doc, pageSettings) => {
   }
   let dragState = null;
 
-  const findEditableTarget = (rawTarget) => {
-    const target = rawTarget instanceof Element ? rawTarget : rawTarget?.parentElement;
-    if (!target) {
-      return null;
-    }
-    return target.closest('[data-editable="true"]');
-  };
-
-  const shouldBlockInteraction = (target) => {
-    if (!target) {
-      return false;
-    }
-    return Boolean(target.closest("a, [role='menuitem'], .menu-link"));
-  };
-
-  const isMenuControlTarget = (target) => {
-    if (!target) {
-      return false;
-    }
-    return Boolean(target.closest(".menu-toggle, .menu-close, #menuClose, .menu-overlay"));
-  };
-
-
   const onPointerMove = (event) => {
     if (!dragState) {
       return;
     }
-    event.preventDefault();
     const deltaX = event.clientX - dragState.startX;
     const deltaY = event.clientY - dragState.startY;
     if (dragState.mode === "resize") {
@@ -447,56 +415,38 @@ const setupFrameInteractions = (doc, pageSettings) => {
   };
 
   const onPointerUp = () => {
-    if (dragState?.pointerId !== undefined && dragState.pointerTarget?.releasePointerCapture) {
-      dragState.pointerTarget.releasePointerCapture(dragState.pointerId);
-    }
     dragState = null;
-    doc.removeEventListener("pointermove", onPointerMove, true);
-    doc.removeEventListener("pointerup", onPointerUp, true);
-    doc.removeEventListener("pointercancel", onPointerUp, true);
+    doc.removeEventListener("mousemove", onPointerMove);
+    doc.removeEventListener("mouseup", onPointerUp);
   };
+
 
   const onPointerDown = (event) => {
     if (!EDIT_MODE) {
       return;
     }
-
-    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-    if (!target) {
-      return;
-    }
-
-    if (isMenuControlTarget(target)) {
-      return;
-    }
-
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
 
-    if (shouldBlockInteraction(target)) {
-      event.preventDefault();
-      event.stopPropagation();
+    let target = event.target;
+    if (target && target.nodeType === Node.TEXT_NODE) {
+      target = target.parentElement;
     }
-
-    const resizeHandle = target.closest(".admin-resize-handle");
-    const selectedTarget = resizeHandle ? resizeHandle.parentElement : findEditableTarget(target);
-    if (!selectedTarget) {
-      if (layoutSelectedElement) {
-        layoutSelectedElement.classList.remove("is-selected");
-      }
-      layoutSelectedElement = null;
-      layoutSelectedId = null;
-      if (layoutElementHint) {
-        layoutElementHint.textContent = "Tap/click an editable element to select it.";
-      }
+    target = target instanceof Element ? target : null;
+    if (!target) {
       return;
     }
-
+    const resizeHandle = target.closest(".admin-resize-handle");
+    const selectedTarget = resizeHandle
+      ? resizeHandle.parentElement
+      : target.closest('[data-editable="true"]');
+    if (!selectedTarget) {
+      return;
+    }
     selectLayoutElement(selectedTarget, pageSettings);
-
+    console.log("Selected editable element:", selectedTarget);
     const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
-    selectedTarget.setPointerCapture?.(event.pointerId);
     dragState = {
       mode: resizeHandle ? "resize" : "drag",
       startX: event.clientX,
@@ -509,31 +459,12 @@ const setupFrameInteractions = (doc, pageSettings) => {
       startHeight: Number.isFinite(override.height)
         ? override.height
         : Math.round(selectedTarget.getBoundingClientRect().height),
-      pointerId: event.pointerId,
-      pointerTarget: selectedTarget,
     };
-    doc.addEventListener("pointermove", onPointerMove, true);
-    doc.addEventListener("pointerup", onPointerUp, true);
-    doc.addEventListener("pointercancel", onPointerUp, true);
-  };
-
-  const onClickCapture = (event) => {
-    if (!EDIT_MODE) {
-      return;
-    }
-    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-    if (isMenuControlTarget(target)) {
-      return;
-    }
-    if (!findEditableTarget(target) || shouldBlockInteraction(target)) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-    }
+    doc.addEventListener("mousemove", onPointerMove);
+    doc.addEventListener("mouseup", onPointerUp);
   };
 
   doc.addEventListener("pointerdown", onPointerDown, { capture: true });
-  doc.addEventListener("click", onClickCapture, { capture: true });
 };
 
 const renderUsers = (users) => {
