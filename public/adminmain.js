@@ -403,9 +403,14 @@ const setupFrameInteractions = (doc, pageSettings) => {
     if (!target) {
       return false;
     }
-    return Boolean(
-      target.closest("a, button, [role='button'], [role='menu'], [role='menuitem'], .menu-toggle, .menu-link")
-    );
+    return Boolean(target.closest("a, [role='menuitem'], .menu-link"));
+  };
+
+  const isMenuControlTarget = (target) => {
+    if (!target) {
+      return false;
+    }
+    return Boolean(target.closest(".menu-toggle, .menu-close, #menuClose, .menu-overlay"));
   };
 
   const onPointerMove = (event) => {
@@ -444,14 +449,19 @@ const setupFrameInteractions = (doc, pageSettings) => {
     if (!EDIT_MODE) {
       return;
     }
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
 
     const target = event.target instanceof Element ? event.target : event.target?.parentElement;
     if (!target) {
       return;
     }
+
+    if (isMenuControlTarget(target)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
 
     if (shouldBlockInteraction(target)) {
       event.preventDefault();
@@ -501,6 +511,9 @@ const setupFrameInteractions = (doc, pageSettings) => {
       return;
     }
     const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (isMenuControlTarget(target)) {
+      return;
+    }
     if (!findEditableTarget(target) || shouldBlockInteraction(target)) {
       event.preventDefault();
       event.stopPropagation();
