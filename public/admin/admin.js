@@ -48,15 +48,21 @@ const saveStorage = (data) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 };
 
+const INTERACTIVE_SELECTOR = "button, a, input, textarea, select, option, [role='button'], [role='menuitem']";
+
 const isVisibleElement = (element) => {
   const style = frameDoc.defaultView.getComputedStyle(element);
   const rect = element.getBoundingClientRect();
   return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
 };
 
+const isInteractiveElement = (element) => element.matches(INTERACTIVE_SELECTOR);
+
 const getElements = () => {
-  const nodes = [...frameDoc.querySelectorAll("[data-admin-id]")].filter(isVisibleElement);
-  nodes.sort((a, b) => (a.dataset.adminName || "").localeCompare(b.dataset.adminName || "fa"));
+  const nodes = [...frameDoc.querySelectorAll("[data-admin-id]")].filter(
+    (element) => isVisibleElement(element) || isInteractiveElement(element),
+  );
+  nodes.sort((a, b) => (a.dataset.adminName || "").localeCompare(b.dataset.adminName || "", "fa"));
   return nodes;
 };
 
