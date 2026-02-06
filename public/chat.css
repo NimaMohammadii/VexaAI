@@ -279,3 +279,59 @@ body {
     transform: translateY(0);
   }
 }
+
+@media (max-width: 768px) {
+  .chat-header {
+    min-height: 52px;
+    padding: calc(8px + var(--safe-top)) 12px 8px;
+    gap: 8px;
+  }
+
+  .brand,
+  .chat-header h1 {
+    font-size: 0.85rem;
+  }
+
+  .icon-button,
+  .send-button {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+  }
+
+  .message-list {
+    padding: 12px 12px 16px;
+    gap: 10px;
+  }
+
+  .message {
+    max-width: 100%;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .chat-input-wrap {
+    padding: 8px 12px calc(12px + var(--safe-bottom));
+  }
+
+  .chat-input-shell {
+    border-radius: 18px;
+    padding: 8px;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .chat-header {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .brand {
+    font-size: 0.82rem;
+  }
+
+  .chat-header h1 {
+    justify-self: start;
+    font-size: 0.8rem;
+  }
+}
