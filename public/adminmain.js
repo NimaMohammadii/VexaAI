@@ -37,7 +37,6 @@ const layoutOffsetYInput = document.getElementById("layoutOffsetY");
 const layoutElementHint = document.getElementById("layoutElementHint");
 const layoutElementXInput = document.getElementById("layoutElementX");
 const layoutElementYInput = document.getElementById("layoutElementY");
-const layoutElementRotateInput = document.getElementById("layoutElementRotate");
 const layoutElementWidthInput = document.getElementById("layoutElementWidth");
 const layoutElementHeightInput = document.getElementById("layoutElementHeight");
 const layoutResetElementBtn = document.getElementById("layoutResetElementBtn");
@@ -119,6 +118,8 @@ const fetchSiteSettings = async () => {
 const layoutPages = {
   home: "/index.html",
   "text-to-speech": "/text-to-speech.html",
+  "live-translate": "/live-translate.html",
+  "vexa-assistant": "/vexa-assistant.html",
   voices: "/voices.html",
   about: "/about.html",
   pricing: "/pricing.html",
@@ -246,8 +247,7 @@ const applyElementOverrideToFrame = (element, override) => {
   const baseTransform = element.dataset.adminBaseTransform;
   const x = Number.isFinite(override?.x) ? override.x : 0;
   const y = Number.isFinite(override?.y) ? override.y : 0;
-  const rotate = Number.isFinite(override?.rotate) ? override.rotate : 0;
-  const transform = [baseTransform, `translate(${x}px, ${y}px)`, `rotate(${rotate}deg)`]
+  const transform = [baseTransform, `translate(${x}px, ${y}px)`]
     .filter(Boolean)
     .join(" ");
   element.style.transform = transform;
@@ -303,7 +303,6 @@ const selectLayoutElement = (element, pageSettings) => {
   const rect = element.getBoundingClientRect();
   if (layoutElementXInput) layoutElementXInput.value = override.x ?? 0;
   if (layoutElementYInput) layoutElementYInput.value = override.y ?? 0;
-  if (layoutElementRotateInput) layoutElementRotateInput.value = override.rotate ?? 0;
   if (layoutElementWidthInput)
     layoutElementWidthInput.value = Number.isFinite(override.width) ? override.width : Math.round(rect.width);
   if (layoutElementHeightInput)
@@ -333,7 +332,6 @@ const clearSelectedOverride = (pageSettings) => {
   layoutSelectedElement.style.height = "";
   if (layoutElementXInput) layoutElementXInput.value = 0;
   if (layoutElementYInput) layoutElementYInput.value = 0;
-  if (layoutElementRotateInput) layoutElementRotateInput.value = 0;
   if (layoutElementWidthInput)
     layoutElementWidthInput.value = Math.round(layoutSelectedElement.getBoundingClientRect().width);
   if (layoutElementHeightInput)
@@ -812,7 +810,6 @@ const bindElementInput = (input, key) => {
 
 bindElementInput(layoutElementXInput, "x");
 bindElementInput(layoutElementYInput, "y");
-bindElementInput(layoutElementRotateInput, "rotate");
 bindElementInput(layoutElementWidthInput, "width");
 bindElementInput(layoutElementHeightInput, "height");
 

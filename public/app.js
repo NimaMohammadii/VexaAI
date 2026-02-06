@@ -89,18 +89,30 @@ const resolvePageKey = () => {
 };
 
 const ensureAdminIds = () => {
-  const candidates = document.querySelectorAll(
-    "[data-admin-id], button, .menu-toggle, .menu-close, .menu-link, .side-menu, .menu-bar, .home-card"
-  );
+  const main = document.querySelector("main");
+  const candidates = main ? main.querySelectorAll("*") : document.querySelectorAll("[data-admin-id], main *");
   const existingIds = new Set();
+
   candidates.forEach((element) => {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    const tag = element.tagName;
+    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
+      return;
+    }
     if (element.dataset.adminId) {
       existingIds.add(element.dataset.adminId);
     }
   });
+
   let index = existingIds.size;
   candidates.forEach((element) => {
-    if (element.dataset.adminId) {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    const tag = element.tagName;
+    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) || element.dataset.adminId) {
       return;
     }
     element.dataset.adminId = `auto-${index}`;
