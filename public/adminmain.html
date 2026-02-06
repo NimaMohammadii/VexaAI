@@ -288,7 +288,12 @@
           <div class="layout-preview">
             <div class="layout-preview-toolbar">
               <span class="muted">Interactive preview</span>
-              <button class="btn ghost" id="layoutRefreshBtn" type="button">Reload preview</button>
+              <div class="form-row compact">
+                <button class="btn" id="layoutEditModeBtn" type="button" aria-pressed="false">
+                  Enable edit mode
+                </button>
+                <button class="btn ghost" id="layoutRefreshBtn" type="button">Reload preview</button>
+              </div>
             </div>
             <div class="layout-frame" id="layoutFrameWrap">
               <iframe id="layoutFrame" title="Site preview"></iframe>
