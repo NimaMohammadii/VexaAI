@@ -48,20 +48,112 @@ const saveStorage = (data) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 };
 
-const INTERACTIVE_SELECTOR = "button, a, input, textarea, select, option, [role='button'], [role='menuitem']";
+const ADMIN_SCAN_SELECTOR = "button, a, input, textarea, select, nav, header, footer, div";
+const EXCLUDED_TAGS = new Set(["SCRIPT", "STYLE", "META", "LINK"]);
+
+let autoElementCounter = 1;
+
+const normalizeText = (value = "") => value.replace(/\s+/g, " ").trim();
+
+const makeAutoAdminId = () => {
+  const id = `auto_el_${String(autoElementCounter).padStart(3, "0")}`;
+  autoElementCounter += 1;
+  return id;
+};
+
+const derivePersianName = (element) => {
+  const tag = element.tagName.toLowerCase();
+  const role = (element.getAttribute("role") || "").toLowerCase();
+  const classHint = normalizeText((element.className || "").replace(/[-_]/g, " "));
+  const textHint = normalizeText(
+    element.getAttribute("aria-label") ||
+      element.getAttribute("title") ||
+      element.getAttribute("placeholder") ||
+      element.textContent ||
+      "",
+  );
+
+  if (tag === "button" || role === "button") {
+    if (/menu|nav|hamburger|toggle/i.test(`${classHint} ${textHint}`)) {
+      return "آیکن منو";
+    }
+    return textHint ? `دکمه ${textHint}` : "دکمه اصلی";
+  }
+
+  if (tag === "a") {
+    return textHint ? `لینک ${textHint}` : "لینک ناوبری";
+  }
+
+  if (tag === "input") {
+    const inputType = (element.getAttribute("type") || "text").toLowerCase();
+    if (["checkbox", "radio"].includes(inputType)) return "گزینه انتخاب";
+    if (inputType === "search") return "کادر جستجو";
+    return "کادر ورودی متن";
+  }
+
+  if (tag === "textarea") return "کادر متن چندخطی";
+  if (tag === "select") return "فهرست انتخاب";
+  if (tag === "nav") return "منوی ناوبری بالا";
+  if (tag === "header") return "سربرگ صفحه";
+  if (tag === "footer") return "پاورقی صفحه";
+
+  if (tag === "div") {
+    if (/audio|player|voice|sound/i.test(`${classHint} ${textHint}`)) {
+      return "پلیر صوتی خروجی";
+    }
+    if (/menu|nav/i.test(`${classHint} ${textHint}`)) {
+      return "بخش منو";
+    }
+    return textHint ? `بخش ${textHint}` : "بخش نمایشی";
+  }
+
+  return "المان صفحه";
+};
 
 const isVisibleElement = (element) => {
+  if (EXCLUDED_TAGS.has(element.tagName)) {
+    return false;
+  }
   const style = frameDoc.defaultView.getComputedStyle(element);
   const rect = element.getBoundingClientRect();
   return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
 };
 
-const isInteractiveElement = (element) => element.matches(INTERACTIVE_SELECTOR);
+const ensureAdminMeta = (element, usedIds) => {
+  let adminId = element.dataset.adminId;
+  if (!adminId || usedIds.has(adminId)) {
+    do {
+      adminId = makeAutoAdminId();
+    } while (usedIds.has(adminId));
+    element.dataset.adminId = adminId;
+  }
+  usedIds.add(adminId);
+
+  if (!element.dataset.adminName) {
+    element.dataset.adminName = derivePersianName(element);
+  }
+};
 
 const getElements = () => {
-  const nodes = [...frameDoc.querySelectorAll("[data-admin-id]")].filter(
-    (element) => isVisibleElement(element) || isInteractiveElement(element),
-  );
+  autoElementCounter = 1;
+  const usedIds = new Set();
+  const nodes = [...frameDoc.querySelectorAll(ADMIN_SCAN_SELECTOR)].filter((element) => {
+    if (!(element instanceof frameDoc.defaultView.Element)) {
+      return false;
+    }
+    if (!isVisibleElement(element)) {
+      return false;
+    }
+    if (element.tagName === "DIV") {
+      const rect = element.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        return false;
+      }
+    }
+
+    ensureAdminMeta(element, usedIds);
+    return true;
+  });
   nodes.sort((a, b) => (a.dataset.adminName || "").localeCompare(b.dataset.adminName || "", "fa"));
   return nodes;
 };
