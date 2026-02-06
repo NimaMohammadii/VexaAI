@@ -403,10 +403,9 @@ const setupFrameInteractions = (doc, pageSettings) => {
     if (!target) {
       return false;
     }
-    return Boolean(
-      target.closest("a, button, [role='button'], [role='menu'], [role='menuitem'], .menu-toggle, .menu-link")
-    );
+    return Boolean(target.closest("a, [role='menuitem'], .menu-link"));
   };
+
 
   const onPointerMove = (event) => {
     if (!dragState) {
@@ -444,14 +443,15 @@ const setupFrameInteractions = (doc, pageSettings) => {
     if (!EDIT_MODE) {
       return;
     }
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
 
     const target = event.target instanceof Element ? event.target : event.target?.parentElement;
     if (!target) {
       return;
     }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
 
     if (shouldBlockInteraction(target)) {
       event.preventDefault();
