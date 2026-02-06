@@ -455,7 +455,7 @@ const handleGenerate = async () => {
   }
 
   if (text === "/adminmain") {
-    window.location.href = "/adminmain";
+    window.location.href = "/admin-login";
     return;
   }
 
