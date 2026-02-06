@@ -310,6 +310,16 @@ const applyFrameEditMode = (doc) => {
     return;
   }
   doc.body.classList.toggle("admin-layout-edit-mode", EDIT_MODE);
+
+  const sideMenu = doc.getElementById("sideMenu");
+  const menuOverlay = doc.getElementById("menuOverlay");
+  if (EDIT_MODE) {
+    sideMenu?.classList.add("is-open");
+    sideMenu?.setAttribute("aria-hidden", "false");
+    if (menuOverlay) {
+      menuOverlay.hidden = true;
+    }
+  }
 };
 
 const refreshLayoutPreview = () => {
@@ -412,6 +422,7 @@ const setupFrameInteractions = (doc, pageSettings) => {
     }
     return Boolean(target.closest(".menu-toggle, .menu-close, #menuClose, .menu-overlay"));
   };
+
 
   const onPointerMove = (event) => {
     if (!dragState) {
