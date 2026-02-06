@@ -409,6 +409,22 @@ const setupFrameInteractions = (doc, pageSettings) => {
   };
 
 
+  const getEditableTarget = (eventTarget) => {
+    let target = eventTarget;
+    if (target && target.nodeType === Node.TEXT_NODE) {
+      target = target.parentElement;
+    }
+    target = target instanceof Element ? target : null;
+    if (!target) {
+      return { resizeHandle: null, selectedTarget: null };
+    }
+    const resizeHandle = target.closest(".admin-resize-handle");
+    const selectedTarget = resizeHandle
+      ? resizeHandle.parentElement
+      : target.closest('[data-editable="true"]');
+    return { resizeHandle, selectedTarget };
+  };
+
   const onPointerDown = (event) => {
     if (!EDIT_MODE) {
       return;
@@ -417,23 +433,11 @@ const setupFrameInteractions = (doc, pageSettings) => {
     event.stopPropagation();
     event.stopImmediatePropagation();
 
-    let target = event.target;
-    if (target && target.nodeType === Node.TEXT_NODE) {
-      target = target.parentElement;
-    }
-    target = target instanceof Element ? target : null;
-    if (!target) {
-      return;
-    }
-    const resizeHandle = target.closest(".admin-resize-handle");
-    const selectedTarget = resizeHandle
-      ? resizeHandle.parentElement
-      : target.closest('[data-editable="true"]');
+    const { resizeHandle, selectedTarget } = getEditableTarget(event.target);
     if (!selectedTarget) {
       return;
     }
     selectLayoutElement(selectedTarget, pageSettings);
-    console.log("Selected editable element:", selectedTarget);
     const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
     dragState = {
       mode: resizeHandle ? "resize" : "drag",
@@ -452,7 +456,22 @@ const setupFrameInteractions = (doc, pageSettings) => {
     doc.addEventListener("mouseup", onPointerUp);
   };
 
+  const onClick = (event) => {
+    if (!EDIT_MODE) {
+      return;
+    }
+    const { selectedTarget } = getEditableTarget(event.target);
+    if (!selectedTarget) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    selectLayoutElement(selectedTarget, pageSettings);
+  };
+
   doc.addEventListener("pointerdown", onPointerDown, { capture: true });
+  doc.addEventListener("click", onClick, { capture: true });
 };
 
 const renderUsers = (users) => {
