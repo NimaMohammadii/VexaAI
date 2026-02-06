@@ -1,3 +1,6 @@
+// این نسخه Debug دارد که به شما کمک میکند مشکل را پیدا کنید
+// بعد از پیدا کردن مشکل، console.log ها را پاک کنید
+
 const loginForm = document.getElementById(“loginForm”);
 const adminCodeInput = document.getElementById(“adminCode”);
 const loginError = document.getElementById(“loginError”);
@@ -66,12 +69,15 @@ return new Date(timestamp).toLocaleString();
 };
 
 const setLoginError = (message) => {
+console.log(“🔴 Login Error:”, message);
 if (loginError) {
 loginError.textContent = message;
+loginError.style.display = message ? “block” : “none”;
 }
 };
 
 const setDashboardVisible = (visible) => {
+console.log(“👁️ Setting dashboard visible:”, visible);
 if (dashboard) {
 dashboard.hidden = !visible;
 }
@@ -90,31 +96,43 @@ layoutStudioPanel.hidden = !visible;
 };
 
 const fetchSummary = async () => {
+console.log(“📊 Fetching admin summary…”);
 const response = await fetch(”/api/admin/summary”);
+console.log(“📊 Summary response:”, { status: response.status, ok: response.ok });
 if (!response.ok) {
 throw new Error(“Unauthorized”);
 }
-return response.json();
+const data = await response.json();
+console.log(“📊 Summary data:”, data);
+return data;
 };
 
 const fetchUsers = async (search = “”) => {
+console.log(“👥 Fetching users…”, search ? `search: ${search}` : “”);
 const params = new URLSearchParams();
 if (search) {
 params.set(“search”, search);
 }
 const response = await fetch(`/api/admin/users?${params.toString()}`);
+console.log(“👥 Users response:”, { status: response.status, ok: response.ok });
 if (!response.ok) {
 throw new Error(“Unauthorized”);
 }
-return response.json();
+const data = await response.json();
+console.log(“👥 Users data:”, data);
+return data;
 };
 
 const fetchSiteSettings = async () => {
+console.log(“⚙️ Fetching site settings…”);
 const response = await fetch(”/api/admin/site-settings”);
+console.log(“⚙️ Settings response:”, { status: response.status, ok: response.ok });
 if (!response.ok) {
 throw new Error(“Unable to load settings.”);
 }
-return response.json();
+const data = await response.json();
+console.log(“⚙️ Settings data:”, data);
+return data;
 };
 
 const layoutPages = {
@@ -407,7 +425,6 @@ if (!selectedTarget) {
   return;
 }
 selectLayoutElement(selectedTarget, pageSettings);
-console.log("Selected editable element:", selectedTarget);
 const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
 dragState = {
   mode: resizeHandle ? "resize" : "drag",
@@ -449,7 +466,9 @@ return `<tr> <td>${user.id}</td> <td>${user.credits}</td> <td><span class="statu
 };
 
 const loadDashboard = async (search = “”) => {
+console.log(“📈 Loading dashboard…”);
 const [summary, userData] = await Promise.all([fetchSummary(), fetchUsers(search)]);
+console.log(“📈 Dashboard data loaded”);
 if (totalUsers) {
 totalUsers.textContent = summary.totalUsers;
 }
@@ -524,7 +543,9 @@ updateFrameSize(pageSettings);
 };
 
 const loadSiteSettings = async () => {
+console.log(“⚙️ Loading site settings…”);
 const settings = await fetchSiteSettings();
+console.log(“⚙️ Settings loaded successfully”);
 populateSettingsForm(settings);
 if (layoutFrame && layoutPageSelect) {
 refreshLayoutPreview();
@@ -544,29 +565,51 @@ throw new Error(error.error || “Unable to update credits.”);
 };
 
 if (loginForm) {
+console.log(“✅ Login form found”);
 loginForm.addEventListener(“submit”, async (event) => {
 event.preventDefault();
+console.log(“🔐 Login form submitted”);
 setLoginError(””);
+
+```
+const code = adminCodeInput.value.trim();
+console.log("🔐 Sending login request...");
+
 try {
-const response = await fetch(”/api/admin/login”, {
-method: “POST”,
-headers: { “Content-Type”: “application/json” },
-body: JSON.stringify({ key: adminCodeInput.value.trim() }),
-});
-if (!response.ok) {
-const error = await response.json();
-throw new Error(error.error || “Invalid code.”);
-}
-adminCodeInput.value = “”;
-await loadDashboard();
-await loadSiteSettings();
+  const response = await fetch("/api/admin/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: code }),
+  });
+  
+  console.log("🔐 Login response status:", response.status, response.ok ? "OK" : "FAILED");
+  
+  if (!response.ok) {
+    const error = await response.json();
+    console.log("🔴 Login failed with error:", error);
+    throw new Error(error.error || "Invalid code.");
+  }
+  
+  console.log("✅ Login successful!");
+  adminCodeInput.value = "";
+  
+  await loadDashboard();
+  await loadSiteSettings();
+  console.log("✅ Dashboard loaded successfully");
+  
 } catch (error) {
-setLoginError(error.message);
-setDashboardVisible(false);
+  console.error("🔴 Login error:", error);
+  setLoginError(error.message);
+  setDashboardVisible(false);
 }
+```
+
 });
+} else {
+console.error(“❌ Login form NOT found! Check HTML element with id=‘loginForm’”);
 }
 
+// Rest of the event listeners remain the same…
 if (searchForm) {
 searchForm.addEventListener(“submit”, async (event) => {
 event.preventDefault();
@@ -902,8 +945,20 @@ setLayoutStatus(error.message, true);
 });
 }
 
+console.log(“🚀 Admin panel script loaded”);
+console.log(“📋 Initial state check:”);
+console.log(”- loginForm:”, !!loginForm);
+console.log(”- adminCodeInput:”, !!adminCodeInput);
+console.log(”- loginPanel:”, !!loginPanel);
+console.log(”- dashboard:”, !!dashboard);
+
+// Check if already authenticated
 loadDashboard()
-.then(() => loadSiteSettings())
+.then(() => {
+console.log(“✅ Already authenticated”);
+return loadSiteSettings();
+})
 .catch(() => {
+console.log(“ℹ️ Not authenticated, showing login”);
 setDashboardVisible(false);
 });
