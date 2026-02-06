@@ -416,6 +416,13 @@ const setupFrameInteractions = (doc, pageSettings) => {
     return Boolean(target.closest("a, [role='menuitem'], .menu-link"));
   };
 
+  const isMenuControlTarget = (target) => {
+    if (!target) {
+      return false;
+    }
+    return Boolean(target.closest(".menu-toggle, .menu-close, #menuClose, .menu-overlay"));
+  };
+
 
   const onPointerMove = (event) => {
     if (!dragState) {
@@ -456,6 +463,10 @@ const setupFrameInteractions = (doc, pageSettings) => {
 
     const target = event.target instanceof Element ? event.target : event.target?.parentElement;
     if (!target) {
+      return;
+    }
+
+    if (isMenuControlTarget(target)) {
       return;
     }
 
@@ -511,6 +522,9 @@ const setupFrameInteractions = (doc, pageSettings) => {
       return;
     }
     const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (isMenuControlTarget(target)) {
+      return;
+    }
     if (!findEditableTarget(target) || shouldBlockInteraction(target)) {
       event.preventDefault();
       event.stopPropagation();
