@@ -100,27 +100,35 @@ body {
 }
 
 .message {
-  max-width: min(88%, 760px);
-  border-radius: 18px;
-  padding: 11px 14px;
-  line-height: 1.52;
+  width: 100%;
+  max-width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 2px 0;
+  line-height: 1.7;
   animation: message-in 180ms ease;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.message--user {
-  align-self: flex-end;
-  background: var(--user);
-}
-
+.message--user,
 .message--assistant {
-  align-self: flex-start;
-  background: var(--assistant);
+  align-self: stretch;
+  background: transparent;
 }
 
 .message-text {
   margin: 0;
+  padding: 0;
+}
+
+.message--user .message-text {
+  color: #dfe5f1;
+  text-align: right;
+}
+
+.message--assistant .message-text {
+  color: var(--text);
+  text-align: left;
 }
 
 .system-message {
