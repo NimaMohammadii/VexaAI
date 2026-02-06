@@ -16,6 +16,7 @@ const scriptedReplies = [
 
 let isResponding = false;
 let replyCursor = 0;
+let userPinnedToBottom = true;
 
 const clampTextarea = () => {
   chatInput.style.height = "auto";
@@ -23,11 +24,23 @@ const clampTextarea = () => {
   chatInput.style.height = `${nextHeight}px`;
 };
 
-const scrollToLatest = () => {
+const isNearBottom = () => {
+  const threshold = 64;
+  const distanceFromBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
+  return distanceFromBottom <= threshold;
+};
+
+const scrollToLatest = (behavior = "smooth") => {
   messageList.scrollTo({
     top: messageList.scrollHeight,
-    behavior: "smooth",
+    behavior,
   });
+};
+
+const maintainBottomLock = () => {
+  if (userPinnedToBottom || document.activeElement === chatInput) {
+    scrollToLatest("auto");
+  }
 };
 
 const appendMessage = ({ role, content }) => {
@@ -58,6 +71,17 @@ const updateSendState = () => {
   sendButton.disabled = !canSend || isResponding;
 };
 
+const updateViewportSizing = () => {
+  const viewport = window.visualViewport;
+  if (!viewport) {
+    document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+    return;
+  }
+
+  const appHeight = Math.round(viewport.height + viewport.offsetTop);
+  document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
+};
+
 const sendMessage = async () => {
   const value = chatInput.value.trim();
   if (!value || isResponding) {
@@ -81,12 +105,13 @@ const sendMessage = async () => {
 
   isResponding = false;
   updateSendState();
-  chatInput.focus();
+  chatInput.focus({ preventScroll: true });
 };
 
 chatInput.addEventListener("input", () => {
   clampTextarea();
   updateSendState();
+  maintainBottomLock();
 });
 
 chatInput.addEventListener("keydown", (event) => {
@@ -96,10 +121,43 @@ chatInput.addEventListener("keydown", (event) => {
   }
 });
 
+chatInput.addEventListener("focus", () => {
+  updateViewportSizing();
+  requestAnimationFrame(() => scrollToLatest("auto"));
+});
+
+chatInput.addEventListener("blur", () => {
+  setTimeout(() => {
+    updateViewportSizing();
+    maintainBottomLock();
+  }, 80);
+});
+
+messageList.addEventListener("scroll", () => {
+  userPinnedToBottom = isNearBottom();
+}, { passive: true });
+
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
   sendMessage();
 });
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    updateViewportSizing();
+    maintainBottomLock();
+  });
+  window.visualViewport.addEventListener("scroll", updateViewportSizing);
+}
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => {
+    updateViewportSizing();
+    maintainBottomLock();
+  }, 120);
+});
+
+window.addEventListener("resize", updateViewportSizing);
 
 appendSystemMessage("Vexa is online");
 appendMessage({
@@ -107,6 +165,7 @@ appendMessage({
   content: "Hi! I'm Vexa. Ask me anything and I'll jump right in.",
 });
 
+updateViewportSizing();
 clampTextarea();
 updateSendState();
-chatInput.focus();
+chatInput.focus({ preventScroll: true });
