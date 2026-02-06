@@ -46,6 +46,7 @@ const layoutFrameHeightInput = document.getElementById("layoutFrameHeight");
 const layoutSaveBtn = document.getElementById("layoutSaveBtn");
 const layoutStatus = document.getElementById("layoutStatus");
 const layoutRefreshBtn = document.getElementById("layoutRefreshBtn");
+const layoutEditModeBtn = document.getElementById("layoutEditModeBtn");
 const layoutFrame = document.getElementById("layoutFrame");
 const layoutFrameWrap = document.getElementById("layoutFrameWrap");
 const GN_FIXED_VALUE = 90;
@@ -55,6 +56,7 @@ const pendingStickers = {};
 let layoutSelectedElement = null;
 let layoutSelectedId = null;
 let frameReady = false;
+let layoutEditModeEnabled = false;
 
 const formatDate = (timestamp) => {
   if (!timestamp) {
@@ -181,14 +183,15 @@ const ensureFrameStyles = (doc) => {
   style.id = "admin-layout-style";
   style.textContent = `
     [data-admin-id] {
-      outline: 1px dashed rgba(143, 146, 255, 0.45);
-      cursor: grab;
+      outline: none;
+      cursor: auto;
     }
     [data-admin-id].admin-selected {
-      outline: 2px solid rgba(143, 146, 255, 0.95);
-      cursor: grabbing;
+      outline: none;
+      cursor: auto;
     }
     .admin-resize-handle {
+      display: none;
       position: absolute;
       width: 14px;
       height: 14px;
@@ -199,6 +202,17 @@ const ensureFrameStyles = (doc) => {
       border: 2px solid #0b0f18;
       cursor: se-resize;
       z-index: 9999;
+    }
+    .admin-layout-edit-mode [data-admin-id] {
+      outline: 1px dashed rgba(143, 146, 255, 0.45);
+      cursor: grab;
+    }
+    .admin-layout-edit-mode [data-admin-id].admin-selected {
+      outline: 2px solid rgba(143, 146, 255, 0.95);
+      cursor: grabbing;
+    }
+    .admin-layout-edit-mode .admin-resize-handle {
+      display: block;
     }
   `;
   doc.head.appendChild(style);
@@ -267,6 +281,22 @@ const applyCanvasOverrideToFrame = (doc, pageSettings) => {
   main.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 };
 
+const updateEditModeButton = () => {
+  if (!layoutEditModeBtn) {
+    return;
+  }
+  layoutEditModeBtn.textContent = layoutEditModeEnabled ? "Disable edit mode" : "Enable edit mode";
+  layoutEditModeBtn.setAttribute("aria-pressed", String(layoutEditModeEnabled));
+  layoutEditModeBtn.classList.toggle("primary", layoutEditModeEnabled);
+};
+
+const applyFrameEditMode = (doc) => {
+  if (!doc?.body) {
+    return;
+  }
+  doc.body.classList.toggle("admin-layout-edit-mode", layoutEditModeEnabled);
+};
+
 const refreshLayoutPreview = () => {
   const pageKey = layoutPageSelect?.value || "home";
   const pageSettings = getPageSettings(pageKey);
@@ -274,7 +304,8 @@ const refreshLayoutPreview = () => {
   updateFrameSize(pageSettings);
   layoutSelectedElement = null;
   layoutSelectedId = null;
-  setLayoutStatus("");
+  updateEditModeButton();
+  setLayoutStatus(layoutEditModeEnabled ? "Edit mode is enabled." : "");
   if (layoutFrame) {
     frameReady = false;
     layoutFrame.src = layoutPages[pageKey] || "/index.html";
@@ -388,6 +419,9 @@ const setupFrameInteractions = (doc, pageSettings) => {
         ? resizeHandle.parentElement
         : target.closest("[data-admin-id]");
       if (!selectedTarget) {
+        return;
+      }
+      if (!layoutEditModeEnabled) {
         return;
       }
       event.preventDefault();
@@ -736,6 +770,21 @@ if (layoutRefreshBtn) {
   });
 }
 
+if (layoutEditModeBtn) {
+  updateEditModeButton();
+  layoutEditModeBtn.addEventListener("click", () => {
+    layoutEditModeEnabled = !layoutEditModeEnabled;
+    updateEditModeButton();
+    applyFrameEditMode(layoutFrame?.contentDocument);
+    if (layoutElementHint) {
+      layoutElementHint.textContent = layoutEditModeEnabled
+        ? "Click any element inside the preview."
+        : "Enable edit mode to drag and resize items.";
+    }
+    setLayoutStatus(layoutEditModeEnabled ? "Edit mode is enabled." : "Edit mode is disabled.");
+  });
+}
+
 if (layoutFrame) {
   layoutFrame.addEventListener("load", () => {
     const doc = layoutFrame.contentDocument;
@@ -747,6 +796,7 @@ if (layoutFrame) {
     const pageSettings = getPageSettings(pageKey);
     ensureFrameStyles(doc);
     ensureFrameAdminIds(doc);
+    applyFrameEditMode(doc);
     applyCanvasOverrideToFrame(doc, pageSettings);
     Object.entries(pageSettings.elements).forEach(([elementId, override]) => {
       const element = doc.querySelector(`[data-admin-id="${elementId}"]`);
@@ -756,7 +806,9 @@ if (layoutFrame) {
     });
     setupFrameInteractions(doc, pageSettings);
     if (layoutElementHint) {
-      layoutElementHint.textContent = "Click any element inside the preview.";
+      layoutElementHint.textContent = layoutEditModeEnabled
+        ? "Click any element inside the preview."
+        : "Enable edit mode to drag and resize items.";
     }
   });
 }
