@@ -228,7 +228,7 @@ const adminAuth = (req, res, next) => {
     if (req.originalUrl.startsWith("/api/")) {
       return res.status(401).json({ error: "Unauthorized." });
     }
-    return res.redirect("/adminmain");
+    return res.redirect("/admin-login");
   }
   return next();
 };
@@ -597,7 +597,7 @@ app.get("/admin-login", (req, res) => {
 });
 
 app.get("/adminmain", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "adminmain.html"));
+  res.redirect("/admin-login");
 });
 
 app.get("/api/admin/summary", adminAuth, (req, res) => {
