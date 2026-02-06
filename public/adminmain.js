@@ -60,6 +60,7 @@ let layoutSelectedOverlay = null;
 let frameReady = false;
 let isEditMode = true;
 let frameWrappedElements = new Map();
+const INPUT_DEBUG_HIGHLIGHT_ATTR = "data-input-debug-highlight";
 const layoutChannel =
   typeof window !== "undefined" && "BroadcastChannel" in window ? new BroadcastChannel("vexa-layout-editor") : null;
 
@@ -188,6 +189,55 @@ const updateFrameSize = (pageSettings) => {
   layoutFrameWrap.style.height = `${pageSettings.frame.height}px`;
 };
 
+const attachGlobalInputDebugListeners = (doc) => {
+  if (!doc || doc.documentElement?.dataset.inputDebugListenersBound === "true") {
+    return;
+  }
+
+  const clearExistingHighlight = () => {
+    const active = doc.querySelector(`[${INPUT_DEBUG_HIGHLIGHT_ATTR}="true"]`);
+    if (!(active instanceof HTMLElement)) {
+      return;
+    }
+    const previousOutline = active.dataset.debugPrevOutline;
+    if (typeof previousOutline === "string") {
+      active.style.outline = previousOutline;
+    } else {
+      active.style.removeProperty("outline");
+    }
+    delete active.dataset.debugPrevOutline;
+    delete active.dataset.inputDebugHighlight;
+  };
+
+  const logInputEvent = (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    const blockingParent = path.find(
+      (node) =>
+        node instanceof Element &&
+        node !== target &&
+        node.ownerDocument?.defaultView?.getComputedStyle(node).pointerEvents === "none",
+    );
+
+    console.log(`[input-debug] ${event.type} target:`, target);
+    console.log(`[input-debug] ${event.type} composedPath:`, path);
+    console.log(`[input-debug] ${event.type} pointer-events blocker:`, blockingParent || null);
+
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    clearExistingHighlight();
+    target.dataset.debugPrevOutline = target.style.outline;
+    target.dataset.inputDebugHighlight = "true";
+    target.style.outline = "2px solid red";
+  };
+
+  doc.addEventListener("pointerdown", logInputEvent);
+  doc.addEventListener("touchstart", logInputEvent);
+  doc.documentElement.dataset.inputDebugListenersBound = "true";
+};
+
 const ensureFrameStyles = (doc) => {
   if (!doc || doc.getElementById("admin-layout-style")) {
     return;
@@ -205,6 +255,9 @@ const ensureFrameStyles = (doc) => {
     }
     .edit-mode * {
       pointer-events: none;
+    }
+    .edit-mode .editable-wrapper {
+      pointer-events: auto;
     }
     .edit-mode .editor-overlay {
       pointer-events: auto;
@@ -1006,6 +1059,7 @@ if (layoutFrame) {
     const pageKey = layoutPageSelect?.value || "home";
     const pageSettings = getPageSettings(pageKey);
     ensureFrameStyles(doc);
+    attachGlobalInputDebugListeners(doc);
     ensureFrameAdminIds(doc);
     applyCanvasOverrideToFrame(doc, pageSettings);
     Object.entries(pageSettings.elements).forEach(([elementId, override]) => {
