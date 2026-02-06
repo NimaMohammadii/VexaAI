@@ -219,8 +219,8 @@ const ensureFrameStyles = (doc) => {
 };
 
 const ensureFrameAdminIds = (doc) => {
-  const main = doc.querySelector("main");
-  const candidates = main ? main.querySelectorAll("*") : doc.querySelectorAll("[data-admin-id], main *");
+  const root = doc.body || doc.documentElement;
+  const candidates = root ? root.querySelectorAll("*") : doc.querySelectorAll("*");
   const existingIds = new Set();
   candidates.forEach((element) => {
     if (!(element instanceof Element)) {
@@ -402,6 +402,29 @@ const setupFrameInteractions = (doc, pageSettings) => {
     doc.removeEventListener("mousemove", onPointerMove);
     doc.removeEventListener("mouseup", onPointerUp);
   };
+
+
+  doc.addEventListener(
+    "click",
+    (event) => {
+      if (!layoutEditModeEnabled) {
+        return;
+      }
+      let target = event.target;
+      if (target && target.nodeType === Node.TEXT_NODE) {
+        target = target.parentElement;
+      }
+      target = target instanceof Element ? target : null;
+      if (!target) {
+        return;
+      }
+      if (target.closest("[data-admin-id]")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    true
+  );
 
   doc.addEventListener(
     "mousedown",

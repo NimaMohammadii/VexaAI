@@ -89,8 +89,8 @@ const resolvePageKey = () => {
 };
 
 const ensureAdminIds = () => {
-  const main = document.querySelector("main");
-  const candidates = main ? main.querySelectorAll("*") : document.querySelectorAll("[data-admin-id], main *");
+  const root = document.body || document.documentElement;
+  const candidates = root ? root.querySelectorAll("*") : document.querySelectorAll("*");
   const existingIds = new Set();
 
   candidates.forEach((element) => {
