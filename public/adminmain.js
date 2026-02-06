@@ -214,18 +214,6 @@ const ensureFrameStyles = (doc) => {
     .admin-layout-edit-mode .admin-resize-handle {
       display: block;
     }
-    .admin-layout-edit-mode button,
-    .admin-layout-edit-mode a,
-    .admin-layout-edit-mode [role="button"],
-    .admin-layout-edit-mode [role="menu"],
-    .admin-layout-edit-mode [role="menuitem"],
-    .admin-layout-edit-mode .menu-overlay,
-    .admin-layout-edit-mode .side-menu,
-    .admin-layout-edit-mode .menu-toggle,
-    .admin-layout-edit-mode .menu-close,
-    .admin-layout-edit-mode .menu-link {
-      pointer-events: none !important;
-    }
     .admin-layout-edit-mode [data-editable="true"],
     .admin-layout-edit-mode [data-editable="true"] * {
       pointer-events: auto;
