@@ -381,6 +381,14 @@ const setupFrameInteractions = (doc, pageSettings) => {
   }
   let dragState = null;
 
+  const shouldBlockInteraction = () => EDIT_MODE;
+
+  const blockEvent = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  };
+
   const onPointerMove = (event) => {
     if (!dragState) {
       return;
@@ -426,12 +434,10 @@ const setupFrameInteractions = (doc, pageSettings) => {
   };
 
   const onPointerDown = (event) => {
-    if (!EDIT_MODE) {
+    if (!shouldBlockInteraction()) {
       return;
     }
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
+    blockEvent(event);
 
     const { resizeHandle, selectedTarget } = getEditableTarget(event.target);
     if (!selectedTarget) {
@@ -457,21 +463,45 @@ const setupFrameInteractions = (doc, pageSettings) => {
   };
 
   const onClick = (event) => {
-    if (!EDIT_MODE) {
+    if (!shouldBlockInteraction()) {
       return;
     }
     const { selectedTarget } = getEditableTarget(event.target);
     if (!selectedTarget) {
       return;
     }
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
+    blockEvent(event);
     selectLayoutElement(selectedTarget, pageSettings);
+  };
+
+  const onAuxClick = (event) => {
+    if (!shouldBlockInteraction()) {
+      return;
+    }
+    blockEvent(event);
+  };
+
+  const onSubmit = (event) => {
+    if (!shouldBlockInteraction()) {
+      return;
+    }
+    blockEvent(event);
+  };
+
+  const onKeyDown = (event) => {
+    if (!shouldBlockInteraction()) {
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      blockEvent(event);
+    }
   };
 
   doc.addEventListener("pointerdown", onPointerDown, { capture: true });
   doc.addEventListener("click", onClick, { capture: true });
+  doc.addEventListener("auxclick", onAuxClick, { capture: true });
+  doc.addEventListener("submit", onSubmit, { capture: true });
+  doc.addEventListener("keydown", onKeyDown, { capture: true });
 };
 
 const renderUsers = (users) => {
