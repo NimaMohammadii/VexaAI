@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vexa AI Chat</title>
+    <link rel="stylesheet" href="chat.css" />
+  </head>
+  <body>
+    <main class="chat-app" aria-label="Vexa AI chat interface">
+      <header class="chat-header">
+        <div class="brand" aria-label="Vexa">Vexa</div>
+        <h1>Chat with Vexa</h1>
+        <button class="icon-button" type="button" aria-label="Open settings">
+          <span aria-hidden="true">⋯</span>
+        </button>
+      </header>
+
+      <section id="messageList" class="message-list" role="log" aria-live="polite" aria-label="Conversation"></section>
+
+      <form id="chatForm" class="chat-input-wrap" aria-label="Send a message to Vexa">
+        <label class="sr-only" for="chatInput">Message Vexa</label>
+        <div class="chat-input-shell">
+          <textarea
+            id="chatInput"
+            rows="1"
+            maxlength="4000"
+            placeholder="Message Vexa..."
+            aria-label="Message Vexa"
+          ></textarea>
+          <button id="sendButton" class="send-button" type="submit" aria-label="Send message" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4.2 19.8 21.7 12 4.2 4.2l-.2 6.4 11.3 1.4L4 13.4Z" />
+            </svg>
+          </button>
+        </div>
+      </form>
+    </main>
+
+    <template id="messageTemplate">
+      <article class="message">
+        <p class="message-text"></p>
+      </article>
+    </template>
+
+    <template id="systemTemplate">
+      <div class="system-message"></div>
+    </template>
+
+    <template id="typingTemplate">
+      <article class="message message--assistant typing" aria-label="Vexa is typing">
+        <div class="typing-content">
+          <span class="typing-label">Vexa is typing</span>
+          <span class="typing-dots" aria-hidden="true">
+            <i></i><i></i><i></i>
+          </span>
+        </div>
+      </article>
+    </template>
+
+    <script src="chat.js"></script>
+  </body>
+</html>
