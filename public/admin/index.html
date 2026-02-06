@@ -1,14 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin</title>
+    <title>پنل مدیریت المان‌ها</title>
     <link rel="stylesheet" href="admin.css" />
   </head>
   <body>
     <main class="admin-shell">
-      <h1>Admin</h1>
+      <section class="admin-controls">
+        <h1>پنل مدیریت المان‌ها</h1>
+        <label for="pageSelector">صفحه هدف</label>
+        <select id="pageSelector">
+          <option value="/index.html">خانه</option>
+          <option value="/text-to-speech.html">تبدیل متن به صدا</option>
+          <option value="/live-translate.html">ترجمه زنده</option>
+          <option value="/vexa-assistant.html">دستیار وکسا</option>
+          <option value="/voices.html">صداها</option>
+          <option value="/about.html">درباره ما</option>
+          <option value="/pricing.html">قیمت‌گذاری</option>
+          <option value="/credits.html">اعتبارها</option>
+          <option value="/how-it-works.html">نحوه کار</option>
+        </select>
+
+        <label for="elementSelector">لیست المان‌ها</label>
+        <select id="elementSelector"></select>
+
+        <div class="fields" id="fieldsContainer"></div>
+      </section>
+
+      <section class="preview-shell">
+        <iframe id="siteFrame" title="پیش‌نمایش سایت"></iframe>
+      </section>
     </main>
+
+    <script src="admin.js"></script>
   </body>
 </html>

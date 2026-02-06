@@ -71,6 +71,135 @@ const applyStickerSettings = (stickers = {}) => {
   });
 };
 
+
+const ADMIN_STYLE_STORAGE_KEY = "vexa-admin-style-overrides";
+const ADMIN_EDITABLE_PROPERTIES = [
+  "left",
+  "top",
+  "width",
+  "height",
+  "fontSize",
+  "borderRadius",
+  "padding",
+  "margin",
+];
+
+const adminTagNameMap = {
+  BUTTON: "دکمه",
+  A: "لینک",
+  INPUT: "کادر ورودی",
+  TEXTAREA: "کادر نوشتن",
+  SELECT: "فهرست انتخاب",
+  OPTION: "گزینه",
+  NAV: "منو",
+  ASIDE: "منوی کناری",
+  MAIN: "بخش اصلی",
+  SECTION: "بخش",
+  HEADER: "سربرگ",
+  FOOTER: "پاورقی",
+  ARTICLE: "کارت",
+  DIV: "بخش",
+  P: "متن",
+  H1: "عنوان",
+  H2: "عنوان",
+  H3: "عنوان",
+  H4: "عنوان",
+  H5: "عنوان",
+  H6: "عنوان",
+  IMG: "تصویر",
+  AUDIO: "پخش کننده صوت",
+  UL: "فهرست",
+  LI: "آیتم فهرست",
+  SPAN: "متن",
+};
+
+const toAdminSlug = (value = "") =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "element";
+
+const deriveAdminName = (element) => {
+  const explicitLabel =
+    element.getAttribute("aria-label") ||
+    element.getAttribute("title") ||
+    element.getAttribute("placeholder") ||
+    element.textContent;
+  const cleanLabel = (explicitLabel || "").trim().replace(/\s+/g, " ").slice(0, 36);
+  const base = adminTagNameMap[element.tagName] || "المان";
+  return cleanLabel ? `${base} ${cleanLabel}` : base;
+};
+
+const ensureAdminMetadata = () => {
+  const elements = document.body ? document.body.querySelectorAll("*") : document.querySelectorAll("*");
+  const pagePrefix = toAdminSlug(resolvePageKey());
+  const usedIds = new Set();
+
+  elements.forEach((element) => {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    const tag = element.tagName;
+    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD", "NOSCRIPT"].includes(tag)) {
+      return;
+    }
+
+    let adminId = element.dataset.adminId;
+    if (!adminId) {
+      const source =
+        element.id ||
+        element.getAttribute("name") ||
+        element.className?.split(" ").filter(Boolean)[0] ||
+        `${tag.toLowerCase()}_${usedIds.size}`;
+      adminId = `${pagePrefix}_${toAdminSlug(source)}`;
+    }
+
+    let counter = 1;
+    const candidate = adminId;
+    while (usedIds.has(adminId)) {
+      adminId = `${candidate}_${counter}`;
+      counter += 1;
+    }
+    usedIds.add(adminId);
+    element.dataset.adminId = adminId;
+
+    if (!element.dataset.adminName) {
+      element.dataset.adminName = deriveAdminName(element);
+    }
+  });
+};
+
+const loadAdminStyleOverrides = () => {
+  try {
+    const raw = localStorage.getItem(ADMIN_STYLE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (error) {
+    return {};
+  }
+};
+
+const applySavedAdminStyles = () => {
+  const pageKey = resolvePageKey();
+  const storage = loadAdminStyleOverrides();
+  const pageStyles = storage?.[pageKey] || {};
+  Object.entries(pageStyles).forEach(([adminId, styleMap]) => {
+    const target = document.querySelector(`[data-admin-id="${adminId}"]`);
+    if (!target || !styleMap || typeof styleMap !== "object") {
+      return;
+    }
+    if (["left", "top"].some((key) => Number.isFinite(styleMap[key]))) {
+      if (getComputedStyle(target).position === "static") {
+        target.style.position = "relative";
+      }
+    }
+    ADMIN_EDITABLE_PROPERTIES.forEach((property) => {
+      if (Number.isFinite(styleMap[property])) {
+        target.style[property] = `${styleMap[property]}px`;
+      }
+    });
+  });
+};
+
 const pageKeyMap = {
   "index.html": "home",
   "text-to-speech.html": "text-to-speech",
@@ -89,35 +218,7 @@ const resolvePageKey = () => {
 };
 
 const ensureAdminIds = () => {
-  const root = document.body || document.documentElement;
-  const candidates = root ? root.querySelectorAll("*") : document.querySelectorAll("*");
-  const existingIds = new Set();
-
-  candidates.forEach((element) => {
-    if (!(element instanceof Element)) {
-      return;
-    }
-    const tag = element.tagName;
-    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
-      return;
-    }
-    if (element.dataset.adminId) {
-      existingIds.add(element.dataset.adminId);
-    }
-  });
-
-  let index = existingIds.size;
-  candidates.forEach((element) => {
-    if (!(element instanceof Element)) {
-      return;
-    }
-    const tag = element.tagName;
-    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) || element.dataset.adminId) {
-      return;
-    }
-    element.dataset.adminId = `auto-${index}`;
-    index += 1;
-  });
+  ensureAdminMetadata();
 };
 
 const applyElementOverrides = (pageSettings) => {
@@ -705,6 +806,8 @@ if (window.VEXA_SELECTED_VOICE) {
   currentVoice = window.VEXA_SELECTED_VOICE;
 }
 
+ensureAdminMetadata();
+applySavedAdminStyles();
 loadSiteSettings();
 initUser();
 sendHeartbeat();
