@@ -47,7 +47,6 @@ const layoutFrameHeightInput = document.getElementById("layoutFrameHeight");
 const layoutSaveBtn = document.getElementById("layoutSaveBtn");
 const layoutStatus = document.getElementById("layoutStatus");
 const layoutRefreshBtn = document.getElementById("layoutRefreshBtn");
-const layoutEditToggle = document.getElementById("layoutEditToggle");
 const layoutFrame = document.getElementById("layoutFrame");
 const layoutFrameWrap = document.getElementById("layoutFrameWrap");
 const GN_FIXED_VALUE = 90;
@@ -56,13 +55,7 @@ let currentSiteSettings = null;
 const pendingStickers = {};
 let layoutSelectedElement = null;
 let layoutSelectedId = null;
-let layoutSelectedOverlay = null;
 let frameReady = false;
-let isEditMode = true;
-let frameWrappedElements = new Map();
-const INPUT_DEBUG_HIGHLIGHT_ATTR = "data-input-debug-highlight";
-const layoutChannel =
-  typeof window !== "undefined" && "BroadcastChannel" in window ? new BroadcastChannel("vexa-layout-editor") : null;
 
 const formatDate = (timestamp) => {
   if (!timestamp) {
@@ -155,16 +148,6 @@ const getPageSettings = (pageKey) => {
   return editor.pages[pageKey];
 };
 
-const broadcastLayoutEditor = () => {
-  if (!layoutChannel || !currentSiteSettings?.layoutEditor) {
-    return;
-  }
-  layoutChannel.postMessage({
-    type: "layout-editor-update",
-    layoutEditor: currentSiteSettings.layoutEditor,
-  });
-};
-
 const setLayoutStatus = (message, isError = false) => {
   if (!layoutStatus) {
     return;
@@ -189,55 +172,6 @@ const updateFrameSize = (pageSettings) => {
   layoutFrameWrap.style.height = `${pageSettings.frame.height}px`;
 };
 
-const attachGlobalInputDebugListeners = (doc) => {
-  if (!doc || doc.documentElement?.dataset.inputDebugListenersBound === "true") {
-    return;
-  }
-
-  const clearExistingHighlight = () => {
-    const active = doc.querySelector(`[${INPUT_DEBUG_HIGHLIGHT_ATTR}="true"]`);
-    if (!(active instanceof HTMLElement)) {
-      return;
-    }
-    const previousOutline = active.dataset.debugPrevOutline;
-    if (typeof previousOutline === "string") {
-      active.style.outline = previousOutline;
-    } else {
-      active.style.removeProperty("outline");
-    }
-    delete active.dataset.debugPrevOutline;
-    delete active.dataset.inputDebugHighlight;
-  };
-
-  const logInputEvent = (event) => {
-    const target = event.target instanceof Element ? event.target : null;
-    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-    const blockingParent = path.find(
-      (node) =>
-        node instanceof Element &&
-        node !== target &&
-        node.ownerDocument?.defaultView?.getComputedStyle(node).pointerEvents === "none",
-    );
-
-    console.log(`[input-debug] ${event.type} target:`, target);
-    console.log(`[input-debug] ${event.type} composedPath:`, path);
-    console.log(`[input-debug] ${event.type} pointer-events blocker:`, blockingParent || null);
-
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-
-    clearExistingHighlight();
-    target.dataset.debugPrevOutline = target.style.outline;
-    target.dataset.inputDebugHighlight = "true";
-    target.style.outline = "2px solid red";
-  };
-
-  doc.addEventListener("pointerdown", logInputEvent);
-  doc.addEventListener("touchstart", logInputEvent);
-  doc.documentElement.dataset.inputDebugListenersBound = "true";
-};
-
 const ensureFrameStyles = (doc) => {
   if (!doc || doc.getElementById("admin-layout-style")) {
     return;
@@ -245,28 +179,13 @@ const ensureFrameStyles = (doc) => {
   const style = doc.createElement("style");
   style.id = "admin-layout-style";
   style.textContent = `
-    .editor-overlay {
-      position: absolute;
-      inset: 0;
-      z-index: 999999;
-      pointer-events: auto;
-      background: rgba(124, 124, 255, 0.2);
+    [data-admin-id] {
+      outline: 1px dashed rgba(143, 146, 255, 0.45);
       cursor: grab;
-      touch-action: none;
     }
-    .edit-mode .real-ui,
-    .edit-mode .real-ui * {
-      pointer-events: none;
-    }
-    .edit-mode .editor-overlay {
-      pointer-events: auto;
-    }
-    .editable-wrapper {
-      position: relative;
-    }
-    .editable-wrapper.selected {
-      outline: 2px dashed #7c7cff;
-      outline-offset: 4px;
+    [data-admin-id].admin-selected {
+      outline: 2px solid rgba(143, 146, 255, 0.95);
+      cursor: grabbing;
     }
     .admin-resize-handle {
       position: absolute;
@@ -285,19 +204,15 @@ const ensureFrameStyles = (doc) => {
 };
 
 const ensureFrameAdminIds = (doc) => {
-  const root = doc.body || doc.documentElement;
-  const candidates = root ? root.querySelectorAll("*") : doc.querySelectorAll("*");
+  const main = doc.querySelector("main");
+  const candidates = main ? main.querySelectorAll("*") : doc.querySelectorAll("[data-admin-id], main *");
   const existingIds = new Set();
   candidates.forEach((element) => {
     if (!(element instanceof Element)) {
       return;
     }
     const tag = element.tagName;
-    if (
-      ["HTML", "BODY", "SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) ||
-      element.classList.contains("editor-overlay") ||
-      element.classList.contains("admin-resize-handle")
-    ) {
+    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
       return;
     }
     if (element.dataset.adminId) {
@@ -310,11 +225,7 @@ const ensureFrameAdminIds = (doc) => {
       return;
     }
     const tag = element.tagName;
-    if (
-      ["HTML", "BODY", "SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag) ||
-      element.classList.contains("editor-overlay") ||
-      element.classList.contains("admin-resize-handle")
-    ) {
+    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
       return;
     }
     if (element.dataset.adminId) {
@@ -323,136 +234,6 @@ const ensureFrameAdminIds = (doc) => {
     element.dataset.adminId = `auto-${index}`;
     index += 1;
   });
-};
-
-const VOID_ELEMENTS = new Set([
-  "AREA",
-  "BASE",
-  "BR",
-  "COL",
-  "EMBED",
-  "HR",
-  "IMG",
-  "INPUT",
-  "LINK",
-  "META",
-  "PARAM",
-  "SOURCE",
-  "TRACK",
-  "WBR",
-]);
-
-const getOverlayForElement = (element) => {
-  if (!element) {
-    return null;
-  }
-  const wrapper = element.classList.contains("editable-wrapper")
-    ? element
-    : element.closest(".editable-wrapper");
-  return wrapper?.querySelector(":scope > .editor-overlay") || null;
-};
-
-const createOverlay = (doc, adminId) => {
-  const overlay = doc.createElement("div");
-  overlay.className = "editor-overlay";
-  overlay.dataset.id = adminId;
-  overlay.setAttribute("role", "button");
-  overlay.setAttribute("aria-label", `Edit ${adminId}`);
-  return overlay;
-};
-
-const enableEditMode = (doc) => {
-  if (!doc) {
-    return;
-  }
-  doc.documentElement.dataset.adminEditMode = "true";
-  doc.body?.classList.add("edit-mode");
-  const elements = doc.querySelectorAll("[data-admin-id]");
-  elements.forEach((element) => {
-    if (!(element instanceof Element)) {
-      return;
-    }
-    const adminId = element.dataset.adminId;
-    if (!adminId) {
-      return;
-    }
-    if (element.classList.contains("editor-overlay") || element.classList.contains("admin-resize-handle")) {
-      return;
-    }
-    const existingWrapper =
-      element.parentElement?.classList.contains("editable-wrapper")
-        ? element.parentElement
-        : null;
-    const wrapper = existingWrapper || doc.createElement("div");
-    if (!existingWrapper) {
-      const computedDisplay = doc.defaultView?.getComputedStyle(element).display || "inline-block";
-      wrapper.className = "editable-wrapper";
-      wrapper.style.display = computedDisplay === "inline" ? "inline-block" : computedDisplay;
-      wrapper.dataset.id = adminId;
-      const realUi = doc.createElement("div");
-      realUi.className = "real-ui";
-      element.parentElement?.insertBefore(wrapper, element);
-      wrapper.appendChild(realUi);
-      realUi.appendChild(element);
-      frameWrappedElements.set(adminId, wrapper);
-    } else {
-      if (!wrapper.dataset.id) {
-        wrapper.dataset.id = adminId;
-      }
-      let realUi = wrapper.querySelector(":scope > .real-ui");
-      if (!realUi) {
-        realUi = doc.createElement("div");
-        realUi.className = "real-ui";
-        const childrenToMove = Array.from(wrapper.children).filter(
-          (child) => !child.classList.contains("editor-overlay")
-        );
-        wrapper.appendChild(realUi);
-        childrenToMove.forEach((child) => realUi.appendChild(child));
-      }
-    }
-    if (!frameWrappedElements.has(adminId)) {
-      frameWrappedElements.set(adminId, wrapper);
-    }
-    const existingOverlay = wrapper.querySelector(":scope > .editor-overlay");
-    if (existingOverlay) {
-      wrapper.insertBefore(existingOverlay, wrapper.firstChild);
-    } else {
-      const overlay = createOverlay(doc, adminId);
-      wrapper.insertBefore(overlay, wrapper.firstChild);
-    }
-  });
-};
-
-const disableEditMode = (doc) => {
-  if (!doc) {
-    return;
-  }
-  doc.documentElement.dataset.adminEditMode = "false";
-  doc.body?.classList.remove("edit-mode");
-  doc.querySelectorAll(".selected").forEach((element) => {
-    element.classList.remove("selected");
-  });
-  doc.querySelectorAll(".admin-selected").forEach((element) => element.classList.remove("admin-selected"));
-  doc.querySelectorAll(".editor-overlay").forEach((overlay) => overlay.remove());
-  doc.querySelectorAll(".admin-resize-handle").forEach((handle) => handle.remove());
-  doc.querySelectorAll(".editable-wrapper").forEach((wrapper) => {
-    wrapper.classList.remove("editable-wrapper");
-    wrapper.classList.remove("selected");
-    delete wrapper.dataset.id;
-  });
-  frameWrappedElements.forEach((wrapper, adminId) => {
-    const realUi = wrapper.querySelector(":scope > .real-ui");
-    const target = (realUi || wrapper).querySelector(`[data-admin-id="${adminId}"]`);
-    const innerTarget = target || realUi?.firstElementChild || wrapper.querySelector("*");
-    if (!innerTarget) {
-      return;
-    }
-    innerTarget.dataset.adminId = adminId;
-    wrapper.parentElement?.insertBefore(innerTarget, wrapper);
-    wrapper.remove();
-  });
-  frameWrappedElements = new Map();
-  layoutSelectedOverlay = null;
 };
 
 const applyElementOverrideToFrame = (element, override) => {
@@ -493,7 +274,6 @@ const refreshLayoutPreview = () => {
   updateFrameSize(pageSettings);
   layoutSelectedElement = null;
   layoutSelectedId = null;
-  layoutSelectedOverlay = null;
   setLayoutStatus("");
   if (layoutFrame) {
     frameReady = false;
@@ -501,59 +281,23 @@ const refreshLayoutPreview = () => {
   }
 };
 
-const setFrameEditMode = (doc, enabled, pageSettings = null) => {
-  if (!doc) {
-    return;
-  }
-  if (enabled) {
-    enableEditMode(doc);
-    doc.__bindLayoutOverlays?.();
-    if (pageSettings) {
-      Object.entries(pageSettings.elements).forEach(([elementId, override]) => {
-        const element = doc.querySelector(`[data-admin-id="${elementId}"]`);
-        if (element) {
-          applyElementOverrideToFrame(element, override);
-        }
-      });
-    }
-  } else {
-    disableEditMode(doc);
-  }
-  layoutSelectedElement = null;
-  layoutSelectedId = null;
-  layoutSelectedOverlay = null;
-  if (layoutElementHint) {
-    layoutElementHint.textContent = enabled
-      ? "Click any element inside the preview."
-      : "Edit mode is off. Toggle it on to select elements.";
-  }
-};
-
-const selectLayoutElement = (element, pageSettings, wrapperOverride = null) => {
+const selectLayoutElement = (element, pageSettings) => {
   if (!element) {
     return;
   }
-  const wrapper = wrapperOverride || element.closest(".editable-wrapper");
-  if (!wrapper) {
-    return;
+  if (layoutSelectedElement && layoutSelectedElement !== element) {
+    layoutSelectedElement.classList.remove("admin-selected");
+    const handle = layoutSelectedElement.querySelector(".admin-resize-handle");
+    handle?.remove();
   }
-  const editId = wrapper.dataset.id || element.dataset.adminId;
-  element.ownerDocument.querySelectorAll(".editable-wrapper.selected").forEach((item) => {
-    if (item !== wrapper) {
-      item.classList.remove("selected");
-    }
-  });
-  element.ownerDocument.querySelectorAll(".admin-selected").forEach((item) => item.classList.remove("admin-selected"));
-  element.ownerDocument.querySelectorAll(".admin-resize-handle").forEach((handle) => handle.remove());
   layoutSelectedElement = element;
-  layoutSelectedId = editId;
-  wrapper.classList.add("selected");
+  layoutSelectedId = element.dataset.adminId;
   element.classList.add("admin-selected");
-  layoutSelectedOverlay =
-    wrapper.querySelector(":scope > .editor-overlay") ||
-    element.ownerDocument.querySelector(`.editor-overlay[data-id="${layoutSelectedId}"]`);
-  if (layoutSelectedOverlay) {
-    layoutSelectedOverlay.classList.add("admin-selected");
+  if (!element.querySelector(".admin-resize-handle")) {
+    const handle = element.ownerDocument.createElement("span");
+    handle.className = "admin-resize-handle";
+    element.style.position = element.style.position || "relative";
+    element.appendChild(handle);
   }
   const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
   const rect = element.getBoundingClientRect();
@@ -567,7 +311,6 @@ const selectLayoutElement = (element, pageSettings, wrapperOverride = null) => {
   if (layoutElementHint) {
     layoutElementHint.textContent = `Selected: ${layoutSelectedId}`;
   }
-  console.log("Selected:", layoutSelectedId);
 };
 
 const updateSelectedOverride = (pageSettings, updates) => {
@@ -578,7 +321,6 @@ const updateSelectedOverride = (pageSettings, updates) => {
   const next = { ...current, ...updates };
   pageSettings.elements[layoutSelectedId] = next;
   applyElementOverrideToFrame(layoutSelectedElement, next);
-  broadcastLayoutEditor();
 };
 
 const clearSelectedOverride = (pageSettings) => {
@@ -597,56 +339,81 @@ const clearSelectedOverride = (pageSettings) => {
   if (layoutElementHeightInput)
     layoutElementHeightInput.value = Math.round(layoutSelectedElement.getBoundingClientRect().height);
   setLayoutStatus("Element reset.");
-  broadcastLayoutEditor();
 };
 
 const setupFrameInteractions = (doc, pageSettings) => {
   if (!doc) {
     return;
   }
+  let dragState = null;
 
-  const selectFromOverlay = (overlayTarget) => {
-    if (!overlayTarget) {
-      return null;
-    }
-    const wrapper = overlayTarget.closest(".editable-wrapper");
-    const editId = wrapper?.dataset.id;
-    const selectedTarget = editId ? doc.querySelector(`[data-admin-id="${editId}"]`) : null;
-    if (!selectedTarget) {
-      return null;
-    }
-    selectLayoutElement(selectedTarget, pageSettings, wrapper);
-    return selectedTarget;
-  };
-
-  const handleOverlayPointerDown = (event) => {
-    if (!isEditMode) {
+  const onPointerMove = (event) => {
+    if (!dragState) {
       return;
     }
-    const overlayTarget = event.currentTarget;
-    if (!(overlayTarget instanceof Element)) {
-      return;
+    const deltaX = event.clientX - dragState.startX;
+    const deltaY = event.clientY - dragState.startY;
+    if (dragState.mode === "resize") {
+      const nextWidth = Math.max(24, Math.round(dragState.startWidth + deltaX));
+      const nextHeight = Math.max(24, Math.round(dragState.startHeight + deltaY));
+      updateSelectedOverride(pageSettings, { width: nextWidth, height: nextHeight });
+      if (layoutElementWidthInput) layoutElementWidthInput.value = nextWidth;
+      if (layoutElementHeightInput) layoutElementHeightInput.value = nextHeight;
+    } else {
+      const nextX = Math.round(dragState.startOffsetX + deltaX);
+      const nextY = Math.round(dragState.startOffsetY + deltaY);
+      updateSelectedOverride(pageSettings, { x: nextX, y: nextY });
+      if (layoutElementXInput) layoutElementXInput.value = nextX;
+      if (layoutElementYInput) layoutElementYInput.value = nextY;
     }
-    event.preventDefault();
-    event.stopPropagation();
-    selectFromOverlay(overlayTarget);
   };
 
-  const bindOverlayHandlers = () => {
-    doc.querySelectorAll(".editor-overlay").forEach((overlay) => {
-      if (!(overlay instanceof Element)) {
-        return;
-      }
-      if (overlay.dataset.overlayBound === "true") {
-        return;
-      }
-      overlay.dataset.overlayBound = "true";
-      overlay.addEventListener("pointerdown", handleOverlayPointerDown, { passive: false });
-    });
+  const onPointerUp = () => {
+    dragState = null;
+    doc.removeEventListener("mousemove", onPointerMove);
+    doc.removeEventListener("mouseup", onPointerUp);
   };
 
-  doc.__bindLayoutOverlays = bindOverlayHandlers;
-  bindOverlayHandlers();
+  doc.addEventListener(
+    "mousedown",
+    (event) => {
+      let target = event.target;
+      if (target && target.nodeType === Node.TEXT_NODE) {
+        target = target.parentElement;
+      }
+      target = target instanceof Element ? target : null;
+      if (!target) {
+        return;
+      }
+      const resizeHandle = target.closest(".admin-resize-handle");
+      const selectedTarget = resizeHandle
+        ? resizeHandle.parentElement
+        : target.closest("[data-admin-id]");
+      if (!selectedTarget) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      selectLayoutElement(selectedTarget, pageSettings);
+      const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
+      dragState = {
+        mode: resizeHandle ? "resize" : "drag",
+        startX: event.clientX,
+        startY: event.clientY,
+        startOffsetX: override.x ?? 0,
+        startOffsetY: override.y ?? 0,
+        startWidth: Number.isFinite(override.width)
+          ? override.width
+          : Math.round(selectedTarget.getBoundingClientRect().width),
+        startHeight: Number.isFinite(override.height)
+          ? override.height
+          : Math.round(selectedTarget.getBoundingClientRect().height),
+      };
+      doc.addEventListener("mousemove", onPointerMove);
+      doc.addEventListener("mouseup", onPointerUp);
+    },
+    true
+  );
 };
 
 const renderUsers = (users) => {
@@ -971,18 +738,6 @@ if (layoutRefreshBtn) {
   });
 }
 
-if (layoutEditToggle) {
-  layoutEditToggle.addEventListener("change", () => {
-    isEditMode = layoutEditToggle.checked;
-    if (frameReady) {
-      const pageKey = layoutPageSelect?.value || "home";
-      const pageSettings = getPageSettings(pageKey);
-      setFrameEditMode(layoutFrame?.contentDocument, isEditMode, pageSettings);
-      applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
-    }
-  });
-}
-
 if (layoutFrame) {
   layoutFrame.addEventListener("load", () => {
     const doc = layoutFrame.contentDocument;
@@ -990,11 +745,9 @@ if (layoutFrame) {
       return;
     }
     frameReady = true;
-    frameWrappedElements = new Map();
     const pageKey = layoutPageSelect?.value || "home";
     const pageSettings = getPageSettings(pageKey);
     ensureFrameStyles(doc);
-    attachGlobalInputDebugListeners(doc);
     ensureFrameAdminIds(doc);
     applyCanvasOverrideToFrame(doc, pageSettings);
     Object.entries(pageSettings.elements).forEach(([elementId, override]) => {
@@ -1004,7 +757,9 @@ if (layoutFrame) {
       }
     });
     setupFrameInteractions(doc, pageSettings);
-    setFrameEditMode(doc, isEditMode, pageSettings);
+    if (layoutElementHint) {
+      layoutElementHint.textContent = "Click any element inside the preview.";
+    }
   });
 }
 
@@ -1016,7 +771,6 @@ if (layoutScaleInput) {
     const pageSettings = getPageSettings(layoutPageSelect?.value || "home");
     pageSettings.canvas.scale = Number(layoutScaleInput.value) || 1;
     applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
-    broadcastLayoutEditor();
   });
 }
 
@@ -1028,7 +782,6 @@ if (layoutOffsetXInput) {
     const pageSettings = getPageSettings(layoutPageSelect?.value || "home");
     pageSettings.canvas.offsetX = Number(layoutOffsetXInput.value) || 0;
     applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
-    broadcastLayoutEditor();
   });
 }
 
@@ -1040,7 +793,6 @@ if (layoutOffsetYInput) {
     const pageSettings = getPageSettings(layoutPageSelect?.value || "home");
     pageSettings.canvas.offsetY = Number(layoutOffsetYInput.value) || 0;
     applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
-    broadcastLayoutEditor();
   });
 }
 
@@ -1085,7 +837,6 @@ if (layoutResetPageBtn) {
       refreshLayoutPreview();
     }
     setLayoutStatus("Page reset.");
-    broadcastLayoutEditor();
   });
 }
 
