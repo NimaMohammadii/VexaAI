@@ -56,7 +56,7 @@ const pendingStickers = {};
 let layoutSelectedElement = null;
 let layoutSelectedId = null;
 let frameReady = false;
-let layoutEditModeEnabled = false;
+let EDIT_MODE = false;
 
 const formatDate = (timestamp) => {
   if (!timestamp) {
@@ -214,6 +214,22 @@ const ensureFrameStyles = (doc) => {
     .admin-layout-edit-mode .admin-resize-handle {
       display: block;
     }
+    .admin-layout-edit-mode button,
+    .admin-layout-edit-mode a,
+    .admin-layout-edit-mode [role="button"],
+    .admin-layout-edit-mode [role="menu"],
+    .admin-layout-edit-mode [role="menuitem"],
+    .admin-layout-edit-mode .menu-overlay,
+    .admin-layout-edit-mode .side-menu,
+    .admin-layout-edit-mode .menu-toggle,
+    .admin-layout-edit-mode .menu-close,
+    .admin-layout-edit-mode .menu-link {
+      pointer-events: none !important;
+    }
+    .admin-layout-edit-mode [data-editable="true"],
+    .admin-layout-edit-mode [data-editable="true"] * {
+      pointer-events: auto;
+    }
   `;
   doc.head.appendChild(style);
 };
@@ -243,6 +259,7 @@ const ensureFrameAdminIds = (doc) => {
     if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag)) {
       return;
     }
+    element.dataset.editable = "true";
     if (element.dataset.adminId) {
       return;
     }
@@ -285,16 +302,16 @@ const updateEditModeButton = () => {
   if (!layoutEditModeBtn) {
     return;
   }
-  layoutEditModeBtn.textContent = layoutEditModeEnabled ? "Disable edit mode" : "Enable edit mode";
-  layoutEditModeBtn.setAttribute("aria-pressed", String(layoutEditModeEnabled));
-  layoutEditModeBtn.classList.toggle("primary", layoutEditModeEnabled);
+  layoutEditModeBtn.textContent = EDIT_MODE ? "Disable edit mode" : "Enable edit mode";
+  layoutEditModeBtn.setAttribute("aria-pressed", String(EDIT_MODE));
+  layoutEditModeBtn.classList.toggle("primary", EDIT_MODE);
 };
 
 const applyFrameEditMode = (doc) => {
   if (!doc?.body) {
     return;
   }
-  doc.body.classList.toggle("admin-layout-edit-mode", layoutEditModeEnabled);
+  doc.body.classList.toggle("admin-layout-edit-mode", EDIT_MODE);
 };
 
 const refreshLayoutPreview = () => {
@@ -305,7 +322,7 @@ const refreshLayoutPreview = () => {
   layoutSelectedElement = null;
   layoutSelectedId = null;
   updateEditModeButton();
-  setLayoutStatus(layoutEditModeEnabled ? "Edit mode is enabled." : "");
+  setLayoutStatus(EDIT_MODE ? "Edit mode is enabled." : "");
   if (layoutFrame) {
     frameReady = false;
     layoutFrame.src = layoutPages[pageKey] || "/index.html";
@@ -404,71 +421,50 @@ const setupFrameInteractions = (doc, pageSettings) => {
   };
 
 
-  doc.addEventListener(
-    "click",
-    (event) => {
-      if (!layoutEditModeEnabled) {
-        return;
-      }
-      let target = event.target;
-      if (target && target.nodeType === Node.TEXT_NODE) {
-        target = target.parentElement;
-      }
-      target = target instanceof Element ? target : null;
-      if (!target) {
-        return;
-      }
-      if (target.closest("[data-admin-id]")) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    },
-    true
-  );
+  const onPointerDown = (event) => {
+    if (!EDIT_MODE) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
 
-  doc.addEventListener(
-    "mousedown",
-    (event) => {
-      let target = event.target;
-      if (target && target.nodeType === Node.TEXT_NODE) {
-        target = target.parentElement;
-      }
-      target = target instanceof Element ? target : null;
-      if (!target) {
-        return;
-      }
-      const resizeHandle = target.closest(".admin-resize-handle");
-      const selectedTarget = resizeHandle
-        ? resizeHandle.parentElement
-        : target.closest("[data-admin-id]");
-      if (!selectedTarget) {
-        return;
-      }
-      if (!layoutEditModeEnabled) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      selectLayoutElement(selectedTarget, pageSettings);
-      const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
-      dragState = {
-        mode: resizeHandle ? "resize" : "drag",
-        startX: event.clientX,
-        startY: event.clientY,
-        startOffsetX: override.x ?? 0,
-        startOffsetY: override.y ?? 0,
-        startWidth: Number.isFinite(override.width)
-          ? override.width
-          : Math.round(selectedTarget.getBoundingClientRect().width),
-        startHeight: Number.isFinite(override.height)
-          ? override.height
-          : Math.round(selectedTarget.getBoundingClientRect().height),
-      };
-      doc.addEventListener("mousemove", onPointerMove);
-      doc.addEventListener("mouseup", onPointerUp);
-    },
-    true
-  );
+    let target = event.target;
+    if (target && target.nodeType === Node.TEXT_NODE) {
+      target = target.parentElement;
+    }
+    target = target instanceof Element ? target : null;
+    if (!target) {
+      return;
+    }
+    const resizeHandle = target.closest(".admin-resize-handle");
+    const selectedTarget = resizeHandle
+      ? resizeHandle.parentElement
+      : target.closest('[data-editable="true"]');
+    if (!selectedTarget) {
+      return;
+    }
+    selectLayoutElement(selectedTarget, pageSettings);
+    console.log("Selected editable element:", selectedTarget);
+    const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
+    dragState = {
+      mode: resizeHandle ? "resize" : "drag",
+      startX: event.clientX,
+      startY: event.clientY,
+      startOffsetX: override.x ?? 0,
+      startOffsetY: override.y ?? 0,
+      startWidth: Number.isFinite(override.width)
+        ? override.width
+        : Math.round(selectedTarget.getBoundingClientRect().width),
+      startHeight: Number.isFinite(override.height)
+        ? override.height
+        : Math.round(selectedTarget.getBoundingClientRect().height),
+    };
+    doc.addEventListener("mousemove", onPointerMove);
+    doc.addEventListener("mouseup", onPointerUp);
+  };
+
+  doc.addEventListener("pointerdown", onPointerDown, { capture: true });
 };
 
 const renderUsers = (users) => {
@@ -796,15 +792,15 @@ if (layoutRefreshBtn) {
 if (layoutEditModeBtn) {
   updateEditModeButton();
   layoutEditModeBtn.addEventListener("click", () => {
-    layoutEditModeEnabled = !layoutEditModeEnabled;
+    EDIT_MODE = !EDIT_MODE;
     updateEditModeButton();
     applyFrameEditMode(layoutFrame?.contentDocument);
     if (layoutElementHint) {
-      layoutElementHint.textContent = layoutEditModeEnabled
+      layoutElementHint.textContent = EDIT_MODE
         ? "Click any element inside the preview."
         : "Enable edit mode to drag and resize items.";
     }
-    setLayoutStatus(layoutEditModeEnabled ? "Edit mode is enabled." : "Edit mode is disabled.");
+    setLayoutStatus(EDIT_MODE ? "Edit mode is enabled." : "Edit mode is disabled.");
   });
 }
 
@@ -829,7 +825,7 @@ if (layoutFrame) {
     });
     setupFrameInteractions(doc, pageSettings);
     if (layoutElementHint) {
-      layoutElementHint.textContent = layoutEditModeEnabled
+      layoutElementHint.textContent = EDIT_MODE
         ? "Click any element inside the preview."
         : "Enable edit mode to drag and resize items.";
     }
