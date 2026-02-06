@@ -214,6 +214,18 @@ const ensureFrameStyles = (doc) => {
     .admin-layout-edit-mode .admin-resize-handle {
       display: block;
     }
+    .admin-layout-edit-mode button,
+    .admin-layout-edit-mode a,
+    .admin-layout-edit-mode [role="button"],
+    .admin-layout-edit-mode [role="menu"],
+    .admin-layout-edit-mode [role="menuitem"],
+    .admin-layout-edit-mode .menu-overlay,
+    .admin-layout-edit-mode .side-menu,
+    .admin-layout-edit-mode .menu-toggle,
+    .admin-layout-edit-mode .menu-close,
+    .admin-layout-edit-mode .menu-link {
+      pointer-events: none !important;
+    }
     .admin-layout-edit-mode [data-editable="true"],
     .admin-layout-edit-mode [data-editable="true"] * {
       pointer-events: auto;
@@ -381,14 +393,6 @@ const setupFrameInteractions = (doc, pageSettings) => {
   }
   let dragState = null;
 
-  const shouldBlockInteraction = () => EDIT_MODE;
-
-  const blockEvent = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-  };
-
   const onPointerMove = (event) => {
     if (!dragState) {
       return;
@@ -417,33 +421,31 @@ const setupFrameInteractions = (doc, pageSettings) => {
   };
 
 
-  const getEditableTarget = (eventTarget) => {
-    let target = eventTarget;
+  const onPointerDown = (event) => {
+    if (!EDIT_MODE) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    let target = event.target;
     if (target && target.nodeType === Node.TEXT_NODE) {
       target = target.parentElement;
     }
     target = target instanceof Element ? target : null;
     if (!target) {
-      return { resizeHandle: null, selectedTarget: null };
+      return;
     }
     const resizeHandle = target.closest(".admin-resize-handle");
     const selectedTarget = resizeHandle
       ? resizeHandle.parentElement
       : target.closest('[data-editable="true"]');
-    return { resizeHandle, selectedTarget };
-  };
-
-  const onPointerDown = (event) => {
-    if (!shouldBlockInteraction()) {
-      return;
-    }
-    blockEvent(event);
-
-    const { resizeHandle, selectedTarget } = getEditableTarget(event.target);
     if (!selectedTarget) {
       return;
     }
     selectLayoutElement(selectedTarget, pageSettings);
+    console.log("Selected editable element:", selectedTarget);
     const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
     dragState = {
       mode: resizeHandle ? "resize" : "drag",
@@ -462,46 +464,7 @@ const setupFrameInteractions = (doc, pageSettings) => {
     doc.addEventListener("mouseup", onPointerUp);
   };
 
-  const onClick = (event) => {
-    if (!shouldBlockInteraction()) {
-      return;
-    }
-    const { selectedTarget } = getEditableTarget(event.target);
-    if (!selectedTarget) {
-      return;
-    }
-    blockEvent(event);
-    selectLayoutElement(selectedTarget, pageSettings);
-  };
-
-  const onAuxClick = (event) => {
-    if (!shouldBlockInteraction()) {
-      return;
-    }
-    blockEvent(event);
-  };
-
-  const onSubmit = (event) => {
-    if (!shouldBlockInteraction()) {
-      return;
-    }
-    blockEvent(event);
-  };
-
-  const onKeyDown = (event) => {
-    if (!shouldBlockInteraction()) {
-      return;
-    }
-    if (event.key === "Enter" || event.key === " ") {
-      blockEvent(event);
-    }
-  };
-
   doc.addEventListener("pointerdown", onPointerDown, { capture: true });
-  doc.addEventListener("click", onClick, { capture: true });
-  doc.addEventListener("auxclick", onAuxClick, { capture: true });
-  doc.addEventListener("submit", onSubmit, { capture: true });
-  doc.addEventListener("keydown", onKeyDown, { capture: true });
 };
 
 const renderUsers = (users) => {
