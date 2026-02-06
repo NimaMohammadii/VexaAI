@@ -2231,3 +2231,129 @@ select {
     width: 100%;
   }
 }
+
+/* ===== Monochrome glass theme refresh ===== */
+:root,
+body[data-theme="light"],
+body[data-theme="dark"] {
+  color-scheme: light;
+  --bg: #f6f6f6;
+  --bg-alt: #ffffff;
+  --surface: #ffffff;
+  --panel: #ffffff;
+  --text: #101010;
+  --muted: #6d6d6d;
+  --primary: #111111;
+  --primary-dark: #000000;
+  --border: #161616;
+  --shadow: 0 22px 55px rgba(0, 0, 0, 0.08);
+  --tag-bg: #f3f3f3;
+  --chip-bg: #efefef;
+  --header-bg: rgba(255, 255, 255, 0.9);
+}
+
+body {
+  background: radial-gradient(circle at 50% -120px, #ffffff 0%, #f5f5f5 45%, #efefef 100%);
+  color: var(--text);
+}
+
+.home,
+.page-section,
+.tts-shell,
+.live-shell,
+.assistant-page,
+.vexa-chat-section,
+.page-hero,
+.home-grid {
+  background: transparent;
+}
+
+.home-card,
+.info-card,
+.price-card,
+.voice-card,
+.panel,
+.vexa-chat-window,
+.live-output-text,
+.tts-editor,
+.history-panel,
+.player,
+.live-translate-card {
+  background: #fff !important;
+  border: 1.5px solid #151515 !important;
+  border-radius: 26px !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.menu-toggle,
+.primary-btn,
+.cta,
+.tts-primary,
+.vexa-chat-input button,
+.audio-play,
+.audio-download,
+.outline-btn,
+.btn,
+.theme-toggle,
+.lang-toggle,
+.voice-trigger,
+.history-toggle,
+.audio-play-btn {
+  border: 1.5px solid #111 !important;
+  border-radius: 18px !important;
+  background: #111 !important;
+  color: #fff !important;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.14);
+}
+
+.outline-btn,
+.theme-toggle,
+.lang-toggle,
+.voice-trigger,
+.history-toggle,
+.btn:not(.primary),
+.menu-link,
+.icon-btn {
+  background: #fff !important;
+  color: #111 !important;
+}
+
+.tts-editor textarea,
+input,
+select,
+.vexa-chat-input textarea,
+.search-input {
+  background: #fff !important;
+  color: #111 !important;
+  border: 2px solid #131313 !important;
+  border-radius: 18px !important;
+}
+
+.home-header,
+.assistant-topbar,
+.tts-topbar,
+.site-header {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-bottom: 1px solid #e3e3e3 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.side-menu {
+  background: #ffffff;
+  border-right: 1px solid #e2e2e2;
+  box-shadow: 20px 0 45px rgba(0, 0, 0, 0.1);
+}
+
+.menu-link.is-active,
+.badge,
+.status.online,
+.vexa-chat-badge {
+  background: #111 !important;
+  color: #fff !important;
+  border-color: #111 !important;
+}
+
+.status.offline {
+  background: #fff0f0 !important;
+  color: #cc3c3c !important;
+}
