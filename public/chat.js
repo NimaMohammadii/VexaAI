@@ -24,6 +24,13 @@ const clampTextarea = () => {
   chatInput.style.height = `${nextHeight}px`;
 };
 
+const scrollToLatest = () => {
+  messageList.scrollTo({
+    top: messageList.scrollHeight,
+    behavior: "smooth",
+  });
+};
+
 const isNearBottom = () => {
   const threshold = 64;
   const distanceFromBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
@@ -105,6 +112,7 @@ const sendMessage = async () => {
 
   isResponding = false;
   updateSendState();
+  chatInput.focus();
   chatInput.focus({ preventScroll: true });
 };
 
@@ -165,6 +173,9 @@ appendMessage({
   content: "Hi! I'm Vexa. Ask me anything and I'll jump right in.",
 });
 
+clampTextarea();
+updateSendState();
+chatInput.focus();
 updateViewportSizing();
 clampTextarea();
 updateSendState();
