@@ -13,6 +13,11 @@ const MAX_HISTORY = 12;
 let isResponding = false;
 let userPinnedToBottom = true;
 
+const RTL_TEXT_PATTERN = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+
+const resolveDirection = (text = "") => (RTL_TEXT_PATTERN.test(text) ? "rtl" : "ltr");
+
+
 const clampTextarea = () => {
   chatInput.style.height = "auto";
   const nextHeight = Math.min(chatInput.scrollHeight, 180);
@@ -41,7 +46,10 @@ const maintainBottomLock = () => {
 const appendMessage = ({ role, content }) => {
   const node = messageTemplate.content.firstElementChild.cloneNode(true);
   node.classList.add(role === "user" ? "message--user" : "message--assistant");
-  node.querySelector(".message-text").textContent = content;
+  const messageText = node.querySelector(".message-text");
+  const direction = resolveDirection(content);
+  messageText.textContent = content;
+  messageText.setAttribute("dir", direction);
   messageList.appendChild(node);
   scrollToLatest();
   return node;
@@ -68,6 +76,11 @@ const showTypingIndicator = () => {
 const updateSendState = () => {
   const canSend = chatInput.value.trim().length > 0;
   sendButton.disabled = !canSend || isResponding;
+};
+
+const updateInputDirection = () => {
+  const direction = resolveDirection(chatInput.value);
+  chatInput.setAttribute("dir", direction);
 };
 
 const updateViewportSizing = () => {
@@ -140,6 +153,7 @@ const sendMessage = async () => {
 chatInput.addEventListener("input", () => {
   clampTextarea();
   updateSendState();
+  updateInputDirection();
   maintainBottomLock();
 });
 
@@ -200,5 +214,6 @@ appendMessage({
 
 clampTextarea();
 updateSendState();
+updateInputDirection();
 updateViewportSizing();
 chatInput.focus({ preventScroll: true });
