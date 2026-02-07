@@ -7,15 +7,10 @@ const messageTemplate = document.getElementById("messageTemplate");
 const systemTemplate = document.getElementById("systemTemplate");
 const typingTemplate = document.getElementById("typingTemplate");
 
-const scriptedReplies = [
-  "Absolutely — tell me the tone you want, and I can draft the perfect response.",
-  "Great prompt. I can structure this into a concise plan in seconds.",
-  "Understood. Want this to sound more formal, friendly, or direct?",
-  "I can help with that. Share one more detail and I'll tailor it for you.",
-];
+const chatHistory = [];
+const MAX_HISTORY = 12;
 
 let isResponding = false;
-let replyCursor = 0;
 let userPinnedToBottom = true;
 
 const clampTextarea = () => {
@@ -99,17 +94,47 @@ const sendMessage = async () => {
   updateSendState();
 
   const typingNode = showTypingIndicator();
-  const waitMs = Math.max(650, Math.min(1500, 350 + value.length * 14));
-  await new Promise((resolve) => setTimeout(resolve, waitMs));
 
-  typingNode.remove();
-  const response = scriptedReplies[replyCursor % scriptedReplies.length];
-  replyCursor += 1;
-  appendMessage({ role: "assistant", content: response });
+  try {
+    chatHistory.push({ role: "user", content: value });
+    if (chatHistory.length > MAX_HISTORY) {
+      chatHistory.shift();
+    }
 
-  isResponding = false;
-  updateSendState();
-  chatInput.focus({ preventScroll: true });
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: value,
+        history: chatHistory,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => ({}));
+      throw new Error(errorPayload.error || "Chat request failed.");
+    }
+
+    const data = await response.json();
+    const reply = data?.message || "No response received. Please try again.";
+    typingNode.remove();
+    appendMessage({ role: "assistant", content: reply });
+
+    chatHistory.push({ role: "assistant", content: reply });
+    if (chatHistory.length > MAX_HISTORY) {
+      chatHistory.shift();
+    }
+  } catch (error) {
+    typingNode.remove();
+    appendMessage({
+      role: "assistant",
+      content: "Sorry, I can't reach GPT right now. Please try again in a moment.",
+    });
+  } finally {
+    isResponding = false;
+    updateSendState();
+    chatInput.focus({ preventScroll: true });
+  }
 };
 
 chatInput.addEventListener("input", () => {
