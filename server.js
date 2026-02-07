@@ -39,6 +39,7 @@ const defaultSiteSettings = {
   },
   stickers: {
     homeTextToSpeech: "",
+    homeAssistant: "",
     homeVoices: "",
     homeAbout: "",
     ttsHeader: "",
@@ -170,6 +171,7 @@ const sanitizeSettings = (raw) => {
     },
     stickers: {
       homeTextToSpeech: sanitizeSticker(stickers.homeTextToSpeech, defaultSiteSettings.stickers.homeTextToSpeech),
+      homeAssistant: sanitizeSticker(stickers.homeAssistant, defaultSiteSettings.stickers.homeAssistant),
       homeVoices: sanitizeSticker(stickers.homeVoices, defaultSiteSettings.stickers.homeVoices),
       homeAbout: sanitizeSticker(stickers.homeAbout, defaultSiteSettings.stickers.homeAbout),
       ttsHeader: sanitizeSticker(stickers.ttsHeader, defaultSiteSettings.stickers.ttsHeader),
