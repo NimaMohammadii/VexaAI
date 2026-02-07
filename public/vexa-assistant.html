@@ -1,84 +1,59 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vexa AI Voice Studio | Vexa Assistant</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>Vexa AI | Chat with Vexa</title>
+    <link rel="stylesheet" href="chat.css" />
   </head>
-  <body dir="ltr" data-theme="dark" class="assistant-body">
-    <div class="menu-overlay" id="menuOverlay" hidden></div>
-    <aside class="side-menu" id="sideMenu" aria-hidden="true">
-      <div class="side-menu-header">
-        <div class="side-menu-brand">
-          <span class="home-icon" aria-hidden="true">▢</span>
-          <span>VexaAI</span>
-        </div>
-        <button class="icon-btn menu-close" id="menuClose" type="button" aria-label="Close menu">
-          ✕
-        </button>
-      </div>
-
-      <div class="side-menu-section">
-        <p class="side-menu-title">Menu</p>
-        <a class="menu-link" href="index.html">Home</a>
-        <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
-        <a class="menu-link" href="live-translate.html">Live Translate</a>
-        <a class="menu-link is-active" href="vexa-assistant.html">Vexa Assistant</a>
-        <a class="menu-link" href="voices.html">Voices</a>
-        <a class="menu-link" href="about.html">About</a>
-      </div>
-    </aside>
-
-    <main class="assistant-page">
-      <header class="assistant-topbar">
-        <div class="assistant-title-wrap">
-          <span class="assistant-title">Vexa Assistant</span>
-        </div>
-        <button class="menu-toggle assistant-menu-btn" id="menuToggle" type="button" aria-expanded="false">
-          ☰ <span>Menu</span>
+  <body>
+    <main class="chat-app" aria-label="Vexa AI chat interface">
+      <header class="chat-header">
+        <div class="brand" aria-label="Vexa">Vexa</div>
+        <h1>Chat with Vexa</h1>
+        <button class="icon-button" type="button" aria-label="Open settings">
+          <span aria-hidden="true">⋯</span>
         </button>
       </header>
-      <section class="vexa-chat-section is-fullscreen" aria-label="Chat with Vexa">
-        <div class="vexa-chat-header">
-          <div>
-            <p class="home-label">Assistant</p>
-            <h2>Chat with Vexa Assistant</h2>
-            <p class="vexa-chat-subtitle">
-              Smart chat for scripting, brainstorming, and tone tuning. Replies match your language.
-            </p>
-          </div>
-          <div class="vexa-chat-meta">
-            <span class="vexa-chat-badge">Online</span>
-            <span class="vexa-chat-model" id="vexaModelLabel">GPT-4o mini</span>
-          </div>
-        </div>
-        <div class="vexa-chat-window" role="log" aria-live="polite">
-          <div class="vexa-chat-message is-vexa" data-role="assistant" dir="auto">
-            <p dir="auto">Hi! I can reply in the same language you use. How can I help today?</p>
-          </div>
-          <div class="vexa-chat-message is-user" data-role="user" dir="auto">
-            <p dir="auto">I need an idea for introducing my new podcast.</p>
-          </div>
-          <div class="vexa-chat-message is-vexa" data-role="assistant" dir="auto">
-            <p dir="auto">Great! Share the podcast topic and vibe so we can get started.</p>
-          </div>
-        </div>
-        <div class="vexa-chat-status" id="vexaChatStatus" aria-live="polite">Ready to chat</div>
-        <form class="vexa-chat-input" action="#" aria-label="Send message to Vexa">
-          <label class="sr-only" for="vexaMessage">Message</label>
+
+      <section id="messageList" class="message-list" role="log" aria-live="polite" aria-label="Conversation"></section>
+
+      <form id="chatForm" class="chat-input-wrap" aria-label="Send a message to Vexa">
+        <label class="sr-only" for="chatInput">Message Vexa</label>
+        <div class="chat-input-shell">
           <textarea
-            id="vexaMessage"
-            name="message"
-            rows="2"
-            placeholder="Write your message... (reply matches your language)"
-            dir="auto"
+            id="chatInput"
+            rows="1"
+            maxlength="4000"
+            placeholder="Message Vexa..."
+            aria-label="Message Vexa"
           ></textarea>
-          <button type="submit" id="vexaChatSubmit">Send</button>
-        </form>
-      </section>
+          <button id="sendButton" class="send-button" type="submit" aria-label="Send message" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4.2 19.8 21.7 12 4.2 4.2l-.2 6.4 11.3 1.4L4 13.4Z" />
+            </svg>
+          </button>
+        </div>
+      </form>
     </main>
 
-    <script src="app.js"></script>
+    <template id="messageTemplate">
+      <article class="message">
+        <p class="message-text"></p>
+      </article>
+    </template>
+
+    <template id="typingTemplate">
+      <article class="message message--assistant typing" aria-label="Vexa is typing">
+        <div class="typing-content">
+          <span class="typing-label">Vexa is typing</span>
+          <span class="typing-dots" aria-hidden="true">
+            <i></i><i></i><i></i>
+          </span>
+        </div>
+      </article>
+    </template>
+
+    <script src="chat.js"></script>
   </body>
 </html>
