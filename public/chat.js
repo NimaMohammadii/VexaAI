@@ -24,13 +24,6 @@ const clampTextarea = () => {
   chatInput.style.height = `${nextHeight}px`;
 };
 
-const scrollToLatest = () => {
-  messageList.scrollTo({
-    top: messageList.scrollHeight,
-    behavior: "smooth",
-  });
-};
-
 const isNearBottom = () => {
   const threshold = 64;
   const distanceFromBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
@@ -60,6 +53,10 @@ const appendMessage = ({ role, content }) => {
 };
 
 const appendSystemMessage = (content) => {
+  if (!systemTemplate) {
+    return;
+  }
+
   const node = systemTemplate.content.firstElementChild.cloneNode(true);
   node.textContent = content;
   messageList.appendChild(node);
@@ -112,7 +109,6 @@ const sendMessage = async () => {
 
   isResponding = false;
   updateSendState();
-  chatInput.focus();
   chatInput.focus({ preventScroll: true });
 };
 
@@ -141,9 +137,13 @@ chatInput.addEventListener("blur", () => {
   }, 80);
 });
 
-messageList.addEventListener("scroll", () => {
-  userPinnedToBottom = isNearBottom();
-}, { passive: true });
+messageList.addEventListener(
+  "scroll",
+  () => {
+    userPinnedToBottom = isNearBottom();
+  },
+  { passive: true }
+);
 
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -175,8 +175,5 @@ appendMessage({
 
 clampTextarea();
 updateSendState();
-chatInput.focus();
 updateViewportSizing();
-clampTextarea();
-updateSendState();
 chatInput.focus({ preventScroll: true });
