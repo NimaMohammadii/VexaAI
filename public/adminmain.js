@@ -35,7 +35,6 @@ const layoutScaleInput = document.getElementById("layoutScale");
 const layoutOffsetXInput = document.getElementById("layoutOffsetX");
 const layoutOffsetYInput = document.getElementById("layoutOffsetY");
 const layoutElementHint = document.getElementById("layoutElementHint");
-const layoutElementSelect = document.getElementById("layoutElementSelect");
 const layoutElementXInput = document.getElementById("layoutElementX");
 const layoutElementYInput = document.getElementById("layoutElementY");
 const layoutElementWidthInput = document.getElementById("layoutElementWidth");
@@ -61,7 +60,7 @@ let EDIT_MODE = false;
 
 const formatDate = (timestamp) => {
   if (!timestamp) {
-    return "هیچ‌وقت";
+    return "Never";
   }
   return new Date(timestamp).toLocaleString();
 };
@@ -93,7 +92,7 @@ const setDashboardVisible = (visible) => {
 const fetchSummary = async () => {
   const response = await fetch("/api/admin/summary");
   if (!response.ok) {
-    throw new Error("غیرمجاز");
+    throw new Error("Unauthorized");
   }
   return response.json();
 };
@@ -105,7 +104,7 @@ const fetchUsers = async (search = "") => {
   }
   const response = await fetch(`/api/admin/users?${params.toString()}`);
   if (!response.ok) {
-    throw new Error("غیرمجاز");
+    throw new Error("Unauthorized");
   }
   return response.json();
 };
@@ -113,7 +112,7 @@ const fetchUsers = async (search = "") => {
 const fetchSiteSettings = async () => {
   const response = await fetch("/api/admin/site-settings");
   if (!response.ok) {
-    throw new Error("بارگذاری تنظیمات انجام نشد.");
+    throw new Error("Unable to load settings.");
   }
   return response.json();
 };
@@ -303,7 +302,7 @@ const updateEditModeButton = () => {
   if (!layoutEditModeBtn) {
     return;
   }
-  layoutEditModeBtn.textContent = EDIT_MODE ? "غیرفعال‌سازی حالت ویرایش" : "فعال‌سازی حالت ویرایش";
+  layoutEditModeBtn.textContent = EDIT_MODE ? "Disable edit mode" : "Enable edit mode";
   layoutEditModeBtn.setAttribute("aria-pressed", String(EDIT_MODE));
   layoutEditModeBtn.classList.toggle("primary", EDIT_MODE);
 };
@@ -323,39 +322,11 @@ const refreshLayoutPreview = () => {
   layoutSelectedElement = null;
   layoutSelectedId = null;
   updateEditModeButton();
-  setLayoutStatus(EDIT_MODE ? "حالت ویرایش فعال است." : "");
+  setLayoutStatus(EDIT_MODE ? "Edit mode is enabled." : "");
   if (layoutFrame) {
     frameReady = false;
     layoutFrame.src = layoutPages[pageKey] || "/index.html";
   }
-};
-
-
-const getElementLabel = (element) => {
-  const id = element.dataset.adminId;
-  const explicitName = element.getAttribute("aria-label") || element.dataset.adminName || "";
-  const text = (element.textContent || "").replace(/\s+/g, " ").trim();
-  const tag = element.tagName.toLowerCase();
-  const name = explicitName || text || tag;
-  return `${name.slice(0, 42)} (${id})`;
-};
-
-const populateElementSelect = (doc) => {
-  if (!layoutElementSelect || !doc) {
-    return;
-  }
-  const elements = [...doc.querySelectorAll('[data-editable="true"]')].filter((el) => {
-    if (!(el instanceof Element)) return false;
-    const tag = el.tagName;
-    return !["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(tag);
-  });
-  layoutElementSelect.innerHTML = '<option value="">انتخاب المان</option>';
-  elements.forEach((element) => {
-    const option = document.createElement("option");
-    option.value = element.dataset.adminId || "";
-    option.textContent = getElementLabel(element);
-    layoutElementSelect.appendChild(option);
-  });
 };
 
 const selectLayoutElement = (element, pageSettings) => {
@@ -369,9 +340,6 @@ const selectLayoutElement = (element, pageSettings) => {
   }
   layoutSelectedElement = element;
   layoutSelectedId = element.dataset.adminId;
-  if (layoutElementSelect) {
-    layoutElementSelect.value = layoutSelectedId;
-  }
   element.classList.add("admin-selected");
   if (!element.querySelector(".admin-resize-handle")) {
     const handle = element.ownerDocument.createElement("span");
@@ -388,7 +356,7 @@ const selectLayoutElement = (element, pageSettings) => {
   if (layoutElementHeightInput)
     layoutElementHeightInput.value = Number.isFinite(override.height) ? override.height : Math.round(rect.height);
   if (layoutElementHint) {
-    layoutElementHint.textContent = `المان انتخاب‌شده: ${layoutSelectedId}`;
+    layoutElementHint.textContent = `Selected: ${layoutSelectedId}`;
   }
 };
 
@@ -416,7 +384,7 @@ const clearSelectedOverride = (pageSettings) => {
     layoutElementWidthInput.value = Math.round(layoutSelectedElement.getBoundingClientRect().width);
   if (layoutElementHeightInput)
     layoutElementHeightInput.value = Math.round(layoutSelectedElement.getBoundingClientRect().height);
-  setLayoutStatus("المان ریست شد.");
+  setLayoutStatus("Element reset.");
 };
 
 const setupFrameInteractions = (doc, pageSettings) => {
@@ -477,6 +445,7 @@ const setupFrameInteractions = (doc, pageSettings) => {
       return;
     }
     selectLayoutElement(selectedTarget, pageSettings);
+    console.log("Selected editable element:", selectedTarget);
     const override = pageSettings.elements[layoutSelectedId] || { x: 0, y: 0 };
     dragState = {
       mode: resizeHandle ? "resize" : "drag",
@@ -503,13 +472,13 @@ const renderUsers = (users) => {
     return;
   }
   if (!users.length) {
-    userRows.innerHTML = `<tr><td class="empty-state" colspan="5">کاربری پیدا نشد.</td></tr>`;
+    userRows.innerHTML = `<tr><td class="empty-state" colspan="5">No users found.</td></tr>`;
     return;
   }
   userRows.innerHTML = users
     .map((user) => {
       const statusClass = user.online ? "online" : "offline";
-      const statusText = user.online ? "آنلاین" : "آفلاین";
+      const statusText = user.online ? "Online" : "Offline";
       return `
         <tr>
           <td>${user.id}</td>
@@ -519,8 +488,8 @@ const renderUsers = (users) => {
           <td>
             <div class="credit-controls">
               <input type="number" min="1" value="50" data-credit-input="${user.id}" />
-              <button class="btn" data-credit-add="${user.id}">افزودن</button>
-              <button class="btn" data-credit-sub="${user.id}">کاهش</button>
+              <button class="btn" data-credit-add="${user.id}">Add</button>
+              <button class="btn" data-credit-sub="${user.id}">Subtract</button>
             </div>
           </td>
         </tr>
@@ -555,7 +524,7 @@ const setStickerPreview = (card, src) => {
   if (src) {
     const img = document.createElement("img");
     img.src = src;
-    img.alt = "پیش‌نمایش استیکر";
+    img.alt = "Sticker preview";
     preview.appendChild(img);
   } else {
     const fallback = document.createElement("span");
@@ -620,7 +589,7 @@ const sendCreditUpdate = async (userId, delta) => {
   });
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "ویرایش کردیت انجام نشد.");
+    throw new Error(error.error || "Unable to update credits.");
   }
 };
 
@@ -636,7 +605,7 @@ if (loginForm) {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "کد نامعتبر است.");
+        throw new Error(error.error || "Invalid code.");
       }
       adminCodeInput.value = "";
       await loadDashboard();
@@ -654,7 +623,7 @@ if (searchForm) {
     try {
       await loadDashboard(searchInput.value.trim());
     } catch (error) {
-      setLoginError("نشست منقضی شد. دوباره وارد شوید.");
+      setLoginError("Session expired. Please log in again.");
       setDashboardVisible(false);
     }
   });
@@ -663,7 +632,7 @@ if (searchForm) {
 if (refreshBtn) {
   refreshBtn.addEventListener("click", () => {
     Promise.all([loadDashboard(searchInput.value.trim()), loadSiteSettings()]).catch(() => {
-      setLoginError("نشست منقضی شد. دوباره وارد شوید.");
+      setLoginError("Session expired. Please log in again.");
       setDashboardVisible(false);
     });
   });
@@ -756,7 +725,7 @@ if (siteSettingsForm) {
 if (resetSettingsBtn) {
   resetSettingsBtn.addEventListener("click", async () => {
     try {
-      setSettingsStatus("در حال بازنشانی...");
+      setSettingsStatus("Resetting...");
       const response = await fetch("/api/admin/site-settings/reset", { method: "POST" });
       if (!response.ok) {
         const error = await response.json();
@@ -764,7 +733,7 @@ if (resetSettingsBtn) {
       }
       const data = await response.json();
       populateSettingsForm(data);
-      setSettingsStatus("تنظیمات پیش‌فرض بازگردانی شد.");
+      setSettingsStatus("Defaults restored.");
     } catch (error) {
       setSettingsStatus(error.message, true);
     }
@@ -814,22 +783,6 @@ if (layoutPageSelect) {
   });
 }
 
-if (layoutElementSelect) {
-  layoutElementSelect.addEventListener("change", () => {
-    const selectedId = layoutElementSelect.value;
-    const doc = layoutFrame?.contentDocument;
-    if (!selectedId || !doc) {
-      return;
-    }
-    const element = doc.querySelector(`[data-admin-id="${selectedId}"]`);
-    if (!element) {
-      return;
-    }
-    const pageSettings = getPageSettings(layoutPageSelect?.value || "home");
-    selectLayoutElement(element, pageSettings);
-  });
-}
-
 if (layoutRefreshBtn) {
   layoutRefreshBtn.addEventListener("click", () => {
     refreshLayoutPreview();
@@ -844,10 +797,10 @@ if (layoutEditModeBtn) {
     applyFrameEditMode(layoutFrame?.contentDocument);
     if (layoutElementHint) {
       layoutElementHint.textContent = EDIT_MODE
-        ? "روی هر المان در پیش‌نمایش کلیک کنید."
-        : "برای جابجایی و تغییر اندازه، حالت ویرایش را فعال کنید.";
+        ? "Click any element inside the preview."
+        : "Enable edit mode to drag and resize items.";
     }
-    setLayoutStatus(EDIT_MODE ? "حالت ویرایش فعال است." : "حالت ویرایش غیرفعال است.");
+    setLayoutStatus(EDIT_MODE ? "Edit mode is enabled." : "Edit mode is disabled.");
   });
 }
 
@@ -862,7 +815,6 @@ if (layoutFrame) {
     const pageSettings = getPageSettings(pageKey);
     ensureFrameStyles(doc);
     ensureFrameAdminIds(doc);
-    populateElementSelect(doc);
     applyFrameEditMode(doc);
     applyCanvasOverrideToFrame(doc, pageSettings);
     Object.entries(pageSettings.elements).forEach(([elementId, override]) => {
@@ -874,8 +826,8 @@ if (layoutFrame) {
     setupFrameInteractions(doc, pageSettings);
     if (layoutElementHint) {
       layoutElementHint.textContent = EDIT_MODE
-        ? "روی هر المان در پیش‌نمایش کلیک کنید."
-        : "برای جابجایی و تغییر اندازه، حالت ویرایش را فعال کنید.";
+        ? "Click any element inside the preview."
+        : "Enable edit mode to drag and resize items.";
     }
   });
 }
@@ -952,7 +904,7 @@ if (layoutResetPageBtn) {
       applyCanvasOverrideToFrame(layoutFrame?.contentDocument, pageSettings);
       refreshLayoutPreview();
     }
-    setLayoutStatus("صفحه ریست شد.");
+    setLayoutStatus("Page reset.");
   });
 }
 
@@ -978,7 +930,7 @@ if (layoutSaveBtn) {
       return;
     }
     try {
-      setLayoutStatus("در حال ذخیره...");
+      setLayoutStatus("Saving...");
       const response = await fetch("/api/admin/site-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -986,11 +938,11 @@ if (layoutSaveBtn) {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "ذخیره چیدمان انجام نشد.");
+        throw new Error(error.error || "Unable to save layout.");
       }
       const data = await response.json();
       populateSettingsForm(data);
-      setLayoutStatus("چیدمان ذخیره شد.");
+      setLayoutStatus("Layout saved.");
     } catch (error) {
       setLayoutStatus(error.message, true);
     }
