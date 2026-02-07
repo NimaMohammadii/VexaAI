@@ -9,10 +9,14 @@
   --user: #2a2f3b;
   --assistant: #1c212c;
   --accent: #f4f6fb;
+  --app-height: 100dvh;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -21,6 +25,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  overflow-x: clip;
   background: var(--bg);
   color: var(--text);
   font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -31,6 +36,18 @@ body {
   height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
+body {
+  touch-action: manipulation;
+}
+
+.chat-app {
+  width: 100%;
+  max-width: 100%;
+  height: var(--app-height);
+  max-height: var(--app-height);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
 }
 
 .chat-header {
@@ -46,6 +63,11 @@ body {
   background: rgba(15, 17, 21, 0.92);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(10px);
+  padding: calc(10px + var(--safe-top)) 18px 10px;
+  background: rgba(15, 17, 21, 0.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  user-select: none;
 }
 
 .brand {
@@ -58,6 +80,7 @@ body {
 .chat-header h1 {
   margin: 0;
   font-size: 0.95rem;
+  font-size: 0.93rem;
   font-weight: 500;
   color: var(--muted);
 }
@@ -71,6 +94,14 @@ body {
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .message-list {
@@ -88,6 +119,22 @@ body {
   border-radius: 18px;
   padding: 11px 14px;
   line-height: 1.52;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  padding: 16px clamp(12px, 4vw, 52px) 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  width: 100%;
+  max-width: min(70%, 760px);
+  margin: 0 auto;
+  padding: 2px 0;
+  line-height: 1.7;
   animation: message-in 180ms ease;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -101,10 +148,25 @@ body {
 .message--assistant {
   align-self: flex-start;
   background: var(--assistant);
+.message--user,
+.message--assistant {
+  align-self: stretch;
+  background: transparent;
 }
 
 .message-text {
   margin: 0;
+  padding: 0;
+}
+
+.message--user .message-text {
+  color: #dfe5f1;
+  text-align: right;
+}
+
+.message--assistant .message-text {
+  color: var(--text);
+  text-align: left;
 }
 
 .system-message {
@@ -154,6 +216,10 @@ body {
 
 .chat-input-wrap {
   padding: 10px clamp(14px, 5vw, 52px) 16px;
+  position: sticky;
+  bottom: 0;
+  z-index: 15;
+  padding: 10px clamp(14px, 5vw, 52px) calc(16px + var(--safe-bottom));
   border-top: 1px solid var(--border);
   background: rgba(15, 17, 21, 0.95);
 }
@@ -174,6 +240,7 @@ body {
   outline: none;
   resize: none;
   max-height: 180px;
+  max-height: min(160px, 35dvh);
   min-height: 24px;
   background: transparent;
   color: var(--text);
@@ -181,6 +248,7 @@ body {
   line-height: 1.45;
   width: 100%;
   padding: 2px 4px;
+  padding: 4px;
 }
 
 #chatInput::placeholder {
@@ -190,6 +258,7 @@ body {
 .send-button {
   width: 38px;
   height: 38px;
+  min-width: 38px;
   border: none;
   border-radius: 50%;
   background: var(--accent);
@@ -198,6 +267,7 @@ body {
   place-items: center;
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
+  touch-action: manipulation;
 }
 
 .send-button svg {
@@ -264,5 +334,58 @@ body {
   .chat-input-wrap {
     padding-inline: 10px;
     padding-bottom: 12px;
+@media (max-width: 768px) {
+  .chat-header {
+    min-height: 52px;
+    padding: calc(8px + var(--safe-top)) 12px 8px;
+    gap: 8px;
+  }
+
+  .brand,
+  .chat-header h1 {
+    font-size: 0.85rem;
+  }
+
+  .icon-button,
+  .send-button {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+  }
+
+  .message-list {
+    padding: 12px 12px 16px;
+    gap: 10px;
+  }
+
+  .message {
+    max-width: 100%;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .chat-input-wrap {
+    padding: 8px 12px calc(12px + var(--safe-bottom));
+  }
+
+  .chat-input-shell {
+    border-radius: 18px;
+    padding: 8px;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .chat-header {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .brand {
+    font-size: 0.82rem;
+  }
+
+  .chat-header h1 {
+    justify-self: start;
+    font-size: 0.8rem;
   }
 }

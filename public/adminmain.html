@@ -1,27 +1,27 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>پنل ادمین وکسا</title>
+    <title>Vexa Admin</title>
     <link rel="stylesheet" href="adminmain.css" />
   </head>
   <body>
     <main class="admin-shell">
       <header class="admin-header">
         <div>
-          <p class="eyebrow">پنل مدیریت</p>
-          <h1>ادمین وکسا</h1>
+          <p class="eyebrow">Hidden Admin Panel</p>
+          <h1>Vexa Admin</h1>
         </div>
-        <button class="btn" id="refreshBtn" type="button" hidden>بارگذاری مجدد</button>
+        <button class="btn" id="refreshBtn" type="button" hidden>Refresh</button>
       </header>
 
       <section class="panel login-panel" id="loginPanel">
-        <h2>ورود به پنل</h2>
-        <p class="muted">کد مدیریت ذخیره‌شده در سرور را وارد کنید.</p>
+        <h2>Enter admin code</h2>
+        <p class="muted">Provide the secret code stored in the server environment to continue.</p>
         <form id="loginForm" class="form-row">
-          <input id="adminCode" type="password" placeholder="کد مدیریت" required />
-          <button class="btn primary" type="submit">ورود به داشبورد</button>
+          <input id="adminCode" type="password" placeholder="Admin code" required />
+          <button class="btn primary" type="submit">Unlock dashboard</button>
         </form>
         <p class="error" id="loginError" role="alert"></p>
       </section>
@@ -29,14 +29,14 @@
       <section class="panel" id="dashboard" hidden>
         <div class="stats">
           <div class="stat-card">
-            <p class="stat-label">تعداد کاربران</p>
+            <p class="stat-label">Total users</p>
             <p class="stat-value" id="totalUsers">0</p>
           </div>
           <div class="stat-card">
-            <p class="stat-label">جستجو</p>
+            <p class="stat-label">Search</p>
             <form id="searchForm" class="form-row compact">
-              <input id="searchInput" type="text" placeholder="جستجو با شناسه کاربر" />
-              <button class="btn" type="submit">جستجو</button>
+              <input id="searchInput" type="text" placeholder="Search by user ID" />
+              <button class="btn" type="submit">Search</button>
             </form>
           </div>
         </div>
@@ -45,11 +45,11 @@
           <table>
             <thead>
               <tr>
-                <th>شناسه کاربر</th>
-                <th>کردیت</th>
-                <th>وضعیت</th>
-                <th>آخرین فعالیت</th>
-                <th>تنظیم کردیت</th>
+                <th>User ID</th>
+                <th>Credits</th>
+                <th>Status</th>
+                <th>Last activity</th>
+                <th>Adjust credits</th>
               </tr>
             </thead>
             <tbody id="userRows"></tbody>
@@ -60,26 +60,26 @@
       <section class="panel settings-panel" id="siteSettingsPanel" hidden>
         <div class="panel-header">
           <div>
-            <h2>شخصی‌سازی سایت</h2>
-            <p class="muted">تنظیم اندازه صفحه‌ها، رنگ‌ها، استیکرها و اندازه دکمه‌ها.</p>
+            <h2>Site customization</h2>
+            <p class="muted">Adjust page sizes, background colors, stickers, and button sizing.</p>
           </div>
-          <button class="btn" id="resetSettingsBtn" type="button">بازگشت به پیش‌فرض</button>
+          <button class="btn" id="resetSettingsBtn" type="button">Reset to defaults</button>
         </div>
 
         <form id="siteSettingsForm" class="settings-form">
           <div class="settings-grid">
             <div class="settings-block">
-              <h3>اندازه‌های چیدمان (px)</h3>
+              <h3>Layout sizes (px)</h3>
               <label>
-                حداکثر عرض صفحه
+                Page max width
                 <input id="pageMaxWidth" type="number" min="720" max="1600" step="10" />
               </label>
               <label>
-                حداکثر عرض گرید خانه
+                Home grid max width
                 <input id="homeGridMaxWidth" type="number" min="720" max="1600" step="10" />
               </label>
               <label>
-                حداکثر عرض تبدیل متن به صدا
+                Text-to-speech max width
                 <input id="ttsMaxWidth" type="number" min="720" max="1600" step="10" />
               </label>
               <label>
@@ -89,113 +89,113 @@
             </div>
 
             <div class="settings-block">
-              <h3>رنگ‌های پس‌زمینه</h3>
+              <h3>Background colors</h3>
               <label>
-                پس‌زمینه اصلی
+                Main background
                 <input id="bgColor" type="color" />
               </label>
               <label>
-                پس‌زمینه جایگزین
+                Alt background
                 <input id="bgAltColor" type="color" />
               </label>
               <label>
-                سطح
+                Surface
                 <input id="surfaceColor" type="color" />
               </label>
               <label>
-                پنل
+                Panel
                 <input id="panelColor" type="color" />
               </label>
               <label>
-                رنگ اصلی
+                Primary accent
                 <input id="primaryColor" type="color" />
               </label>
               <label>
-                پس‌زمینه هدر (RGBA)
+                Header background (RGBA)
                 <input id="headerBg" type="text" placeholder="rgba(9, 10, 12, 0.92)" />
               </label>
             </div>
 
             <div class="settings-block">
-              <h3>اندازه دکمه‌ها</h3>
+              <h3>Button sizes</h3>
               <label>
-                اندازه فونت پایه (rem)
+                Base font size (rem)
                 <input id="baseFontSize" type="number" min="0.7" max="1.4" step="0.05" />
               </label>
               <label>
-                پدینگ عمودی پایه (px)
+                Base padding Y (px)
                 <input id="basePaddingY" type="number" min="6" max="24" step="1" />
               </label>
               <label>
-                پدینگ افقی پایه (px)
+                Base padding X (px)
                 <input id="basePaddingX" type="number" min="10" max="36" step="1" />
               </label>
               <label>
-                اندازه فونت CTA (rem)
+                CTA font size (rem)
                 <input id="ctaFontSize" type="number" min="0.7" max="1.5" step="0.05" />
               </label>
               <label>
-                پدینگ عمودی CTA (px)
+                CTA padding Y (px)
                 <input id="ctaPaddingY" type="number" min="8" max="32" step="1" />
               </label>
               <label>
-                پدینگ افقی CTA (px)
+                CTA padding X (px)
                 <input id="ctaPaddingX" type="number" min="12" max="48" step="1" />
               </label>
             </div>
           </div>
 
           <div class="settings-block">
-            <h3>بارگذاری استیکر</h3>
-            <p class="muted">برای بخش‌های مشخص‌شده استیکر دلخواه آپلود کنید.</p>
+            <h3>Sticker uploads</h3>
+            <p class="muted">Upload custom sticker images for the highlighted spots.</p>
             <div class="sticker-grid">
               <div class="sticker-card" data-sticker-slot="homeTextToSpeech">
                 <div class="sticker-preview"></div>
                 <div class="sticker-meta">
-                  <span>خانه: تبدیل متن به صدا</span>
+                  <span>Home: Text to Speech</span>
                   <input type="file" accept="image/*" />
                   <button class="btn ghost" type="button" data-sticker-clear="homeTextToSpeech">
-                    حذف
+                    Remove
                   </button>
                 </div>
               </div>
               <div class="sticker-card" data-sticker-slot="homeVoices">
                 <div class="sticker-preview"></div>
                 <div class="sticker-meta">
-                  <span>خانه: صداها</span>
+                  <span>Home: Voices</span>
                   <input type="file" accept="image/*" />
-                  <button class="btn ghost" type="button" data-sticker-clear="homeVoices">حذف</button>
+                  <button class="btn ghost" type="button" data-sticker-clear="homeVoices">Remove</button>
                 </div>
               </div>
               <div class="sticker-card" data-sticker-slot="homeAbout">
                 <div class="sticker-preview"></div>
                 <div class="sticker-meta">
-                  <span>خانه: درباره</span>
+                  <span>Home: About</span>
                   <input type="file" accept="image/*" />
-                  <button class="btn ghost" type="button" data-sticker-clear="homeAbout">حذف</button>
+                  <button class="btn ghost" type="button" data-sticker-clear="homeAbout">Remove</button>
                 </div>
               </div>
               <div class="sticker-card" data-sticker-slot="ttsHeader">
                 <div class="sticker-preview"></div>
                 <div class="sticker-meta">
-                  <span>هدر تبدیل متن به صدا</span>
+                  <span>Text-to-speech header</span>
                   <input type="file" accept="image/*" />
-                  <button class="btn ghost" type="button" data-sticker-clear="ttsHeader">حذف</button>
+                  <button class="btn ghost" type="button" data-sticker-clear="ttsHeader">Remove</button>
                 </div>
               </div>
               <div class="sticker-card" data-sticker-slot="aboutHero">
                 <div class="sticker-preview"></div>
                 <div class="sticker-meta">
-                  <span>بنر درباره</span>
+                  <span>About hero</span>
                   <input type="file" accept="image/*" />
-                  <button class="btn ghost" type="button" data-sticker-clear="aboutHero">حذف</button>
+                  <button class="btn ghost" type="button" data-sticker-clear="aboutHero">Remove</button>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="form-row">
-            <button class="btn primary" type="submit">ذخیره تنظیمات</button>
+            <button class="btn primary" type="submit">Save settings</button>
             <span class="muted" id="settingsStatus" role="status"></span>
           </div>
         </form>
@@ -204,55 +204,51 @@
       <section class="panel layout-studio" id="layoutStudioPanel" hidden>
         <div class="panel-header">
           <div>
-            <h2>استودیو چیدمان</h2>
+            <h2>Layout studio</h2>
             <p class="muted">
-              همه بخش‌های سایت را ببینید و اندازه/جای منوها، دکمه‌ها، کادرها و تمام المان‌ها را تغییر دهید.
+              Simulate every page, drag any element in the preview, rotate, and resize the page canvas.
             </p>
           </div>
           <div class="form-row compact">
             <label>
-              صفحه
+              Page
               <select id="layoutPageSelect">
-                <option value="home">خانه</option>
-                <option value="text-to-speech">تبدیل متن به صدا</option>
-                <option value="voices">صداها</option>
-                <option value="live-translate">ترجمه زنده</option>
-                <option value="vexa-assistant">دستیار وکسا</option>
-                <option value="about">درباره</option>
-                <option value="pricing">قیمت‌گذاری</option>
-                <option value="credits">کردیت</option>
-                <option value="how-it-works">نحوه کار</option>
+                <option value="home">Home</option>
+                <option value="text-to-speech">Text to speech</option>
+                <option value="voices">Voices</option>
+                <option value="live-translate">Live translate</option>
+                <option value="vexa-assistant">Vexa assistant</option>
+                <option value="about">About</option>
+                <option value="pricing">Pricing</option>
+                <option value="credits">Credits</option>
+                <option value="how-it-works">How it works</option>
               </select>
             </label>
-            <button class="btn" id="layoutResetPageBtn" type="button">ریست صفحه</button>
+            <button class="btn" id="layoutResetPageBtn" type="button">Reset page</button>
           </div>
         </div>
 
         <div class="layout-studio-body">
           <div class="layout-controls">
             <div class="settings-block">
-              <h3>بوم</h3>
+              <h3>Canvas</h3>
               <label>
-                مقیاس
+                Scale
                 <input id="layoutScale" type="number" min="0.6" max="1.4" step="0.05" />
               </label>
               <label>
-                افست X (px)
+                Offset X (px)
                 <input id="layoutOffsetX" type="number" min="-200" max="200" step="4" />
               </label>
               <label>
-                افست Y (px)
+                Offset Y (px)
                 <input id="layoutOffsetY" type="number" min="-200" max="200" step="4" />
               </label>
             </div>
 
             <div class="settings-block">
-              <h3>المان انتخاب‌شده</h3>
-              <label>
-                لیست همه المان‌ها
-                <select id="layoutElementSelect"></select>
-              </label>
-              <p class="muted" id="layoutElementHint">روی هر المان در پیش‌نمایش کلیک کنید یا از لیست انتخاب کنید.</p>
+              <h3>Selected element</h3>
+              <p class="muted" id="layoutElementHint">Click any element inside the preview.</p>
               <label>
                 X (px)
                 <input id="layoutElementX" type="number" min="-320" max="320" step="2" />
@@ -262,28 +258,28 @@
                 <input id="layoutElementY" type="number" min="-320" max="320" step="2" />
               </label>
               <label>
-                عرض (px)
+                Width (px)
                 <input id="layoutElementWidth" type="number" min="24" max="1400" step="4" />
               </label>
               <label>
-                ارتفاع (px)
+                Height (px)
                 <input id="layoutElementHeight" type="number" min="24" max="1400" step="4" />
               </label>
-              <button class="btn ghost" id="layoutResetElementBtn" type="button">ریست المان</button>
+              <button class="btn ghost" id="layoutResetElementBtn" type="button">Reset element</button>
             </div>
 
             <div class="settings-block">
-              <h3>قاب پیش‌نمایش</h3>
+              <h3>Preview frame</h3>
               <label>
-                عرض (px)
+                Width (px)
                 <input id="layoutFrameWidth" type="number" min="320" max="1600" step="10" />
               </label>
               <label>
-                ارتفاع (px)
+                Height (px)
                 <input id="layoutFrameHeight" type="number" min="420" max="1200" step="10" />
               </label>
               <div class="form-row">
-                <button class="btn primary" id="layoutSaveBtn" type="button">ذخیره چیدمان</button>
+                <button class="btn primary" id="layoutSaveBtn" type="button">Save layout</button>
                 <span class="muted" id="layoutStatus" role="status"></span>
               </div>
             </div>
@@ -291,16 +287,16 @@
 
           <div class="layout-preview">
             <div class="layout-preview-toolbar">
-              <span class="muted">پیش‌نمایش تعاملی</span>
+              <span class="muted">Interactive preview</span>
               <div class="form-row compact">
                 <button class="btn" id="layoutEditModeBtn" type="button" aria-pressed="false">
-                  فعال‌سازی حالت ویرایش
+                  Enable edit mode
                 </button>
-                <button class="btn ghost" id="layoutRefreshBtn" type="button">بارگذاری مجدد پیش‌نمایش</button>
+                <button class="btn ghost" id="layoutRefreshBtn" type="button">Reload preview</button>
               </div>
             </div>
             <div class="layout-frame" id="layoutFrameWrap">
-              <iframe id="layoutFrame" title="پیش‌نمایش سایت"></iframe>
+              <iframe id="layoutFrame" title="Site preview"></iframe>
             </div>
           </div>
         </div>

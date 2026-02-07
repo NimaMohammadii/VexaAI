@@ -4,6 +4,7 @@ const chatInput = document.getElementById("chatInput");
 const sendButton = document.getElementById("sendButton");
 
 const messageTemplate = document.getElementById("messageTemplate");
+const systemTemplate = document.getElementById("systemTemplate");
 const typingTemplate = document.getElementById("typingTemplate");
 
 const scriptedReplies = [
@@ -15,6 +16,7 @@ const scriptedReplies = [
 
 let isResponding = false;
 let replyCursor = 0;
+let userPinnedToBottom = true;
 
 const clampTextarea = () => {
   chatInput.style.height = "auto";
@@ -29,10 +31,37 @@ const scrollToLatest = () => {
   });
 };
 
+const isNearBottom = () => {
+  const threshold = 64;
+  const distanceFromBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
+  return distanceFromBottom <= threshold;
+};
+
+const scrollToLatest = (behavior = "smooth") => {
+  messageList.scrollTo({
+    top: messageList.scrollHeight,
+    behavior,
+  });
+};
+
+const maintainBottomLock = () => {
+  if (userPinnedToBottom || document.activeElement === chatInput) {
+    scrollToLatest("auto");
+  }
+};
+
 const appendMessage = ({ role, content }) => {
   const node = messageTemplate.content.firstElementChild.cloneNode(true);
   node.classList.add(role === "user" ? "message--user" : "message--assistant");
   node.querySelector(".message-text").textContent = content;
+  messageList.appendChild(node);
+  scrollToLatest();
+  return node;
+};
+
+const appendSystemMessage = (content) => {
+  const node = systemTemplate.content.firstElementChild.cloneNode(true);
+  node.textContent = content;
   messageList.appendChild(node);
   scrollToLatest();
 };
@@ -47,6 +76,17 @@ const showTypingIndicator = () => {
 const updateSendState = () => {
   const canSend = chatInput.value.trim().length > 0;
   sendButton.disabled = !canSend || isResponding;
+};
+
+const updateViewportSizing = () => {
+  const viewport = window.visualViewport;
+  if (!viewport) {
+    document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+    return;
+  }
+
+  const appHeight = Math.round(viewport.height + viewport.offsetTop);
+  document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
 };
 
 const sendMessage = async () => {
@@ -73,11 +113,13 @@ const sendMessage = async () => {
   isResponding = false;
   updateSendState();
   chatInput.focus();
+  chatInput.focus({ preventScroll: true });
 };
 
 chatInput.addEventListener("input", () => {
   clampTextarea();
   updateSendState();
+  maintainBottomLock();
 });
 
 chatInput.addEventListener("keydown", (event) => {
@@ -87,11 +129,45 @@ chatInput.addEventListener("keydown", (event) => {
   }
 });
 
+chatInput.addEventListener("focus", () => {
+  updateViewportSizing();
+  requestAnimationFrame(() => scrollToLatest("auto"));
+});
+
+chatInput.addEventListener("blur", () => {
+  setTimeout(() => {
+    updateViewportSizing();
+    maintainBottomLock();
+  }, 80);
+});
+
+messageList.addEventListener("scroll", () => {
+  userPinnedToBottom = isNearBottom();
+}, { passive: true });
+
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
   sendMessage();
 });
 
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    updateViewportSizing();
+    maintainBottomLock();
+  });
+  window.visualViewport.addEventListener("scroll", updateViewportSizing);
+}
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => {
+    updateViewportSizing();
+    maintainBottomLock();
+  }, 120);
+});
+
+window.addEventListener("resize", updateViewportSizing);
+
+appendSystemMessage("Vexa is online");
 appendMessage({
   role: "assistant",
   content: "Hi! I'm Vexa. Ask me anything and I'll jump right in.",
@@ -100,3 +176,7 @@ appendMessage({
 clampTextarea();
 updateSendState();
 chatInput.focus();
+updateViewportSizing();
+clampTextarea();
+updateSendState();
+chatInput.focus({ preventScroll: true });
