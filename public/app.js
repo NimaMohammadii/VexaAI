@@ -26,6 +26,7 @@ let currentVoice = window.VEXA_SELECTED_VOICE || "Rachel";
 
 const formatNumber = (value) => value.toLocaleString("en-US");
 const USER_ID_STORAGE_KEY = "vexa_user_id";
+const ACCOUNT_STORAGE_KEY = "vexa_account";
 const CREDIT_FILL_MAX = 100;
 const GN_FIXED_VALUE = 90;
 
@@ -264,7 +265,24 @@ const generateUserId = () => {
   return `user_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 };
 
+const getAccountFromStorage = () => {
+  try {
+    const raw = localStorage.getItem(ACCOUNT_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const account = JSON.parse(raw);
+    return account && typeof account.id === "string" ? account : null;
+  } catch (error) {
+    return null;
+  }
+};
+
 const getOrCreateUserId = () => {
+  const account = getAccountFromStorage();
+  if (account?.id) {
+    return account.id;
+  }
   let userId = getStoredUserId();
   if (!userId) {
     userId = generateUserId();
