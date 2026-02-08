@@ -36,20 +36,22 @@
       <section class="account-layout">
         <article class="account-card">
           <h2>Create account</h2>
-          <p class="account-note">Sign up with email and choose your username.</p>
+          <p class="account-note">Sign up with email and username, then verify the code sent to your email.</p>
           <form id="registerForm" class="account-form">
             <label>Email <input type="email" id="registerEmail" required /></label>
             <label>Username <input type="text" id="registerUsername" minlength="3" maxlength="30" required /></label>
-            <button type="submit" class="menu-toggle">Create account</button>
+            <button type="submit" class="menu-toggle">Send verification code</button>
+            <label>Verification code <input type="text" id="registerCode" inputmode="numeric" pattern="\d{6}" maxlength="6" placeholder="6-digit code" /></label>
+            <button type="button" id="verifyRegisterBtn" class="menu-toggle">Verify and create account</button>
           </form>
         </article>
 
         <article class="account-card">
           <h2>Login</h2>
-          <p class="account-note">Use your email to continue.</p>
+          <p class="account-note">Use your email and receive a magic login link.</p>
           <form id="loginForm" class="account-form">
             <label>Email <input type="email" id="loginEmail" required /></label>
-            <button type="submit" class="menu-toggle">Login</button>
+            <button type="submit" class="menu-toggle">Send magic link</button>
           </form>
         </article>
 
