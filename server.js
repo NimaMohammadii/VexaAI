@@ -13,6 +13,9 @@ const ADMIN_SESSION_COOKIE = "admin_session";
 const ADMIN_SESSION_TTL_MS = 30 * 60 * 1000;
 const adminSessions = new Map();
 const users = new Map();
+const accountsByEmail = new Map();
+const accountsById = new Map();
+const userAuthSessions = new Map();
 const SETTINGS_FILE = path.join(__dirname, "data", "site-settings.json");
 const defaultSiteSettings = {
   layout: {
@@ -51,6 +54,7 @@ const defaultSiteSettings = {
 
 const USER_STARTING_CREDITS = 500;
 const USER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
+const USER_AUTH_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 app.use(express.json({ limit: "6mb" }));
 
@@ -270,6 +274,48 @@ const touchUser = (user) => {
   users.set(user.id, user);
 };
 
+const normalizeEmail = (value) => (typeof value === "string" ? value.trim().toLowerCase() : "");
+
+const sanitizeUsername = (value) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 30);
+};
+
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const isValidUsername = (username) => /^[a-zA-Z0-9_\-.]{3,30}$/.test(username);
+
+const getAuthSession = (req) => {
+  const authHeader = req.headers.authorization || "";
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  const sessionId = match?.[1];
+  if (!sessionId) {
+    return null;
+  }
+
+  const session = userAuthSessions.get(sessionId);
+  if (!session || session.expiresAt < Date.now()) {
+    userAuthSessions.delete(sessionId);
+    return null;
+  }
+
+  session.expiresAt = Date.now() + USER_AUTH_SESSION_TTL_MS;
+  userAuthSessions.set(sessionId, session);
+  return session;
+};
+
+const getAccountPublicData = (account) => ({
+  id: account.id,
+  email: account.email,
+  username: account.username,
+  createdAt: account.createdAt,
+});
+
 app.post("/tts", async (req, res) => {
   try {
     const { text, voice, userId } = req.body;
@@ -355,6 +401,122 @@ app.post("/api/users/heartbeat", (req, res) => {
     return res.status(400).json({ error: "User ID is required." });
   }
   touchUser(user);
+  return res.json({ success: true });
+});
+
+app.post("/api/auth/register", (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const username = sanitizeUsername(req.body?.username);
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: "A valid email is required." });
+  }
+
+  if (!isValidUsername(username)) {
+    return res.status(400).json({
+      error: "Username must be 3-30 characters and only include letters, numbers, underscore, dash or dot.",
+    });
+  }
+
+  if (accountsByEmail.has(email)) {
+    return res.status(409).json({ error: "An account with this email already exists." });
+  }
+
+  const accountId = `acct_${crypto.randomUUID()}`;
+  const account = {
+    id: accountId,
+    email,
+    username,
+    createdAt: Date.now(),
+  };
+
+  accountsByEmail.set(email, account);
+  accountsById.set(accountId, account);
+
+  const user = getOrCreateUser(accountId);
+  touchUser(user);
+
+  const sessionToken = crypto.randomUUID();
+  userAuthSessions.set(sessionToken, {
+    accountId,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + USER_AUTH_SESSION_TTL_MS,
+  });
+
+  return res.status(201).json({ token: sessionToken, account: getAccountPublicData(account) });
+});
+
+app.post("/api/auth/login", (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: "A valid email is required." });
+  }
+
+  const account = accountsByEmail.get(email);
+  if (!account) {
+    return res.status(404).json({ error: "Account not found for this email." });
+  }
+
+  const user = getOrCreateUser(account.id);
+  touchUser(user);
+
+  const sessionToken = crypto.randomUUID();
+  userAuthSessions.set(sessionToken, {
+    accountId: account.id,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + USER_AUTH_SESSION_TTL_MS,
+  });
+
+  return res.json({ token: sessionToken, account: getAccountPublicData(account) });
+});
+
+app.get("/api/auth/me", (req, res) => {
+  const session = getAuthSession(req);
+  if (!session) {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+
+  const account = accountsById.get(session.accountId);
+  if (!account) {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+
+  return res.json({ account: getAccountPublicData(account) });
+});
+
+app.patch("/api/auth/username", (req, res) => {
+  const session = getAuthSession(req);
+  if (!session) {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+
+  const account = accountsById.get(session.accountId);
+  if (!account) {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+
+  const username = sanitizeUsername(req.body?.username);
+  if (!isValidUsername(username)) {
+    return res.status(400).json({
+      error: "Username must be 3-30 characters and only include letters, numbers, underscore, dash or dot.",
+    });
+  }
+
+  account.username = username;
+  accountsById.set(account.id, account);
+  accountsByEmail.set(account.email, account);
+  return res.json({ account: getAccountPublicData(account) });
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  const session = getAuthSession(req);
+  if (session) {
+    const authHeader = req.headers.authorization || "";
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (match?.[1]) {
+      userAuthSessions.delete(match[1]);
+    }
+  }
   return res.json({ success: true });
 });
 

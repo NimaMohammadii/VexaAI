@@ -2060,3 +2060,52 @@ select {
   }
 
 }
+
+.account-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.account-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.account-card h2 {
+  margin: 0 0 6px;
+}
+
+.account-note {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.account-form {
+  display: grid;
+  gap: 10px;
+}
+
+.account-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.account-form input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  color: var(--text);
+}
+
+.account-logout {
+  margin-top: 10px;
+  display: inline-block;
+  cursor: pointer;
+}
