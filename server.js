@@ -487,7 +487,7 @@ app.post("/api/users/heartbeat", (req, res) => {
   return res.json({ success: true });
 });
 
-app.post("/auth/send-code", async (req, res) => {
+const handleSendCode = async (req, res) => {
   try {
     cleanupExpiredAuthArtifacts();
 
@@ -535,9 +535,9 @@ app.post("/auth/send-code", async (req, res) => {
       details: error.message || "Email provider request failed.",
     });
   }
-});
+};
 
-app.post("/auth/verify-code", (req, res) => {
+const handleVerifyCode = (req, res) => {
   cleanupExpiredAuthArtifacts();
 
   const email = normalizeEmail(req.body?.email);
@@ -589,9 +589,9 @@ app.post("/auth/verify-code", (req, res) => {
   });
 
   return res.status(201).json({ token: sessionToken, account: getAccountPublicData(account) });
-});
+};
 
-app.post("/auth/login-magic-link", async (req, res) => {
+const handleLoginMagicLink = async (req, res) => {
   try {
     cleanupExpiredAuthArtifacts();
 
@@ -629,7 +629,16 @@ app.post("/auth/login-magic-link", async (req, res) => {
       details: error.message || "Email provider request failed.",
     });
   }
-});
+};
+
+app.post("/auth/send-code", handleSendCode);
+app.post("/api/auth/register", handleSendCode);
+
+app.post("/auth/verify-code", handleVerifyCode);
+app.post("/api/auth/register/verify", handleVerifyCode);
+
+app.post("/auth/login-magic-link", handleLoginMagicLink);
+app.post("/api/auth/login", handleLoginMagicLink);
 
 app.post("/api/auth/magic-link/verify", (req, res) => {
   cleanupExpiredAuthArtifacts();
