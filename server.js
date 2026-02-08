@@ -57,7 +57,7 @@ const defaultSiteSettings = {
 const USER_STARTING_CREDITS = 500;
 const USER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 const USER_AUTH_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const EMAIL_VERIFICATION_TTL_MS = 10 * 60 * 1000;
+const EMAIL_VERIFICATION_TTL_MS = 5 * 60 * 1000;
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
 
 app.use(express.json({ limit: "6mb" }));
@@ -321,10 +321,40 @@ const getAccountPublicData = (account) => ({
 });
 
 
-const sendResendEmail = async ({ to, subject, html, text }) => {
-  const apiKey = process.env.RESEND_API_KEY;
+const sendEmail = async ({ to, subject, html, text }) => {
+  const apiKey = process.env.EMAIL_API_KEY;
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY is missing.");
+    throw new Error("EMAIL_API_KEY is missing.");
+  }
+
+  const provider = (process.env.EMAIL_PROVIDER || "resend").trim().toLowerCase();
+
+  if (provider === "sendgrid") {
+    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: {
+          email: process.env.EMAIL_FROM || process.env.SENDGRID_FROM_EMAIL || "noreply@gmail.com",
+        },
+        personalizations: [{ to: [{ email: to }] }],
+        subject,
+        content: [
+          { type: "text/plain", value: text || "" },
+          { type: "text/html", value: html || "" },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to send email via SendGrid.");
+    }
+
+    return { provider: "sendgrid", success: true };
   }
 
   const response = await fetch("https://api.resend.com/emails", {
@@ -334,7 +364,7 @@ const sendResendEmail = async ({ to, subject, html, text }) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+      from: process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
       to: [to],
       subject,
       html,
@@ -344,7 +374,7 @@ const sendResendEmail = async ({ to, subject, html, text }) => {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(errorText || "Failed to send email.");
+    throw new Error(errorText || "Failed to send email via Resend.");
   }
 
   return response.json().catch(() => ({}));
@@ -457,7 +487,7 @@ app.post("/api/users/heartbeat", (req, res) => {
   return res.json({ success: true });
 });
 
-app.post("/api/auth/register", async (req, res) => {
+app.post("/auth/send-code", async (req, res) => {
   try {
     cleanupExpiredAuthArtifacts();
 
@@ -487,11 +517,11 @@ app.post("/api/auth/register", async (req, res) => {
       requestedAt: Date.now(),
     });
 
-    await sendResendEmail({
+    await sendEmail({
       to: email,
       subject: "Your Vexa verification code",
-      html: `<p>Your verification code is: <strong>${verificationCode}</strong></p><p>This code expires in 10 minutes.</p>`,
-      text: `Your verification code is: ${verificationCode}. This code expires in 10 minutes.`,
+      html: `<p>Your verification code is: <strong>${verificationCode}</strong></p><p>This code expires in 5 minutes.</p>`,
+      text: `Your verification code is: ${verificationCode}. This code expires in 5 minutes.`,
     });
 
     return res.status(201).json({
@@ -499,11 +529,15 @@ app.post("/api/auth/register", async (req, res) => {
       message: "Verification code sent to your email.",
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message || "Unable to send verification code." });
+    console.error("[auth/send-code] Email send failed:", error);
+    return res.status(500).json({
+      error: "Unable to send verification code email.",
+      details: error.message || "Email provider request failed.",
+    });
   }
 });
 
-app.post("/api/auth/register/verify", (req, res) => {
+app.post("/auth/verify-code", (req, res) => {
   cleanupExpiredAuthArtifacts();
 
   const email = normalizeEmail(req.body?.email);
@@ -520,11 +554,11 @@ app.post("/api/auth/register/verify", (req, res) => {
   const pending = pendingEmailVerifications.get(email);
   if (!pending || pending.expiresAt < Date.now()) {
     pendingEmailVerifications.delete(email);
-    return res.status(400).json({ error: "Code is invalid or expired." });
+    return res.status(400).json({ error: "Verification code is invalid or expired." });
   }
 
   if (pending.verificationCode !== code) {
-    return res.status(400).json({ error: "Code is invalid or expired." });
+    return res.status(400).json({ error: "Verification code is incorrect." });
   }
 
   if (accountsByEmail.has(email)) {
@@ -557,7 +591,7 @@ app.post("/api/auth/register/verify", (req, res) => {
   return res.status(201).json({ token: sessionToken, account: getAccountPublicData(account) });
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/auth/login-magic-link", async (req, res) => {
   try {
     cleanupExpiredAuthArtifacts();
 
@@ -580,7 +614,7 @@ app.post("/api/auth/login", async (req, res) => {
     });
 
     const magicLink = buildMagicLink(magicToken);
-    await sendResendEmail({
+    await sendEmail({
       to: account.email,
       subject: "Your Vexa magic login link",
       html: `<p>Click to login: <a href="${magicLink}">${magicLink}</a></p><p>This link expires in 15 minutes.</p>`,
@@ -589,7 +623,11 @@ app.post("/api/auth/login", async (req, res) => {
 
     return res.json({ success: true, message: "Magic link sent to your email." });
   } catch (error) {
-    return res.status(500).json({ error: error.message || "Unable to send magic link." });
+    console.error("[auth/login-magic-link] Email send failed:", error);
+    return res.status(500).json({
+      error: "Unable to send magic link email.",
+      details: error.message || "Email provider request failed.",
+    });
   }
 });
 
