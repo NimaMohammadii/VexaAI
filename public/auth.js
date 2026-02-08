@@ -11,6 +11,7 @@ const updateUsername = document.getElementById("updateUsername");
 const logoutBtn = document.getElementById("logoutBtn");
 const registerCodeInput = document.getElementById("registerCode");
 const verifyRegisterBtn = document.getElementById("verifyRegisterBtn");
+const registerSendCodeBtn = document.getElementById("registerSendCodeBtn");
 
 const setStatus = (message, isError = false) => {
   if (!authStatus) {
@@ -95,20 +96,30 @@ const loadMe = async () => {
   }
 };
 
-registerForm?.addEventListener("submit", async (event) => {
-  event.preventDefault();
+const sendVerificationCode = async (event) => {
+  event?.preventDefault();
   const email = document.getElementById("registerEmail")?.value?.trim();
   const username = document.getElementById("registerUsername")?.value?.trim();
+
   try {
-    await apiRequest("/api/auth/register", {
+    const response = await fetch("/auth/send-code", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username }),
     });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Request failed.");
+    }
+
     setStatus("Verification code sent. Please check your email.");
   } catch (error) {
     setStatus(error.message, true);
   }
-});
+};
+
+registerForm?.addEventListener("submit", sendVerificationCode);
+registerSendCodeBtn?.addEventListener("click", sendVerificationCode);
 
 verifyRegisterBtn?.addEventListener("click", async () => {
   const email = document.getElementById("registerEmail")?.value?.trim();
