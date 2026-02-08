@@ -322,12 +322,19 @@ const getAccountPublicData = (account) => ({
 
 
 const sendEmail = async ({ to, subject, html, text }) => {
-  const apiKey = process.env.EMAIL_API_KEY;
-  if (!apiKey) {
-    throw new Error("EMAIL_API_KEY is missing.");
-  }
-
   const provider = (process.env.EMAIL_PROVIDER || "resend").trim().toLowerCase();
+
+  const apiKey =
+    provider === "sendgrid"
+      ? process.env.EMAIL_API_KEY || process.env.SENDGRID_API_KEY
+      : process.env.EMAIL_API_KEY || process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    if (provider === "sendgrid") {
+      throw new Error("Missing API key. Set EMAIL_API_KEY or SENDGRID_API_KEY.");
+    }
+    throw new Error("Missing API key. Set EMAIL_API_KEY or RESEND_API_KEY.");
+  }
 
   if (provider === "sendgrid") {
     const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
