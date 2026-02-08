@@ -16,6 +16,8 @@ const users = new Map();
 const accountsByEmail = new Map();
 const accountsById = new Map();
 const userAuthSessions = new Map();
+const pendingEmailVerifications = new Map();
+const pendingMagicLinks = new Map();
 const SETTINGS_FILE = path.join(__dirname, "data", "site-settings.json");
 const defaultSiteSettings = {
   layout: {
@@ -55,6 +57,8 @@ const defaultSiteSettings = {
 const USER_STARTING_CREDITS = 500;
 const USER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 const USER_AUTH_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const EMAIL_VERIFICATION_TTL_MS = 10 * 60 * 1000;
+const MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
 
 app.use(express.json({ limit: "6mb" }));
 
@@ -316,6 +320,55 @@ const getAccountPublicData = (account) => ({
   createdAt: account.createdAt,
 });
 
+
+const sendResendEmail = async ({ to, subject, html, text }) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is missing.");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+      to: [to],
+      subject,
+      html,
+      text,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Failed to send email.");
+  }
+
+  return response.json().catch(() => ({}));
+};
+
+const cleanupExpiredAuthArtifacts = () => {
+  const now = Date.now();
+  for (const [key, value] of pendingEmailVerifications.entries()) {
+    if (!value || value.expiresAt < now) {
+      pendingEmailVerifications.delete(key);
+    }
+  }
+  for (const [key, value] of pendingMagicLinks.entries()) {
+    if (!value || value.expiresAt < now) {
+      pendingMagicLinks.delete(key);
+    }
+  }
+};
+
+const buildMagicLink = (token) => {
+  const baseUrl = (process.env.APP_BASE_URL || `http://localhost:${port}`).replace(/\/$/, "");
+  return `${baseUrl}/account.html?magicToken=${encodeURIComponent(token)}`;
+};
+
 app.post("/tts", async (req, res) => {
   try {
     const { text, voice, userId } = req.body;
@@ -404,21 +457,78 @@ app.post("/api/users/heartbeat", (req, res) => {
   return res.json({ success: true });
 });
 
-app.post("/api/auth/register", (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    cleanupExpiredAuthArtifacts();
+
+    const email = normalizeEmail(req.body?.email);
+    const username = sanitizeUsername(req.body?.username);
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: "A valid email is required." });
+    }
+
+    if (!isValidUsername(username)) {
+      return res.status(400).json({
+        error: "Username must be 3-30 characters and only include letters, numbers, underscore, dash or dot.",
+      });
+    }
+
+    if (accountsByEmail.has(email)) {
+      return res.status(409).json({ error: "An account with this email already exists." });
+    }
+
+    const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+    pendingEmailVerifications.set(email, {
+      email,
+      username,
+      verificationCode,
+      expiresAt: Date.now() + EMAIL_VERIFICATION_TTL_MS,
+      requestedAt: Date.now(),
+    });
+
+    await sendResendEmail({
+      to: email,
+      subject: "Your Vexa verification code",
+      html: `<p>Your verification code is: <strong>${verificationCode}</strong></p><p>This code expires in 10 minutes.</p>`,
+      text: `Your verification code is: ${verificationCode}. This code expires in 10 minutes.`,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Verification code sent to your email.",
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Unable to send verification code." });
+  }
+});
+
+app.post("/api/auth/register/verify", (req, res) => {
+  cleanupExpiredAuthArtifacts();
+
   const email = normalizeEmail(req.body?.email);
-  const username = sanitizeUsername(req.body?.username);
+  const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
 
   if (!isValidEmail(email)) {
     return res.status(400).json({ error: "A valid email is required." });
   }
 
-  if (!isValidUsername(username)) {
-    return res.status(400).json({
-      error: "Username must be 3-30 characters and only include letters, numbers, underscore, dash or dot.",
-    });
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ error: "A valid 6-digit code is required." });
+  }
+
+  const pending = pendingEmailVerifications.get(email);
+  if (!pending || pending.expiresAt < Date.now()) {
+    pendingEmailVerifications.delete(email);
+    return res.status(400).json({ error: "Code is invalid or expired." });
+  }
+
+  if (pending.verificationCode !== code) {
+    return res.status(400).json({ error: "Code is invalid or expired." });
   }
 
   if (accountsByEmail.has(email)) {
+    pendingEmailVerifications.delete(email);
     return res.status(409).json({ error: "An account with this email already exists." });
   }
 
@@ -426,12 +536,13 @@ app.post("/api/auth/register", (req, res) => {
   const account = {
     id: accountId,
     email,
-    username,
+    username: pending.username,
     createdAt: Date.now(),
   };
 
   accountsByEmail.set(email, account);
   accountsById.set(accountId, account);
+  pendingEmailVerifications.delete(email);
 
   const user = getOrCreateUser(accountId);
   touchUser(user);
@@ -446,15 +557,60 @@ app.post("/api/auth/register", (req, res) => {
   return res.status(201).json({ token: sessionToken, account: getAccountPublicData(account) });
 });
 
-app.post("/api/auth/login", (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ error: "A valid email is required." });
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    cleanupExpiredAuthArtifacts();
+
+    const email = normalizeEmail(req.body?.email);
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: "A valid email is required." });
+    }
+
+    const account = accountsByEmail.get(email);
+    if (!account) {
+      return res.status(404).json({ error: "Account not found for this email." });
+    }
+
+    const magicToken = crypto.randomUUID();
+    pendingMagicLinks.set(magicToken, {
+      accountId: account.id,
+      email: account.email,
+      expiresAt: Date.now() + MAGIC_LINK_TTL_MS,
+      requestedAt: Date.now(),
+    });
+
+    const magicLink = buildMagicLink(magicToken);
+    await sendResendEmail({
+      to: account.email,
+      subject: "Your Vexa magic login link",
+      html: `<p>Click to login: <a href="${magicLink}">${magicLink}</a></p><p>This link expires in 15 minutes.</p>`,
+      text: `Use this link to login: ${magicLink} (expires in 15 minutes).`,
+    });
+
+    return res.json({ success: true, message: "Magic link sent to your email." });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || "Unable to send magic link." });
+  }
+});
+
+app.post("/api/auth/magic-link/verify", (req, res) => {
+  cleanupExpiredAuthArtifacts();
+
+  const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
+  if (!token) {
+    return res.status(400).json({ error: "Magic link token is required." });
   }
 
-  const account = accountsByEmail.get(email);
+  const pending = pendingMagicLinks.get(token);
+  if (!pending || pending.expiresAt < Date.now()) {
+    pendingMagicLinks.delete(token);
+    return res.status(400).json({ error: "Magic link is invalid or expired." });
+  }
+
+  const account = accountsById.get(pending.accountId);
+  pendingMagicLinks.delete(token);
   if (!account) {
-    return res.status(404).json({ error: "Account not found for this email." });
+    return res.status(404).json({ error: "Account not found." });
   }
 
   const user = getOrCreateUser(account.id);
