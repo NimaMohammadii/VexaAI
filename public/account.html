@@ -40,7 +40,7 @@
           <form id="registerForm" class="account-form">
             <label>Email <input type="email" id="registerEmail" required /></label>
             <label>Username <input type="text" id="registerUsername" minlength="3" maxlength="30" required /></label>
-            <button type="submit" class="menu-toggle">Send verification code</button>
+            <button type="button" id="registerSendCodeBtn" class="menu-toggle">Send verification code</button>
             <label>Verification code <input type="text" id="registerCode" inputmode="numeric" pattern="\d{6}" maxlength="6" placeholder="6-digit code" /></label>
             <button type="button" id="verifyRegisterBtn" class="menu-toggle">Verify and create account</button>
           </form>
