@@ -34,34 +34,18 @@
       </div>
 
       <section class="account-layout">
-        <article class="account-card">
-          <h2>Create account</h2>
-          <p class="account-note">Sign up with email and username, then verify the code sent to your email.</p>
-          <form id="registerForm" class="account-form">
-            <label>Email <input type="email" id="registerEmail" required /></label>
-            <label>Username <input type="text" id="registerUsername" minlength="3" maxlength="30" required /></label>
-            <button type="button" id="registerSendCodeBtn" class="menu-toggle">Send verification code</button>
-            <label>Verification code <input type="text" id="registerCode" inputmode="numeric" pattern="\d{6}" maxlength="6" placeholder="6-digit code" /></label>
-            <button type="button" id="verifyRegisterBtn" class="menu-toggle">Verify and create account</button>
-          </form>
-        </article>
-
-        <article class="account-card">
-          <h2>Login</h2>
-          <p class="account-note">Use your email and receive a magic login link.</p>
-          <form id="loginForm" class="account-form">
-            <label>Email <input type="email" id="loginEmail" required /></label>
-            <button type="submit" class="menu-toggle">Send magic link</button>
-          </form>
+        <article class="account-card" id="authCard">
+          <h2>Sign in</h2>
+          <p class="account-note">Continue with your social account.</p>
+          <div class="oauth-buttons">
+            <a href="/api/auth/oauth/google/start" class="oauth-btn oauth-btn-google">Sign in with Google</a>
+            <a href="/api/auth/oauth/apple/start" class="oauth-btn oauth-btn-apple">Sign in with Apple</a>
+          </div>
         </article>
 
         <article class="account-card" id="profileCard" hidden>
           <h2>Profile</h2>
           <p class="account-note" id="profileInfo"></p>
-          <form id="usernameForm" class="account-form">
-            <label>Username <input type="text" id="updateUsername" minlength="3" maxlength="30" required /></label>
-            <button type="submit" class="menu-toggle">Update username</button>
-          </form>
           <button type="button" id="logoutBtn" class="menu-link account-logout">Logout</button>
         </article>
       </section>
