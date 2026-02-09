@@ -15,9 +15,9 @@ const adminSessions = new Map();
 const users = new Map();
 const accountsByEmail = new Map();
 const accountsById = new Map();
+const accountsByProviderId = new Map();
 const userAuthSessions = new Map();
-const pendingEmailVerifications = new Map();
-const pendingMagicLinks = new Map();
+const pendingOAuthStates = new Map();
 const SETTINGS_FILE = path.join(__dirname, "data", "site-settings.json");
 const defaultSiteSettings = {
   layout: {
@@ -57,8 +57,7 @@ const defaultSiteSettings = {
 const USER_STARTING_CREDITS = 500;
 const USER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 const USER_AUTH_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const EMAIL_VERIFICATION_TTL_MS = 5 * 60 * 1000;
-const MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
 app.use(express.json({ limit: "6mb" }));
 
@@ -280,19 +279,7 @@ const touchUser = (user) => {
 
 const normalizeEmail = (value) => (typeof value === "string" ? value.trim().toLowerCase() : "");
 
-const sanitizeUsername = (value) => {
-  if (typeof value !== "string") {
-    return "";
-  }
-  return value
-    .trim()
-    .replace(/\s+/g, " ")
-    .slice(0, 30);
-};
-
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-const isValidUsername = (username) => /^[a-zA-Z0-9_\-.]{3,30}$/.test(username);
 
 const getAuthSession = (req) => {
   const authHeader = req.headers.authorization || "";
@@ -316,361 +303,305 @@ const getAuthSession = (req) => {
 const getAccountPublicData = (account) => ({
   id: account.id,
   email: account.email,
-  username: account.username,
+  provider: account.provider,
+  providerId: account.providerId,
   createdAt: account.createdAt,
 });
 
-
-const sendEmail = async ({ to, subject, html, text }) => {
-  const apiKey = process.env.EMAIL_API_KEY;
-  if (!apiKey) {
-    throw new Error("EMAIL_API_KEY is missing.");
-  }
-
-  const provider = (process.env.EMAIL_PROVIDER || "resend").trim().toLowerCase();
-
-  if (provider === "sendgrid") {
-    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: {
-          email: process.env.EMAIL_FROM || process.env.SENDGRID_FROM_EMAIL || "noreply@gmail.com",
-        },
-        personalizations: [{ to: [{ email: to }] }],
-        subject,
-        content: [
-          { type: "text/plain", value: text || "" },
-          { type: "text/html", value: html || "" },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || "Failed to send email via SendGrid.");
-    }
-
-    return { provider: "sendgrid", success: true };
-  }
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-      to: [to],
-      subject,
-      html,
-      text,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to send email via Resend.");
-  }
-
-  return response.json().catch(() => ({}));
-};
-
 const cleanupExpiredAuthArtifacts = () => {
   const now = Date.now();
-  for (const [key, value] of pendingEmailVerifications.entries()) {
+  for (const [key, value] of pendingOAuthStates.entries()) {
     if (!value || value.expiresAt < now) {
-      pendingEmailVerifications.delete(key);
-    }
-  }
-  for (const [key, value] of pendingMagicLinks.entries()) {
-    if (!value || value.expiresAt < now) {
-      pendingMagicLinks.delete(key);
+      pendingOAuthStates.delete(key);
     }
   }
 };
 
-const buildMagicLink = (token) => {
+const base64UrlEncode = (value) =>
+  Buffer.from(value)
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+
+const decodeJwtPayload = (token) => {
+  if (typeof token !== "string") {
+    return null;
+  }
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const normalized = payload + "=".repeat((4 - (payload.length % 4 || 4)) % 4);
+    return JSON.parse(Buffer.from(normalized, "base64").toString("utf8"));
+  } catch (error) {
+    return null;
+  }
+};
+
+const buildAppUrl = (relativePath = "") => {
   const baseUrl = (process.env.APP_BASE_URL || `http://localhost:${port}`).replace(/\/$/, "");
-  return `${baseUrl}/account.html?magicToken=${encodeURIComponent(token)}`;
+  return `${baseUrl}${relativePath}`;
 };
 
-app.post("/tts", async (req, res) => {
-  try {
-    const { text, voice, userId } = req.body;
+const buildOAuthRedirectUri = (provider) => buildAppUrl(`/api/auth/oauth/${provider}/callback`);
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({ error: "Text is required." });
-    }
-
-    const user = getOrCreateUser(userId);
-    if (!user) {
-      return res.status(400).json({ error: "User ID is required." });
-    }
-
-    const creditCost = text.trim().length;
-    if (user.credits < creditCost) {
-      return res.status(402).json({ error: "Not enough credits remaining." });
-    }
-
-    const voiceId = voiceMap[voice] || voiceMap.Rachel;
-    const apiKey = process.env.ELEVEN_API;
-
-    if (!apiKey) {
-      return res.status(500).json({ error: "Server API key is missing." });
-    }
-
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-      {
-        method: "POST",
-        headers: {
-          Accept: "audio/mpeg",
-          "Content-Type": "application/json",
-          "xi-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          text,
-          model_id: "eleven_v3",
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.7,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(500).json({ error: errorText || "TTS failed." });
-    }
-
-    res.setHeader("Content-Type", "audio/mpeg");
-
-    const audioBuffer = Buffer.from(await response.arrayBuffer());
-    user.credits -= creditCost;
-    touchUser(user);
-    res.setHeader("X-User-Credits", user.credits);
-    res.setHeader("X-User-Starting-Credits", user.startingCredits);
-    return res.send(audioBuffer);
-  } catch (error) {
-    return res.status(500).json({ error: "Unexpected server error." });
-  }
-});
-
-app.post("/api/users/init", (req, res) => {
-  const { userId } = req.body;
-  const user = getOrCreateUser(userId);
-  if (!user) {
-    return res.status(400).json({ error: "User ID is required." });
-  }
-  touchUser(user);
-  return res.json({
-    id: user.id,
-    credits: user.credits,
-    startingCredits: user.startingCredits,
-    lastActivityAt: user.lastActivityAt,
-  });
-});
-
-app.post("/api/users/heartbeat", (req, res) => {
-  const { userId } = req.body;
-  const user = getOrCreateUser(userId);
-  if (!user) {
-    return res.status(400).json({ error: "User ID is required." });
-  }
-  touchUser(user);
-  return res.json({ success: true });
-});
-
-const handleSendCode = async (req, res) => {
-  try {
-    cleanupExpiredAuthArtifacts();
-
-    const email = normalizeEmail(req.body?.email);
-    const username = sanitizeUsername(req.body?.username);
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "A valid email is required." });
-    }
-
-    if (!isValidUsername(username)) {
-      return res.status(400).json({
-        error: "Username must be 3-30 characters and only include letters, numbers, underscore, dash or dot.",
-      });
-    }
-
-    if (accountsByEmail.has(email)) {
-      return res.status(409).json({ error: "An account with this email already exists." });
-    }
-
-    const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
-    pendingEmailVerifications.set(email, {
-      email,
-      username,
-      verificationCode,
-      expiresAt: Date.now() + EMAIL_VERIFICATION_TTL_MS,
-      requestedAt: Date.now(),
-    });
-
-    await sendEmail({
-      to: email,
-      subject: "Your Vexa verification code",
-      html: `<p>Your verification code is: <strong>${verificationCode}</strong></p><p>This code expires in 5 minutes.</p>`,
-      text: `Your verification code is: ${verificationCode}. This code expires in 5 minutes.`,
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: "Verification code sent to your email.",
-    });
-  } catch (error) {
-    console.error("[auth/send-code] Email send failed:", error);
-    return res.status(500).json({
-      error: "Unable to send verification code email.",
-      details: error.message || "Email provider request failed.",
-    });
-  }
-};
-
-const handleVerifyCode = (req, res) => {
+const createOAuthState = (provider) => {
   cleanupExpiredAuthArtifacts();
-
-  const email = normalizeEmail(req.body?.email);
-  const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
-
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ error: "A valid email is required." });
-  }
-
-  if (!/^\d{6}$/.test(code)) {
-    return res.status(400).json({ error: "A valid 6-digit code is required." });
-  }
-
-  const pending = pendingEmailVerifications.get(email);
-  if (!pending || pending.expiresAt < Date.now()) {
-    pendingEmailVerifications.delete(email);
-    return res.status(400).json({ error: "Verification code is invalid or expired." });
-  }
-
-  if (pending.verificationCode !== code) {
-    return res.status(400).json({ error: "Verification code is incorrect." });
-  }
-
-  if (accountsByEmail.has(email)) {
-    pendingEmailVerifications.delete(email);
-    return res.status(409).json({ error: "An account with this email already exists." });
-  }
-
-  const accountId = `acct_${crypto.randomUUID()}`;
-  const account = {
-    id: accountId,
-    email,
-    username: pending.username,
+  const state = crypto.randomUUID();
+  pendingOAuthStates.set(state, {
+    provider,
+    expiresAt: Date.now() + OAUTH_STATE_TTL_MS,
     createdAt: Date.now(),
-  };
+  });
+  return state;
+};
 
-  accountsByEmail.set(email, account);
-  accountsById.set(accountId, account);
-  pendingEmailVerifications.delete(email);
+const consumeOAuthState = (provider, state) => {
+  cleanupExpiredAuthArtifacts();
+  const pending = pendingOAuthStates.get(state);
+  pendingOAuthStates.delete(state);
+  if (!pending || pending.provider !== provider || pending.expiresAt < Date.now()) {
+    return false;
+  }
+  return true;
+};
 
+const createSessionForAccount = (accountId) => {
   const user = getOrCreateUser(accountId);
   touchUser(user);
-
   const sessionToken = crypto.randomUUID();
   userAuthSessions.set(sessionToken, {
     accountId,
     createdAt: Date.now(),
     expiresAt: Date.now() + USER_AUTH_SESSION_TTL_MS,
   });
-
-  return res.status(201).json({ token: sessionToken, account: getAccountPublicData(account) });
+  return sessionToken;
 };
 
-const handleLoginMagicLink = async (req, res) => {
-  try {
-    cleanupExpiredAuthArtifacts();
-
-    const email = normalizeEmail(req.body?.email);
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: "A valid email is required." });
-    }
-
-    const account = accountsByEmail.get(email);
-    if (!account) {
-      return res.status(404).json({ error: "Account not found for this email." });
-    }
-
-    const magicToken = crypto.randomUUID();
-    pendingMagicLinks.set(magicToken, {
-      accountId: account.id,
-      email: account.email,
-      expiresAt: Date.now() + MAGIC_LINK_TTL_MS,
-      requestedAt: Date.now(),
-    });
-
-    const magicLink = buildMagicLink(magicToken);
-    await sendEmail({
-      to: account.email,
-      subject: "Your Vexa magic login link",
-      html: `<p>Click to login: <a href="${magicLink}">${magicLink}</a></p><p>This link expires in 15 minutes.</p>`,
-      text: `Use this link to login: ${magicLink} (expires in 15 minutes).`,
-    });
-
-    return res.json({ success: true, message: "Magic link sent to your email." });
-  } catch (error) {
-    console.error("[auth/login-magic-link] Email send failed:", error);
-    return res.status(500).json({
-      error: "Unable to send magic link email.",
-      details: error.message || "Email provider request failed.",
-    });
-  }
-};
-
-app.post("/auth/send-code", handleSendCode);
-app.post("/api/auth/register", handleSendCode);
-
-app.post("/auth/verify-code", handleVerifyCode);
-app.post("/api/auth/register/verify", handleVerifyCode);
-
-app.post("/auth/login-magic-link", handleLoginMagicLink);
-app.post("/api/auth/login", handleLoginMagicLink);
-
-app.post("/api/auth/magic-link/verify", (req, res) => {
-  cleanupExpiredAuthArtifacts();
-
-  const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
-  if (!token) {
-    return res.status(400).json({ error: "Magic link token is required." });
+const getOrCreateOAuthAccount = ({ provider, providerId, email }) => {
+  const providerKey = `${provider}:${providerId}`;
+  let account = accountsByProviderId.get(providerKey);
+  if (!account && email) {
+    account = accountsByEmail.get(email);
   }
 
-  const pending = pendingMagicLinks.get(token);
-  if (!pending || pending.expiresAt < Date.now()) {
-    pendingMagicLinks.delete(token);
-    return res.status(400).json({ error: "Magic link is invalid or expired." });
-  }
-
-  const account = accountsById.get(pending.accountId);
-  pendingMagicLinks.delete(token);
   if (!account) {
-    return res.status(404).json({ error: "Account not found." });
+    const accountId = `acct_${crypto.randomUUID()}`;
+    account = {
+      id: accountId,
+      email,
+      provider,
+      providerId,
+      createdAt: Date.now(),
+    };
+  } else {
+    account.email = email;
+    account.provider = provider;
+    account.providerId = providerId;
   }
 
-  const user = getOrCreateUser(account.id);
-  touchUser(user);
+  accountsById.set(account.id, account);
+  accountsByProviderId.set(providerKey, account);
+  if (email) {
+    accountsByEmail.set(email, account);
+  }
+  return account;
+};
 
-  const sessionToken = crypto.randomUUID();
-  userAuthSessions.set(sessionToken, {
-    accountId: account.id,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + USER_AUTH_SESSION_TTL_MS,
+const redirectWithResult = (res, payload) => {
+  const encoded = encodeURIComponent(Buffer.from(JSON.stringify(payload)).toString("base64"));
+  return res.redirect(`/account.html?oauthResult=${encoded}`);
+};
+
+const handleOAuthError = (res, message) =>
+  redirectWithResult(res, {
+    error: message || "OAuth authentication failed.",
   });
 
-  return res.json({ token: sessionToken, account: getAccountPublicData(account) });
+const buildGoogleAuthUrl = () => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    throw new Error("GOOGLE_CLIENT_ID is missing.");
+  }
+  const state = createOAuthState("google");
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: buildOAuthRedirectUri("google"),
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    access_type: "offline",
+    prompt: "consent",
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+};
+
+const createAppleClientSecret = () => {
+  const teamId = process.env.APPLE_TEAM_ID;
+  const clientId = process.env.APPLE_CLIENT_ID;
+  const keyId = process.env.APPLE_KEY_ID;
+  const privateKey = process.env.APPLE_PRIVATE_KEY;
+
+  if (!teamId || !clientId || !keyId || !privateKey) {
+    throw new Error("Apple OAuth env vars are missing.");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "ES256", kid: keyId, typ: "JWT" };
+  const payload = {
+    iss: teamId,
+    iat: now,
+    exp: now + 60 * 60,
+    aud: "https://appleid.apple.com",
+    sub: clientId,
+  };
+
+  const encodedHeader = base64UrlEncode(JSON.stringify(header));
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const input = `${encodedHeader}.${encodedPayload}`;
+
+  const signer = crypto.createSign("RSA-SHA256");
+  signer.update(input);
+  signer.end();
+  const signature = signer
+    .sign({ key: privateKey.replace(/\\n/g, "\n") })
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+
+  return `${input}.${signature}`;
+};
+
+const buildAppleAuthUrl = () => {
+  const clientId = process.env.APPLE_CLIENT_ID;
+  if (!clientId) {
+    throw new Error("APPLE_CLIENT_ID is missing.");
+  }
+  const state = createOAuthState("apple");
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: buildOAuthRedirectUri("apple"),
+    response_type: "code",
+    response_mode: "query",
+    scope: "name email",
+    state,
+  });
+  return `https://appleid.apple.com/auth/authorize?${params.toString()}`;
+};
+
+app.get("/api/auth/oauth/google/start", (req, res) => {
+  try {
+    return res.redirect(buildGoogleAuthUrl());
+  } catch (error) {
+    return handleOAuthError(res, error.message);
+  }
+});
+
+app.get("/api/auth/oauth/apple/start", (req, res) => {
+  try {
+    return res.redirect(buildAppleAuthUrl());
+  } catch (error) {
+    return handleOAuthError(res, error.message);
+  }
+});
+
+app.get("/api/auth/oauth/google/callback", async (req, res) => {
+  try {
+    const code = typeof req.query.code === "string" ? req.query.code.trim() : "";
+    const state = typeof req.query.state === "string" ? req.query.state.trim() : "";
+    if (!code || !state || !consumeOAuthState("google", state)) {
+      return handleOAuthError(res, "Invalid OAuth state.");
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return handleOAuthError(res, "Google OAuth credentials are missing.");
+    }
+
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: buildOAuthRedirectUri("google"),
+        grant_type: "authorization_code",
+      }),
+    });
+
+    const tokenData = await tokenResponse.json().catch(() => ({}));
+    if (!tokenResponse.ok || !tokenData.access_token) {
+      return handleOAuthError(res, tokenData.error_description || "Google token exchange failed.");
+    }
+
+    const profileResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const profile = await profileResponse.json().catch(() => ({}));
+
+    const providerId = profile?.id ? String(profile.id) : "";
+    const email = normalizeEmail(profile?.email);
+    if (!providerId || !isValidEmail(email)) {
+      return handleOAuthError(res, "Google account data is incomplete.");
+    }
+
+    const account = getOrCreateOAuthAccount({ provider: "google", providerId, email });
+    const sessionToken = createSessionForAccount(account.id);
+    return redirectWithResult(res, { token: sessionToken, account: getAccountPublicData(account) });
+  } catch (error) {
+    return handleOAuthError(res, error.message);
+  }
+});
+
+app.get("/api/auth/oauth/apple/callback", async (req, res) => {
+  try {
+    const code = typeof req.query.code === "string" ? req.query.code.trim() : "";
+    const state = typeof req.query.state === "string" ? req.query.state.trim() : "";
+    if (!code || !state || !consumeOAuthState("apple", state)) {
+      return handleOAuthError(res, "Invalid OAuth state.");
+    }
+
+    const clientId = process.env.APPLE_CLIENT_ID;
+    if (!clientId) {
+      return handleOAuthError(res, "Apple OAuth credentials are missing.");
+    }
+
+    const tokenResponse = await fetch("https://appleid.apple.com/auth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: createAppleClientSecret(),
+        code,
+        grant_type: "authorization_code",
+        redirect_uri: buildOAuthRedirectUri("apple"),
+      }),
+    });
+
+    const tokenData = await tokenResponse.json().catch(() => ({}));
+    if (!tokenResponse.ok || !tokenData.id_token) {
+      return handleOAuthError(res, tokenData.error || "Apple token exchange failed.");
+    }
+
+    const payload = decodeJwtPayload(tokenData.id_token);
+    const providerId = payload?.sub ? String(payload.sub) : "";
+    const email = normalizeEmail(payload?.email);
+    if (!providerId || !isValidEmail(email)) {
+      return handleOAuthError(res, "Apple account data is incomplete.");
+    }
+
+    const account = getOrCreateOAuthAccount({ provider: "apple", providerId, email });
+    const sessionToken = createSessionForAccount(account.id);
+    return redirectWithResult(res, { token: sessionToken, account: getAccountPublicData(account) });
+  } catch (error) {
+    return handleOAuthError(res, error.message);
+  }
 });
 
 app.get("/api/auth/me", (req, res) => {
@@ -684,30 +615,6 @@ app.get("/api/auth/me", (req, res) => {
     return res.status(401).json({ error: "Unauthorized." });
   }
 
-  return res.json({ account: getAccountPublicData(account) });
-});
-
-app.patch("/api/auth/username", (req, res) => {
-  const session = getAuthSession(req);
-  if (!session) {
-    return res.status(401).json({ error: "Unauthorized." });
-  }
-
-  const account = accountsById.get(session.accountId);
-  if (!account) {
-    return res.status(401).json({ error: "Unauthorized." });
-  }
-
-  const username = sanitizeUsername(req.body?.username);
-  if (!isValidUsername(username)) {
-    return res.status(400).json({
-      error: "Username must be 3-30 characters and only include letters, numbers, underscore, dash or dot.",
-    });
-  }
-
-  account.username = username;
-  accountsById.set(account.id, account);
-  accountsByEmail.set(account.email, account);
   return res.json({ account: getAccountPublicData(account) });
 });
 
