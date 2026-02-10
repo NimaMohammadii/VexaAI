@@ -2105,37 +2105,6 @@ select {
 }
 
 
-.oauth-buttons {
-  display: grid;
-  gap: 10px;
-}
-
-.oauth-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  padding: 12px 14px;
-  font-weight: 600;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.oauth-btn:hover {
-  transform: translateY(-1px);
-  opacity: 0.95;
-}
-
-.oauth-btn-google {
-  background: #ffffff;
-  color: #202124;
-}
-
-.oauth-btn-apple {
-  background: #000000;
-  color: #ffffff;
-}
 
 .account-logout {
   margin-top: 10px;
