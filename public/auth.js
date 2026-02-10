@@ -9,6 +9,7 @@ const sendCodeForm = document.getElementById("sendCodeForm");
 const verifyCodeForm = document.getElementById("verifyCodeForm");
 const emailInput = document.getElementById("emailInput");
 const otpInput = document.getElementById("otpInput");
+const sendCodeBtn = document.getElementById("sendCodeBtn");
 
 let supabaseClient = null;
 
@@ -116,8 +117,7 @@ const initSupabase = async () => {
   });
 };
 
-sendCodeForm?.addEventListener("submit", async (event) => {
-  event.preventDefault();
+const sendOtp = async () => {
   setStatus("");
 
   const email = normalizeEmail(emailInput?.value);
@@ -131,10 +131,18 @@ sendCodeForm?.addEventListener("submit", async (event) => {
     if (error) {
       throw error;
     }
-    setStatus("کد تایید ارسال شد. ایمیل خود را بررسی کنید.");
+    setStatus("کد ارسال شد.");
   } catch (error) {
     setStatus(mapOtpError(error?.message), true);
   }
+};
+
+sendCodeForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+});
+
+sendCodeBtn?.addEventListener("click", () => {
+  void sendOtp();
 });
 
 verifyCodeForm?.addEventListener("submit", async (event) => {
