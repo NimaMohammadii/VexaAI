@@ -39,6 +39,12 @@ const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const mapOtpError = (message = "") => {
   const lower = message.toLowerCase();
+  if (lower.includes("signups not allowed") || lower.includes("signup is disabled")) {
+    return "ساخت اکانت جدید در تنظیمات Supabase غیرفعال است.";
+  }
+  if (lower.includes("email rate limit") || lower.includes("rate limit")) {
+    return "تعداد درخواست‌های ارسال کد زیاد است. چند دقیقه بعد دوباره تلاش کنید.";
+  }
   if (lower.includes("invalid email")) {
     return "ایمیل نامعتبر است.";
   }
@@ -173,7 +179,12 @@ const sendOtp = async (email) => {
   setLoading(true);
   setMessage({});
   try {
-    const { error } = await supabaseClient.auth.signInWithOtp({ email: normalizedEmail });
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        shouldCreateUser: true,
+      },
+    });
     if (error) {
       console.error("sendOtp error:", error.message);
       setMessage({ error: mapOtpError(error.message) });
