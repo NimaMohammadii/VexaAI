@@ -24,7 +24,7 @@ const dashboardEmail = document.getElementById("dashboardEmail");
 const dashboardState = document.getElementById("dashboardState");
 const verifyEmailValue = document.getElementById("verifyEmailValue");
 
-const supabaseClient = window.supabase.createClient("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY");
+let supabaseClient = null;
 const state = {
   view: "enter_email",
   loading: false,
@@ -55,6 +55,33 @@ const mapOtpError = (message = "") => {
     return "کد اشتباه است.";
   }
   return "خطا در احراز هویت. دوباره تلاش کنید.";
+};
+
+const loadPublicConfig = async () => {
+  const response = await fetch("/api/public-config");
+  if (!response.ok) {
+    throw new Error("public-config request failed");
+  }
+
+  const data = await response.json();
+  return {
+    url: String(data?.SUPABASE_URL || "").trim(),
+    key: String(data?.SUPABASE_PUBLISHABLE_KEY || "").trim(),
+  };
+};
+
+const getSupabaseClient = async () => {
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  const { url, key } = await loadPublicConfig();
+  if (!url || !key) {
+    throw new Error("supabase config is missing");
+  }
+
+  supabaseClient = window.supabase.createClient(url, key);
+  return supabaseClient;
 };
 
 const setMessage = ({ success = "", error = "" }) => {
@@ -135,7 +162,8 @@ const setView = (view) => {
 const userNeedsProfile = (user) => !user?.user_metadata?.username;
 
 const syncProfileRecord = async ({ userId, email, username }) => {
-  const { error } = await supabaseClient.from("users").upsert(
+  const client = await getSupabaseClient();
+  const { error } = await client.from("users").upsert(
     {
       id: userId,
       email,
@@ -166,7 +194,8 @@ const sendOtp = async (email) => {
   setLoading(true);
   setMessage({});
   try {
-    const { error } = await supabaseClient.auth.signInWithOtp({ email: normalizedEmail });
+    const client = await getSupabaseClient();
+    const { error } = await client.auth.signInWithOtp({ email: normalizedEmail });
     if (error) {
       console.error("sendOtp error:", error.message);
       setMessage({ error: mapOtpError(error.message) });
@@ -183,6 +212,9 @@ const sendOtp = async (email) => {
     }
     setView("enter_code");
     setMessage({ success: "کد به ایمیل ارسال شد." });
+  } catch (error) {
+    console.error("sendOtp fatal error:", error);
+    setMessage({ error: mapOtpError(String(error?.message || "")) });
   } finally {
     setLoading(false);
   }
@@ -206,7 +238,8 @@ const verifyOtp = async (email, code) => {
   setMessage({});
 
   try {
-    const { data, error } = await supabaseClient.auth.verifyOtp({
+    const client = await getSupabaseClient();
+    const { data, error } = await client.auth.verifyOtp({
       email: normalizedEmail,
       token,
       type: "email",
@@ -228,6 +261,9 @@ const verifyOtp = async (email, code) => {
 
     setView("dashboard");
     setMessage({ success: "ورود با موفقیت انجام شد." });
+  } catch (error) {
+    console.error("verifyOtp fatal error:", error);
+    setMessage({ error: mapOtpError(String(error?.message || "")) });
   } finally {
     setLoading(false);
   }
@@ -256,7 +292,8 @@ const completeProfile = async () => {
   setMessage({});
 
   try {
-    const { error: metadataError } = await supabaseClient.auth.updateUser({
+    const client = await getSupabaseClient();
+    const { error: metadataError } = await client.auth.updateUser({
       data: { username },
     });
 
@@ -272,7 +309,7 @@ const completeProfile = async () => {
 
     const {
       data: { session },
-    } = await supabaseClient.auth.getSession();
+    } = await client.auth.getSession();
 
     state.session = session;
     setView("dashboard");
@@ -309,13 +346,14 @@ const handleSession = (session) => {
 };
 
 const initSupabase = async () => {
+  const client = await getSupabaseClient();
   const {
     data: { session },
-  } = await supabaseClient.auth.getSession();
+  } = await client.auth.getSession();
 
   handleSession(session);
 
-  supabaseClient.auth.onAuthStateChange((_event, currentSession) => {
+  client.auth.onAuthStateChange((_event, currentSession) => {
     handleSession(currentSession);
   });
 };
@@ -348,9 +386,12 @@ backToEmailBtn?.addEventListener("click", () => {
 logoutBtn?.addEventListener("click", async () => {
   setLoading(true);
   try {
-    await supabaseClient.auth.signOut();
+    const client = await getSupabaseClient();
+    await client.auth.signOut();
     handleSession(null);
     setMessage({ success: "Logged out." });
+  } catch (error) {
+    setMessage({ error: "خروج از حساب ناموفق بود." });
   } finally {
     setLoading(false);
   }
