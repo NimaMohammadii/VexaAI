@@ -1,8 +1,7 @@
 const ACCOUNT_STORAGE_KEY = "vexa_account";
 
 const authCard = document.getElementById("authCard");
-const sendCodeView = document.getElementById("sendCodeView");
-const verifyCodeView = document.getElementById("verifyCodeView");
+const verifyCodeCard = document.getElementById("verifyCodeCard");
 const completeProfileCard = document.getElementById("completeProfileCard");
 const dashboardCard = document.getElementById("dashboardCard");
 
@@ -23,6 +22,7 @@ const logoutBtn = document.getElementById("logoutBtn");
 const authStatus = document.getElementById("authStatus");
 const dashboardEmail = document.getElementById("dashboardEmail");
 const dashboardState = document.getElementById("dashboardState");
+const verifyEmailValue = document.getElementById("verifyEmailValue");
 
 let supabaseClient = null;
 const state = {
@@ -102,13 +102,14 @@ const render = () => {
   const isDashboard = state.view === "dashboard";
 
   if (authCard) {
-    authCard.hidden = !(isEnterEmail || isEnterCode);
+    authCard.hidden = !isEnterEmail;
   }
-  if (sendCodeView) {
-    sendCodeView.hidden = !isEnterEmail;
+  if (verifyCodeCard) {
+    verifyCodeCard.hidden = !isEnterCode;
   }
-  if (verifyCodeView) {
-    verifyCodeView.hidden = !isEnterCode;
+
+  if (verifyEmailValue) {
+    verifyEmailValue.textContent = state.email || normalizeEmail(emailInput?.value || "") || "-";
   }
   if (completeProfileCard) {
     completeProfileCard.hidden = !isCompleteProfile;
@@ -192,6 +193,13 @@ const sendOtp = async (email) => {
     }
 
     state.email = normalizedEmail;
+    if (emailInput) {
+      emailInput.value = normalizedEmail;
+    }
+    if (otpInput) {
+      otpInput.value = "";
+      otpInput.focus();
+    }
     setView("enter_code");
     setMessage({ success: "کد به ایمیل ارسال شد." });
   } finally {
@@ -351,7 +359,10 @@ completeProfileBtn?.addEventListener("click", () => {
 });
 
 backToEmailBtn?.addEventListener("click", () => {
-  otpInput.value = "";
+  if (otpInput) {
+    otpInput.value = "";
+  }
+  state.email = "";
   setView("enter_email");
   setMessage({});
 });
