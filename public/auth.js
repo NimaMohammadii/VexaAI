@@ -1,4 +1,3 @@
-const AUTH_TOKEN_KEY = "vexa_auth_token";
 const ACCOUNT_STORAGE_KEY = "vexa_account";
 
 const authCard = document.getElementById("authCard");
@@ -6,6 +5,12 @@ const profileCard = document.getElementById("profileCard");
 const profileInfo = document.getElementById("profileInfo");
 const authStatus = document.getElementById("authStatus");
 const logoutBtn = document.getElementById("logoutBtn");
+const sendCodeForm = document.getElementById("sendCodeForm");
+const verifyCodeForm = document.getElementById("verifyCodeForm");
+const emailInput = document.getElementById("emailInput");
+const otpInput = document.getElementById("otpInput");
+
+let supabaseClient = null;
 
 const setStatus = (message, isError = false) => {
   if (!authStatus) {
@@ -15,34 +20,38 @@ const setStatus = (message, isError = false) => {
   authStatus.classList.toggle("error", Boolean(isError));
 };
 
-const getToken = () => {
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const normalizeEmail = (value) => (typeof value === "string" ? value.trim().toLowerCase() : "");
+
+const saveAccount = (user) => {
+  if (!user?.id || !user?.email) {
+    return;
+  }
   try {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
+    localStorage.setItem(
+      ACCOUNT_STORAGE_KEY,
+      JSON.stringify({
+        id: user.id,
+        email: user.email,
+        provider: "email_otp",
+      })
+    );
   } catch (error) {
-    return null;
+    console.warn("Unable to persist account.", error);
   }
 };
 
-const saveSession = ({ token, account }) => {
+const clearAccount = () => {
   try {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-    localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
-  } catch (error) {
-    console.warn("Unable to persist session.", error);
-  }
-};
-
-const clearSession = () => {
-  try {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(ACCOUNT_STORAGE_KEY);
   } catch (error) {
-    console.warn("Unable to clear session.", error);
+    console.warn("Unable to clear account.", error);
   }
 };
 
-const renderProfile = (account) => {
-  const isLoggedIn = Boolean(account);
+const renderProfile = (user) => {
+  const isLoggedIn = Boolean(user);
   if (profileCard) {
     profileCard.hidden = !isLoggedIn;
   }
@@ -50,77 +59,134 @@ const renderProfile = (account) => {
     authCard.hidden = isLoggedIn;
   }
 
-  if (isLoggedIn && profileInfo) {
-    profileInfo.textContent = `Email: ${account.email} • Provider: ${account.provider}`;
+  if (profileInfo && isLoggedIn) {
+    profileInfo.textContent = `Email: ${user.email}`;
   }
 };
 
-const apiRequest = async (url, options = {}) => {
-  const token = getToken();
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+const mapOtpError = (message = "") => {
+  const lower = message.toLowerCase();
+  if (lower.includes("invalid email")) {
+    return "ایمیل نامعتبر است.";
   }
-  const response = await fetch(url, { ...options, headers });
-  const data = await response.json().catch(() => ({}));
+  if (lower.includes("expired") || lower.includes("has expired")) {
+    return "کد منقضی شده است.";
+  }
+  if (lower.includes("invalid token") || lower.includes("token") || lower.includes("otp")) {
+    return "کد اشتباه است.";
+  }
+  return "خطا در احراز هویت. دوباره تلاش کنید.";
+};
+
+const loadConfig = async () => {
+  const response = await fetch("/api/public-config");
   if (!response.ok) {
-    throw new Error(data.error || "Request failed.");
+    throw new Error("Unable to load auth config.");
   }
-  return data;
+  const data = await response.json();
+  const url = data?.SUPABASE_URL;
+  const key = data?.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase config is missing.");
+  }
+  return { url, key };
 };
 
-const loadMe = async () => {
-  try {
-    const token = getToken();
-    if (!token) {
+const initSupabase = async () => {
+  const { url, key } = await loadConfig();
+  supabaseClient = window.supabase.createClient(url, key);
+
+  const {
+    data: { session },
+  } = await supabaseClient.auth.getSession();
+
+  if (session?.user) {
+    saveAccount(session.user);
+    renderProfile(session.user);
+  }
+
+  supabaseClient.auth.onAuthStateChange((_event, currentSession) => {
+    if (currentSession?.user) {
+      saveAccount(currentSession.user);
+      renderProfile(currentSession.user);
+    } else {
+      clearAccount();
       renderProfile(null);
-      return;
     }
-    const data = await apiRequest("/api/auth/me", { method: "GET" });
-    saveSession({ token, account: data.account });
-    renderProfile(data.account);
-  } catch (error) {
-    clearSession();
-    renderProfile(null);
-  }
+  });
 };
 
-logoutBtn?.addEventListener("click", async () => {
-  try {
-    await apiRequest("/api/auth/logout", { method: "POST", body: JSON.stringify({}) });
-  } catch (error) {
-    console.warn(error);
-  }
-  clearSession();
-  renderProfile(null);
-  setStatus("Logged out.");
-});
+sendCodeForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setStatus("");
 
-const handleOAuthResultFromUrl = () => {
-  const params = new URLSearchParams(window.location.search);
-  const encoded = params.get("oauthResult");
-  if (!encoded) {
+  const email = normalizeEmail(emailInput?.value);
+  if (!isValidEmail(email)) {
+    setStatus("ایمیل نامعتبر است.", true);
     return;
   }
 
   try {
-    const payload = JSON.parse(atob(decodeURIComponent(encoded)));
-    if (payload?.error) {
-      setStatus(payload.error, true);
-    } else if (payload?.token && payload?.account) {
-      saveSession(payload);
-      renderProfile(payload.account);
-      setStatus("Logged in successfully.");
+    const { error } = await supabaseClient.auth.signInWithOtp({ email });
+    if (error) {
+      throw error;
     }
+    setStatus("کد تایید ارسال شد. ایمیل خود را بررسی کنید.");
   } catch (error) {
-    setStatus("OAuth response is invalid.", true);
+    setStatus(mapOtpError(error?.message), true);
+  }
+});
+
+verifyCodeForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setStatus("");
+
+  const email = normalizeEmail(emailInput?.value);
+  const token = (otpInput?.value || "").trim();
+
+  if (!isValidEmail(email)) {
+    setStatus("ایمیل نامعتبر است.", true);
+    return;
   }
 
-  params.delete("oauthResult");
-  const nextQuery = params.toString();
-  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
-  window.history.replaceState({}, "", nextUrl);
-};
+  if (!/^\d{6}$/.test(token)) {
+    setStatus("کد باید ۶ رقمی باشد.", true);
+    return;
+  }
 
-handleOAuthResultFromUrl();
-loadMe();
+  try {
+    const { data, error } = await supabaseClient.auth.verifyOtp({
+      email,
+      token,
+      type: "email",
+    });
+    if (error) {
+      throw error;
+    }
+
+    if (data?.user) {
+      saveAccount(data.user);
+    }
+
+    setStatus("ورود با موفقیت انجام شد.");
+    window.location.assign("/index.html");
+  } catch (error) {
+    setStatus(mapOtpError(error?.message), true);
+  }
+});
+
+logoutBtn?.addEventListener("click", async () => {
+  try {
+    await supabaseClient.auth.signOut();
+  } catch (error) {
+    console.warn(error);
+  }
+  clearAccount();
+  renderProfile(null);
+  setStatus("Logged out.");
+});
+
+initSupabase().catch((error) => {
+  console.error(error);
+  setStatus("تنظیمات احراز هویت Supabase ناقص است.", true);
+});
