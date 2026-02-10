@@ -2111,3 +2111,34 @@ select {
   display: inline-block;
   cursor: pointer;
 }
+
+
+.account-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.account-placeholder {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.status-message {
+  min-height: 24px;
+  margin: 0;
+  color: #86efac;
+}
+
+.status-message.error {
+  color: #fca5a5;
+}
+
+.status-message.success {
+  color: #86efac;
+}
+
