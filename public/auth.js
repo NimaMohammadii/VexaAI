@@ -24,7 +24,7 @@ const dashboardEmail = document.getElementById("dashboardEmail");
 const dashboardState = document.getElementById("dashboardState");
 const verifyEmailValue = document.getElementById("verifyEmailValue");
 
-let supabaseClient = null;
+const supabaseClient = window.supabase.createClient("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY");
 const state = {
   view: "enter_email",
   loading: false,
@@ -132,20 +132,6 @@ const setView = (view) => {
   render();
 };
 
-const loadConfig = async () => {
-  const response = await fetch("/api/public-config");
-  if (!response.ok) {
-    throw new Error("Unable to load auth config.");
-  }
-  const data = await response.json();
-  const url = data?.SUPABASE_URL;
-  const key = data?.SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) {
-    throw new Error("Supabase config is missing.");
-  }
-  return { url, key };
-};
-
 const userNeedsProfile = (user) => !user?.user_metadata?.username;
 
 const syncProfileRecord = async ({ userId, email, username }) => {
@@ -175,17 +161,12 @@ const sendOtp = async (email) => {
     return;
   }
 
-  console.log("OTP email:", normalizedEmail);
+  console.log("Sending OTP request to Supabase");
 
   setLoading(true);
   setMessage({});
   try {
-    const { error } = await supabaseClient.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        shouldCreateUser: true,
-      },
-    });
+    const { error } = await supabaseClient.auth.signInWithOtp({ email: normalizedEmail });
     if (error) {
       console.error("sendOtp error:", error.message);
       setMessage({ error: mapOtpError(error.message) });
@@ -328,9 +309,6 @@ const handleSession = (session) => {
 };
 
 const initSupabase = async () => {
-  const { url, key } = await loadConfig();
-  supabaseClient = window.supabase.createClient(url, key);
-
   const {
     data: { session },
   } = await supabaseClient.auth.getSession();
