@@ -1,6 +1,9 @@
 const magicLinkForm = document.getElementById("magicLinkForm");
 const emailInput = document.getElementById("emailInput");
 const sendMagicLinkBtn = document.getElementById("sendMagicLinkBtn");
+const googleSignInBtn = document.getElementById("googleSignInBtn");
+const userEmail = document.getElementById("user-email");
+const loggedInState = document.getElementById("loggedInState");
 const authStatus = document.getElementById("authStatus");
 
 let supabaseClient = null;
@@ -13,6 +16,31 @@ const setMessage = (message = "", isError = false) => {
   authStatus.textContent = message;
   authStatus.classList.toggle("success", Boolean(message) && !isError);
   authStatus.classList.toggle("error", Boolean(message) && isError);
+};
+
+const setLoggedInState = (session) => {
+  const email = session?.user?.email || "";
+  const isLoggedIn = Boolean(email);
+
+  if (magicLinkForm) {
+    magicLinkForm.hidden = isLoggedIn;
+  }
+
+  if (googleSignInBtn) {
+    googleSignInBtn.hidden = isLoggedIn;
+  }
+
+  if (loggedInState) {
+    loggedInState.hidden = !isLoggedIn;
+  }
+
+  if (userEmail) {
+    userEmail.textContent = email;
+  }
+
+  if (isLoggedIn) {
+    setMessage("You are logged in");
+  }
 };
 
 const loadPublicConfig = async () => {
@@ -85,6 +113,65 @@ const submitMagicLink = async (event) => {
   }
 };
 
+const continueWithGoogle = async () => {
+  if (googleSignInBtn) {
+    googleSignInBtn.disabled = true;
+  }
+
+  setMessage("");
+
+  try {
+    const client = await getSupabaseClient();
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/account.html",
+      },
+    });
+
+    if (error) {
+      setMessage("Unable to continue with Google", true);
+      if (googleSignInBtn) {
+        googleSignInBtn.disabled = false;
+      }
+    }
+  } catch (error) {
+    console.error("google oauth error:", error);
+    setMessage("Unable to continue with Google", true);
+    if (googleSignInBtn) {
+      googleSignInBtn.disabled = false;
+    }
+  }
+};
+
+const initializeAuthState = async () => {
+  try {
+    const client = await getSupabaseClient();
+    const {
+      data: { session },
+      error,
+    } = await client.auth.getSession();
+
+    if (error) {
+      setMessage("Unable to load session", true);
+      return;
+    }
+
+    if (session) {
+      setLoggedInState(session);
+    }
+  } catch (error) {
+    console.error("session load error:", error);
+    setMessage("Unable to load session", true);
+  }
+};
+
 magicLinkForm?.addEventListener("submit", (event) => {
   void submitMagicLink(event);
 });
+
+googleSignInBtn?.addEventListener("click", () => {
+  void continueWithGoogle();
+});
+
+void initializeAuthState();
