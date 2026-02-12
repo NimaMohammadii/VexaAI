@@ -7,7 +7,33 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body dir="ltr" data-theme="dark">
+    <div class="menu-overlay" id="menuOverlay" hidden></div>
+    <aside class="side-menu" id="sideMenu" aria-hidden="true">
+      <div class="side-menu-header">
+        <div class="side-menu-brand">
+          <span class="home-icon" aria-hidden="true">▢</span>
+          <span>VexaAI</span>
+        </div>
+        <button class="icon-btn menu-close" id="menuClose" type="button" aria-label="Close menu">✕</button>
+      </div>
+      <div class="side-menu-section">
+        <p class="side-menu-title">Menu</p>
+        <a class="menu-link" href="index.html">Home</a>
+        <a class="menu-link" href="text-to-speech.html">Text to Speech</a>
+        <a class="menu-link" href="live-translate.html">Live Translate</a>
+        <a class="menu-link" href="vexa-assistant.html">Vexa Assistant</a>
+        <a class="menu-link" href="voices.html">Voices</a>
+        <a class="menu-link" href="account.html">Account</a>
+        <a class="menu-link is-active" href="dashboard.html">Dashboard</a>
+        <a class="menu-link" href="about.html">About</a>
+      </div>
+    </aside>
+
     <main class="home">
+      <div class="menu-bar">
+        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false">☰ <span>Dashboard</span></button>
+      </div>
+
       <section class="account-layout">
         <article class="account-card">
           <h2>Dashboard</h2>
