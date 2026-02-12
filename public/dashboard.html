@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vexa AI | Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body dir="ltr" data-theme="dark">
+    <main class="home">
+      <section class="account-layout">
+        <article class="account-card">
+          <h2>Dashboard</h2>
+          <p class="account-note">Manage your profile username.</p>
+
+          <div id="usernameDisplay" hidden>
+            Username: <strong id="usernameValue"></strong>
+          </div>
+
+          <form id="usernameForm" class="account-form" novalidate hidden>
+            <label for="usernameInput">Choose a username</label>
+            <input id="usernameInput" name="username" type="text" autocomplete="username" placeholder="your_username" required />
+            <button id="saveUsernameBtn" type="submit" class="menu-link">Save username</button>
+          </form>
+
+          <p id="dashboardStatus" class="status-message"></p>
+        </article>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>
