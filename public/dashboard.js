@@ -8,6 +8,42 @@ const dashboardStatus = document.getElementById("dashboardStatus");
 let supabaseClient = null;
 let currentUser = null;
 
+const menuToggle = document.getElementById("menuToggle");
+const menuClose = document.getElementById("menuClose");
+const sideMenu = document.getElementById("sideMenu");
+const menuOverlay = document.getElementById("menuOverlay");
+
+const openMenu = () => {
+  if (!sideMenu || !menuOverlay) {
+    return;
+  }
+  sideMenu.classList.add("is-open");
+  menuOverlay.hidden = false;
+  menuToggle?.setAttribute("aria-expanded", "true");
+};
+
+const closeMenu = () => {
+  if (!sideMenu || !menuOverlay) {
+    return;
+  }
+  sideMenu.classList.remove("is-open");
+  menuOverlay.hidden = true;
+  menuToggle?.setAttribute("aria-expanded", "false");
+};
+
+const toggleMenu = () => {
+  if (!sideMenu) {
+    return;
+  }
+
+  if (sideMenu.classList.contains("is-open")) {
+    closeMenu();
+    return;
+  }
+
+  openMenu();
+};
+
 const setStatus = (message = "", isError = false) => {
   if (!dashboardStatus) {
     return;
@@ -158,3 +194,21 @@ usernameForm?.addEventListener("submit", (event) => {
 });
 
 void loadDashboard();
+
+if (menuToggle) {
+  menuToggle.addEventListener("click", toggleMenu);
+}
+
+if (menuClose) {
+  menuClose.addEventListener("click", closeMenu);
+}
+
+if (menuOverlay) {
+  menuOverlay.addEventListener("click", closeMenu);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeMenu();
+  }
+});
