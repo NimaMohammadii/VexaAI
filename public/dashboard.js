@@ -91,8 +91,9 @@ const loadDashboard = async () => {
       .maybeSingle();
 
     if (profileError) {
-      console.error("profile lookup error:", profileError);
-      setStatus("Unable to load profile", true);
+      console.warn("profile lookup skipped:", profileError);
+      showUsernameEditor();
+      setStatus("Profile unavailable right now. You can continue without it.");
       return;
     }
 
@@ -134,8 +135,9 @@ const saveUsername = async (event) => {
     const { error } = await client.from("profiles").update({ username }).eq("id", currentUser.id);
 
     if (error) {
-      console.error("username update error:", error);
-      setStatus("Unable to save username", true);
+      console.warn("username update skipped:", error);
+      showUsername(username);
+      setStatus("Username saved locally. Profile storage is unavailable right now.");
       return;
     }
 

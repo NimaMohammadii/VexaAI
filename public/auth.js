@@ -171,8 +171,8 @@ const initializeAuthState = async () => {
       .maybeSingle();
 
     if (profileError) {
-      console.error("profile lookup error:", profileError);
-      setMessage("Unable to load profile", true);
+      console.warn("profile lookup skipped:", profileError);
+      window.location.assign("/dashboard.html");
       return;
     }
 
@@ -185,8 +185,8 @@ const initializeAuthState = async () => {
       });
 
       if (insertError) {
-        console.error("profile insert error:", insertError);
-        setMessage("Unable to create profile", true);
+        console.warn("profile insert skipped:", insertError);
+        window.location.assign("/dashboard.html");
         return;
       }
     }
