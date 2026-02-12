@@ -157,9 +157,41 @@ const initializeAuthState = async () => {
       return;
     }
 
-    if (session) {
-      setLoggedInState(session);
+    const user = session?.user;
+    if (!user) {
+      return;
     }
+
+    setLoggedInState(session);
+
+    const { data: existingProfile, error: profileError } = await client
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("profile lookup error:", profileError);
+      setMessage("Unable to load profile", true);
+      return;
+    }
+
+    if (!existingProfile) {
+      const { error: insertError } = await client.from("profiles").insert({
+        id: user.id,
+        email: user.email,
+        username: null,
+        created_at: new Date(),
+      });
+
+      if (insertError) {
+        console.error("profile insert error:", insertError);
+        setMessage("Unable to create profile", true);
+        return;
+      }
+    }
+
+    window.location.assign("/dashboard.html");
   } catch (error) {
     console.error("session load error:", error);
     setMessage("Unable to load session", true);
