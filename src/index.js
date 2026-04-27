@@ -156,7 +156,7 @@ async function getUserRequests(env, userId) {
   return requests;
 }
 
-async function telegramApi(env, method, payload) {
+async function telegramApi(env, method, payload = {}) {
   const token = env.BOT_TOKEN;
   if (!token) throw new Error("BOT_TOKEN is missing");
 
@@ -164,15 +164,57 @@ async function telegramApi(env, method, payload) {
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload || {}),
   });
 
-  if (!res.ok) {
-    const text = await res.text();
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!res.ok || data.ok === false) {
     throw new Error(`Telegram API error (${res.status}): ${text}`);
   }
 
-  return res.json();
+  return data;
+}
+
+function sanitizeWebhookInfo(info) {
+  const result = info?.result || {};
+  return {
+    ok: Boolean(info?.ok),
+    url: result.url || "",
+    pending_update_count: result.pending_update_count || 0,
+    last_error_date: result.last_error_date || null,
+    last_error_message: result.last_error_message || null,
+    max_connections: result.max_connections || null,
+    allowed_updates: result.allowed_updates || null,
+  };
+}
+
+async function getWebhookInfo(env) {
+  const info = await telegramApi(env, "getWebhookInfo", {});
+  return sanitizeWebhookInfo(info);
+}
+
+async function setWebhookToCurrentWorker(env, request) {
+  const currentUrl = new URL(request.url);
+  const webhookUrl = `${currentUrl.origin}/`;
+  const response = await telegramApi(env, "setWebhook", {
+    url: webhookUrl,
+    drop_pending_updates: true,
+    allowed_updates: ["message"],
+  });
+  const webhookInfo = await getWebhookInfo(env);
+  return {
+    ok: Boolean(response?.ok),
+    description: response?.description || "",
+    webhookUrl,
+    webhookInfo,
+  };
 }
 
 async function sendMessage(env, chatId, text, replyMarkup = undefined) {
@@ -603,19 +645,46 @@ async function handleMessage(env, message) {
   return { action: "fallback_menu_sent" };
 }
 
+async function handleGet(request, env) {
+  const url = new URL(request.url);
+
+  if (url.pathname === "/debug/webhook") {
+    try {
+      return json({ ok: true, webhookInfo: await getWebhookInfo(env) });
+    } catch (error) {
+      return json({ ok: false, error: error?.message || "Unknown error" }, 500);
+    }
+  }
+
+  if (url.pathname === "/debug/set-webhook") {
+    try {
+      return json(await setWebhookToCurrentWorker(env, request));
+    } catch (error) {
+      return json({ ok: false, error: error?.message || "Unknown error" }, 500);
+    }
+  }
+
+  return json({
+    ok: true,
+    service: "ProNetIRBot Telegram webhook is running",
+    workerUrl: `${url.origin}/`,
+    diagnostics: {
+      webhookInfo: `${url.origin}/debug/webhook`,
+      setWebhook: `${url.origin}/debug/set-webhook`,
+    },
+    config: {
+      hasBotToken: Boolean(env.BOT_TOKEN),
+      hasBotOwner: Boolean(env.BOT_OWNER),
+      hasAdminChatId: Boolean(env.ADMIN_CHAT_ID),
+      hasBotKv: Boolean(env.BOT_KV),
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "GET") {
-      return json({
-        ok: true,
-        service: "ProNetIRBot Telegram webhook is running",
-        config: {
-          hasBotToken: Boolean(env.BOT_TOKEN),
-          hasBotOwner: Boolean(env.BOT_OWNER),
-          hasAdminChatId: Boolean(env.ADMIN_CHAT_ID),
-          hasBotKv: Boolean(env.BOT_KV),
-        },
-      });
+      return handleGet(request, env);
     }
 
     if (request.method !== "POST") {
@@ -631,7 +700,7 @@ export default {
 
     const message = update?.message;
     if (!message?.chat?.id) {
-      return json({ ok: true, ignored: true });
+      return json({ ok: true, ignored: true, reason: "No message chat id in update" });
     }
 
     try {
