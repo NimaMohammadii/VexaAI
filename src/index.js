@@ -86,12 +86,18 @@ function publicRequestId() {
 }
 
 function getKv(env) {
-  return env.BOT_KV || null;
+  return env.BOT_KV || env.KV || null;
+}
+
+function getKvBindingName(env) {
+  if (env.BOT_KV) return "BOT_KV";
+  if (env.KV) return "KV";
+  return null;
 }
 
 function requireKv(env) {
   const kv = getKv(env);
-  if (!kv) throw new Error("BOT_KV binding is not configured");
+  if (!kv) throw new Error("KV binding is not configured. Add a KV namespace binding named BOT_KV.");
   return kv;
 }
 
@@ -306,7 +312,7 @@ async function sendStatus(env, message) {
   const userId = message.from?.id || chatId;
 
   if (!getKv(env)) {
-    return sendMessage(env, chatId, "برای نمایش وضعیت درخواست‌ها، اتصال ذخیره‌سازی BOT_KV باید در Cloudflare فعال شود.");
+    return sendMessage(env, chatId, "برای نمایش وضعیت درخواست‌ها، اتصال ذخیره‌سازی BOT_KV باید در Cloudflare فعال شود. اگر binding را تازه اضافه کرده‌اید، از Cloudflare روی Save and deploy یا Redeploy بزنید.");
   }
 
   const requests = await getUserRequests(env, userId);
@@ -497,7 +503,7 @@ async function handleMessage(env, message) {
     try {
       await beginRegistration(env, chatId);
     } catch {
-      await sendMessage(env, chatId, "برای فعال شدن فرم ثبت درخواست، ذخیره‌سازی BOT_KV باید در Cloudflare به Worker وصل شود.\n\nبعد از اتصال KV، همین گزینه را دوباره بزنید.");
+      await sendMessage(env, chatId, "برای فعال شدن فرم ثبت درخواست، ذخیره‌سازی BOT_KV باید در Cloudflare به Worker وصل شود. اگر binding را تازه اضافه کرده‌اید، از Cloudflare روی Save and deploy یا Redeploy بزنید.");
     }
     return { action: "registration_started" };
   }
@@ -559,7 +565,10 @@ async function handleGet(request, env) {
       hasBotToken: Boolean(env.BOT_TOKEN),
       hasBotOwner: Boolean(env.BOT_OWNER),
       hasAdminChatId: Boolean(env.ADMIN_CHAT_ID),
-      hasBotKv: Boolean(env.BOT_KV),
+      hasBotKv: Boolean(getKv(env)),
+      kvBindingName: getKvBindingName(env),
+      hasBotKvBinding: Boolean(env.BOT_KV),
+      hasKvBinding: Boolean(env.KV),
     },
   });
 }
