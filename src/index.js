@@ -13,7 +13,6 @@ const CATEGORIES = [
   ["پزشک / نظام پزشکی", "استاد / دانشگاه"],
   ["شرکت / کسب‌وکار", "سایر"],
 ];
-
 const OPERATORS = [["همراه اول", "ایرانسل", "رایتل"]];
 const MAX_DOCUMENTS = 8;
 const MAX_USER_REQUESTS = 10;
@@ -49,13 +48,11 @@ function removeKeyboard() {
   return { remove_keyboard: true };
 }
 
-function normalizeCommand(text) {
-  const trimmed = (text || "").trim();
+function normalizeCommand(text = "") {
+  const trimmed = text.trim();
   if (!trimmed.startsWith("/")) return null;
-
   const [rawCommand] = trimmed.split(/\s+/, 1);
-  const commandWithoutMention = rawCommand.split("@")[0];
-  return commandWithoutMention.toLowerCase();
+  return rawCommand.split("@")[0].toLowerCase();
 }
 
 function toEnglishDigits(value = "") {
@@ -94,23 +91,13 @@ function getKv(env) {
 
 function requireKv(env) {
   const kv = getKv(env);
-  if (!kv) {
-    throw new Error("BOT_KV binding is not configured");
-  }
+  if (!kv) throw new Error("BOT_KV binding is not configured");
   return kv;
 }
 
-function stateKey(chatId) {
-  return `state:${chatId}`;
-}
-
-function requestKey(requestId) {
-  return `request:${requestId}`;
-}
-
-function userRequestsKey(userId) {
-  return `user_requests:${userId}`;
-}
+const stateKey = (chatId) => `state:${chatId}`;
+const requestKey = (requestId) => `request:${requestId}`;
+const userRequestsKey = (userId) => `user_requests:${userId}`;
 
 async function getState(env, chatId) {
   const kv = getKv(env);
@@ -120,8 +107,7 @@ async function getState(env, chatId) {
 }
 
 async function setState(env, chatId, state) {
-  const kv = requireKv(env);
-  await kv.put(stateKey(chatId), JSON.stringify(state), { expirationTtl: 60 * 60 * 24 });
+  await requireKv(env).put(stateKey(chatId), JSON.stringify(state), { expirationTtl: 60 * 60 * 24 });
 }
 
 async function clearState(env, chatId) {
@@ -147,12 +133,10 @@ async function getUserRequests(env, userId) {
   const rawIds = await kv.get(userRequestsKey(userId));
   const ids = rawIds ? JSON.parse(rawIds) : [];
   const requests = [];
-
   for (const id of ids.slice(0, 3)) {
     const rawRequest = await kv.get(requestKey(id));
     if (rawRequest) requests.push(JSON.parse(rawRequest));
   }
-
   return requests;
 }
 
@@ -160,8 +144,7 @@ async function telegramApi(env, method, payload = {}) {
   const token = env.BOT_TOKEN;
   if (!token) throw new Error("BOT_TOKEN is missing");
 
-  const url = `https://api.telegram.org/bot${token}/${method}`;
-  const res = await fetch(url, {
+  const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload || {}),
@@ -178,7 +161,6 @@ async function telegramApi(env, method, payload = {}) {
   if (!res.ok || data.ok === false) {
     throw new Error(`Telegram API error (${res.status}): ${text}`);
   }
-
   return data;
 }
 
@@ -196,25 +178,34 @@ function sanitizeWebhookInfo(info) {
 }
 
 async function getWebhookInfo(env) {
-  const info = await telegramApi(env, "getWebhookInfo", {});
-  return sanitizeWebhookInfo(info);
+  return sanitizeWebhookInfo(await telegramApi(env, "getWebhookInfo", {}));
 }
 
-async function setWebhookToCurrentWorker(env, request) {
-  const currentUrl = new URL(request.url);
-  const webhookUrl = `${currentUrl.origin}/`;
+async function setWebhook(env, webhookUrl) {
   const response = await telegramApi(env, "setWebhook", {
     url: webhookUrl,
     drop_pending_updates: true,
     allowed_updates: ["message"],
   });
-  const webhookInfo = await getWebhookInfo(env);
   return {
     ok: Boolean(response?.ok),
     description: response?.description || "",
     webhookUrl,
-    webhookInfo,
+    webhookInfo: await getWebhookInfo(env),
   };
+}
+
+async function ensureWebhook(env, request) {
+  const currentUrl = new URL(request.url);
+  const webhookUrl = `${currentUrl.origin}/`;
+  const before = await getWebhookInfo(env);
+
+  if (before.url === webhookUrl) {
+    return { changed: false, webhookUrl, before, after: before };
+  }
+
+  const setResult = await setWebhook(env, webhookUrl);
+  return { changed: true, webhookUrl, before, after: setResult.webhookInfo, description: setResult.description };
 }
 
 async function sendMessage(env, chatId, text, replyMarkup = undefined) {
@@ -294,50 +285,32 @@ async function notifyAdmin(env, request) {
   if (!adminChatId) return;
 
   await sendMessage(env, adminChatId, adminSummary(request));
-
   for (const doc of request.documents) {
-    const caption = `مدرک پرونده ${request.id}`;
+    const payload = { chat_id: adminChatId, caption: `مدرک پرونده ${request.id}` };
     if (doc.type === "photo") {
-      await telegramApi(env, "sendPhoto", {
-        chat_id: adminChatId,
-        photo: doc.fileId,
-        caption,
-      });
+      await telegramApi(env, "sendPhoto", { ...payload, photo: doc.fileId });
     } else {
-      await telegramApi(env, "sendDocument", {
-        chat_id: adminChatId,
-        document: doc.fileId,
-        caption,
-      });
+      await telegramApi(env, "sendDocument", { ...payload, document: doc.fileId });
     }
   }
 }
 
 async function beginRegistration(env, chatId) {
   requireKv(env);
-
-  await setState(env, chatId, {
-    step: "fullName",
-    data: {},
-    documents: [],
-    startedAt: nowIso(),
-  });
-
+  await setState(env, chatId, { step: "fullName", data: {}, documents: [], startedAt: nowIso() });
   return sendMessage(env, chatId, "لطفاً نام و نام خانوادگی متقاضی را وارد کنید:", removeKeyboard());
 }
 
 async function sendStatus(env, message) {
   const chatId = message.chat.id;
   const userId = message.from?.id || chatId;
-  const requests = await getUserRequests(env, userId);
 
   if (!getKv(env)) {
     return sendMessage(env, chatId, "برای نمایش وضعیت درخواست‌ها، اتصال ذخیره‌سازی BOT_KV باید در Cloudflare فعال شود.");
   }
 
-  if (!requests.length) {
-    return sendMessage(env, chatId, "برای شما هنوز درخواستی ثبت نشده است.");
-  }
+  const requests = await getUserRequests(env, userId);
+  if (!requests.length) return sendMessage(env, chatId, "برای شما هنوز درخواستی ثبت نشده است.");
 
   const text = requests
     .map(
@@ -357,13 +330,8 @@ async function sendStatus(env, message) {
 function getIncomingDocument(message) {
   if (message.photo?.length) {
     const photo = message.photo[message.photo.length - 1];
-    return {
-      type: "photo",
-      fileId: photo.file_id,
-      fileUniqueId: photo.file_unique_id,
-    };
+    return { type: "photo", fileId: photo.file_id, fileUniqueId: photo.file_unique_id };
   }
-
   if (message.document) {
     return {
       type: "document",
@@ -373,7 +341,6 @@ function getIncomingDocument(message) {
       mimeType: message.document.mime_type || "",
     };
   }
-
   return null;
 }
 
@@ -383,173 +350,100 @@ async function handleRegistrationStep(env, message, state) {
 
   if (text === BUTTONS.CANCEL || text === "/cancel") {
     await clearState(env, chatId);
-    await sendMessage(env, chatId, "فرآیند ثبت درخواست لغو شد.", mainKeyboard());
-    return;
+    return sendMessage(env, chatId, "فرآیند ثبت درخواست لغو شد.", mainKeyboard());
   }
 
   switch (state.step) {
-    case "fullName": {
-      if (text.length < 3) {
-        await sendMessage(env, chatId, "نام واردشده کوتاه است. لطفاً نام و نام خانوادگی را کامل وارد کنید:");
-        return;
-      }
-
+    case "fullName":
+      if (text.length < 3) return sendMessage(env, chatId, "نام واردشده کوتاه است. لطفاً نام و نام خانوادگی را کامل وارد کنید:");
       state.data.fullName = text;
       state.step = "phone";
       await setState(env, chatId, state);
-      await sendMessage(env, chatId, "شماره موبایل متقاضی را وارد کنید. شماره باید به نام خود متقاضی باشد:");
-      return;
-    }
+      return sendMessage(env, chatId, "شماره موبایل متقاضی را وارد کنید. شماره باید به نام خود متقاضی باشد:");
 
     case "phone": {
       const phone = cleanPhone(text);
-      if (!isValidPhone(phone)) {
-        await sendMessage(env, chatId, "شماره موبایل معتبر نیست. نمونه صحیح: 09123456789");
-        return;
-      }
-
+      if (!isValidPhone(phone)) return sendMessage(env, chatId, "شماره موبایل معتبر نیست. نمونه صحیح: 09123456789");
       state.data.phone = phone;
       state.step = "nationalId";
       await setState(env, chatId, state);
-      await sendMessage(env, chatId, "کد ملی ۱۰ رقمی متقاضی را وارد کنید:");
-      return;
+      return sendMessage(env, chatId, "کد ملی ۱۰ رقمی متقاضی را وارد کنید:");
     }
 
     case "nationalId": {
       const nationalId = cleanNationalId(text);
-      if (!isValidNationalId(nationalId)) {
-        await sendMessage(env, chatId, "کد ملی باید ۱۰ رقم باشد. لطفاً دوباره وارد کنید:");
-        return;
-      }
-
+      if (!isValidNationalId(nationalId)) return sendMessage(env, chatId, "کد ملی باید ۱۰ رقم باشد. لطفاً دوباره وارد کنید:");
       state.data.nationalId = nationalId;
       state.step = "category";
       await setState(env, chatId, state);
-      await sendMessage(env, chatId, "نوع درخواست را انتخاب کنید:", keyboard(CATEGORIES));
-      return;
+      return sendMessage(env, chatId, "نوع درخواست را انتخاب کنید:", keyboard(CATEGORIES));
     }
 
-    case "category": {
-      const flatCategories = CATEGORIES.flat();
-      if (!flatCategories.includes(text)) {
-        await sendMessage(env, chatId, "لطفاً نوع درخواست را از گزینه‌های زیر انتخاب کنید:", keyboard(CATEGORIES));
-        return;
-      }
-
+    case "category":
+      if (!CATEGORIES.flat().includes(text)) return sendMessage(env, chatId, "لطفاً نوع درخواست را از گزینه‌های زیر انتخاب کنید:", keyboard(CATEGORIES));
       state.data.category = text;
       state.step = "relationDesc";
       await setState(env, chatId, state);
-      await sendMessage(
+      return sendMessage(
         env,
         chatId,
         "رابطه شغلی یا سازمانی متقاضی را توضیح دهید.\nمثلاً: کارمند بخش فروش، پیمانکار تولید محتوا، پزشک عضو نظام پزشکی، استاد دانشگاه و ...",
         removeKeyboard(),
       );
-      return;
-    }
 
-    case "relationDesc": {
-      if (text.length < 5) {
-        await sendMessage(env, chatId, "توضیح رابطه شغلی خیلی کوتاه است. لطفاً کمی کامل‌تر توضیح دهید:");
-        return;
-      }
-
+    case "relationDesc":
+      if (text.length < 5) return sendMessage(env, chatId, "توضیح رابطه شغلی خیلی کوتاه است. لطفاً کمی کامل‌تر توضیح دهید:");
       state.data.relationDesc = text;
       state.step = "orgName";
       await setState(env, chatId, state);
-      await sendMessage(env, chatId, "نام شرکت، سازمان، دانشگاه، کلینیک یا مجموعه را وارد کنید:");
-      return;
-    }
+      return sendMessage(env, chatId, "نام شرکت، سازمان، دانشگاه، کلینیک یا مجموعه را وارد کنید:");
 
-    case "orgName": {
-      if (text.length < 2) {
-        await sendMessage(env, chatId, "نام مجموعه معتبر نیست. لطفاً دوباره وارد کنید:");
-        return;
-      }
-
+    case "orgName":
+      if (text.length < 2) return sendMessage(env, chatId, "نام مجموعه معتبر نیست. لطفاً دوباره وارد کنید:");
       state.data.orgName = text;
       state.step = "city";
       await setState(env, chatId, state);
-      await sendMessage(env, chatId, "شهر محل فعالیت را وارد کنید:");
-      return;
-    }
+      return sendMessage(env, chatId, "شهر محل فعالیت را وارد کنید:");
 
-    case "city": {
-      if (text.length < 2) {
-        await sendMessage(env, chatId, "نام شهر معتبر نیست. لطفاً دوباره وارد کنید:");
-        return;
-      }
-
+    case "city":
+      if (text.length < 2) return sendMessage(env, chatId, "نام شهر معتبر نیست. لطفاً دوباره وارد کنید:");
       state.data.city = text;
       state.step = "operator";
       await setState(env, chatId, state);
-      await sendMessage(env, chatId, "اپراتور موردنظر را انتخاب کنید:", keyboard(OPERATORS));
-      return;
-    }
+      return sendMessage(env, chatId, "اپراتور موردنظر را انتخاب کنید:", keyboard(OPERATORS));
 
-    case "operator": {
-      const flatOperators = OPERATORS.flat();
-      if (!flatOperators.includes(text)) {
-        await sendMessage(env, chatId, "لطفاً اپراتور را از گزینه‌های زیر انتخاب کنید:", keyboard(OPERATORS));
-        return;
-      }
-
+    case "operator":
+      if (!OPERATORS.flat().includes(text)) return sendMessage(env, chatId, "لطفاً اپراتور را از گزینه‌های زیر انتخاب کنید:", keyboard(OPERATORS));
       state.data.operator = text;
       state.step = "documents";
       await setState(env, chatId, state);
-      await sendMessage(
+      return sendMessage(
         env,
         chatId,
-        "لطفاً مدارک را ارسال کنید.\n\n" +
-          "مدارک پیشنهادی:\n" +
-          "۱. تصویر کارت ملی\n" +
-          "۲. مدرک شغلی / معرفی‌نامه / قرارداد / کارت نظام پزشکی / مدرک دانشگاهی\n\n" +
+        "لطفاً مدارک را ارسال کنید.\n\nمدارک پیشنهادی:\n۱. تصویر کارت ملی\n۲. مدرک شغلی / معرفی‌نامه / قرارداد / کارت نظام پزشکی / مدرک دانشگاهی\n\n" +
           `بعد از ارسال همه مدارک، روی «${BUTTONS.FINISH_DOCS}» بزنید یا کلمه «تمام» را بفرستید.`,
         keyboard([[BUTTONS.FINISH_DOCS], [BUTTONS.CANCEL]], false),
       );
-      return;
-    }
 
     case "documents": {
       if (text === BUTTONS.FINISH_DOCS || text === "تمام") {
-        if (!state.documents.length) {
-          await sendMessage(env, chatId, "حداقل یک مدرک باید ارسال شود.");
-          return;
-        }
-
+        if (!state.documents.length) return sendMessage(env, chatId, "حداقل یک مدرک باید ارسال شود.");
         state.step = "confirm";
         await setState(env, chatId, state);
-        await sendMessage(
-          env,
-          chatId,
-          requestSummary(state.data, state.documents.length),
-          keyboard([[BUTTONS.CONFIRM], [BUTTONS.CANCEL]]),
-        );
-        return;
+        return sendMessage(env, chatId, requestSummary(state.data, state.documents.length), keyboard([[BUTTONS.CONFIRM], [BUTTONS.CANCEL]]));
       }
 
       const incomingDocument = getIncomingDocument(message);
-      if (!incomingDocument) {
-        await sendMessage(env, chatId, "لطفاً عکس یا فایل مدرک ارسال کنید، یا پس از اتمام روی «اتمام مدارک» بزنید.");
-        return;
-      }
-
-      if (state.documents.length >= MAX_DOCUMENTS) {
-        await sendMessage(env, chatId, `حداکثر ${MAX_DOCUMENTS} مدرک قابل ثبت است. برای ادامه روی «اتمام مدارک» بزنید.`);
-        return;
-      }
+      if (!incomingDocument) return sendMessage(env, chatId, "لطفاً عکس یا فایل مدرک ارسال کنید، یا پس از اتمام روی «اتمام مدارک» بزنید.");
+      if (state.documents.length >= MAX_DOCUMENTS) return sendMessage(env, chatId, `حداکثر ${MAX_DOCUMENTS} مدرک قابل ثبت است. برای ادامه روی «اتمام مدارک» بزنید.`);
 
       state.documents.push(incomingDocument);
       await setState(env, chatId, state);
-      await sendMessage(env, chatId, `مدرک دریافت شد. تعداد مدارک ثبت‌شده: ${state.documents.length}`);
-      return;
+      return sendMessage(env, chatId, `مدرک دریافت شد. تعداد مدارک ثبت‌شده: ${state.documents.length}`);
     }
 
     case "confirm": {
-      if (text !== BUTTONS.CONFIRM) {
-        await sendMessage(env, chatId, "برای ثبت نهایی روی «تأیید و ثبت» بزنید یا «لغو» را انتخاب کنید.");
-        return;
-      }
+      if (text !== BUTTONS.CONFIRM) return sendMessage(env, chatId, "برای ثبت نهایی روی «تأیید و ثبت» بزنید یا «لغو» را انتخاب کنید.");
 
       const request = {
         id: publicRequestId(),
@@ -558,14 +452,7 @@ async function handleRegistrationStep(env, message, state) {
         username: message.from?.username || "",
         firstName: message.from?.first_name || "",
         lastName: message.from?.last_name || "",
-        fullName: state.data.fullName,
-        phone: state.data.phone,
-        nationalId: state.data.nationalId,
-        category: state.data.category,
-        relationDesc: state.data.relationDesc,
-        orgName: state.data.orgName,
-        city: state.data.city,
-        operator: state.data.operator,
+        ...state.data,
         documents: state.documents,
         status: "در انتظار بررسی",
         createdAt: nowIso(),
@@ -573,20 +460,13 @@ async function handleRegistrationStep(env, message, state) {
 
       await saveRequest(env, request);
       await clearState(env, chatId);
-      await sendMessage(
-        env,
-        chatId,
-        `✅ درخواست شما ثبت شد.\n\nشماره پرونده: ${request.id}\nوضعیت فعلی: در انتظار بررسی\n\nنتیجه پس از بررسی مدارک اطلاع‌رسانی می‌شود.`,
-        mainKeyboard(),
-      );
-      await notifyAdmin(env, request);
-      return;
+      await sendMessage(env, chatId, `✅ درخواست شما ثبت شد.\n\nشماره پرونده: ${request.id}\nوضعیت فعلی: در انتظار بررسی\n\nنتیجه پس از بررسی مدارک اطلاع‌رسانی می‌شود.`, mainKeyboard());
+      return notifyAdmin(env, request);
     }
 
-    default: {
+    default:
       await clearState(env, chatId);
-      await sendMainMenu(env, chatId);
-    }
+      return sendMainMenu(env, chatId);
   }
 }
 
@@ -616,26 +496,19 @@ async function handleMessage(env, message) {
   if (text === BUTTONS.REGISTER) {
     try {
       await beginRegistration(env, chatId);
-    } catch (error) {
-      await sendMessage(
-        env,
-        chatId,
-        "برای فعال شدن فرم ثبت درخواست، ذخیره‌سازی BOT_KV باید در Cloudflare به Worker وصل شود.\n\nبعد از اتصال KV، همین گزینه را دوباره بزنید.",
-      );
+    } catch {
+      await sendMessage(env, chatId, "برای فعال شدن فرم ثبت درخواست، ذخیره‌سازی BOT_KV باید در Cloudflare به Worker وصل شود.\n\nبعد از اتصال KV، همین گزینه را دوباره بزنید.");
     }
     return { action: "registration_started" };
   }
-
   if (text === BUTTONS.STATUS) {
     await sendStatus(env, message);
     return { action: "status_sent" };
   }
-
   if (text === BUTTONS.SUPPORT) {
     await sendSupport(env, chatId);
     return { action: "support_sent" };
   }
-
   if (text === BUTTONS.RULES) {
     await sendRules(env, chatId);
     return { action: "rules_sent" };
@@ -658,9 +531,18 @@ async function handleGet(request, env) {
 
   if (url.pathname === "/debug/set-webhook") {
     try {
-      return json(await setWebhookToCurrentWorker(env, request));
+      return json(await setWebhook(env, `${url.origin}/`));
     } catch (error) {
       return json({ ok: false, error: error?.message || "Unknown error" }, 500);
+    }
+  }
+
+  let webhookAutoSetup = null;
+  if (env.BOT_TOKEN && url.searchParams.get("no_auto_webhook") !== "1") {
+    try {
+      webhookAutoSetup = await ensureWebhook(env, request);
+    } catch (error) {
+      webhookAutoSetup = { ok: false, error: error?.message || "Unknown error" };
     }
   }
 
@@ -668,6 +550,7 @@ async function handleGet(request, env) {
     ok: true,
     service: "ProNetIRBot Telegram webhook is running",
     workerUrl: `${url.origin}/`,
+    webhookAutoSetup,
     diagnostics: {
       webhookInfo: `${url.origin}/debug/webhook`,
       setWebhook: `${url.origin}/debug/set-webhook`,
@@ -683,13 +566,8 @@ async function handleGet(request, env) {
 
 export default {
   async fetch(request, env) {
-    if (request.method === "GET") {
-      return handleGet(request, env);
-    }
-
-    if (request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
-    }
+    if (request.method === "GET") return handleGet(request, env);
+    if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
     let update;
     try {
@@ -699,22 +577,13 @@ export default {
     }
 
     const message = update?.message;
-    if (!message?.chat?.id) {
-      return json({ ok: true, ignored: true, reason: "No message chat id in update" });
-    }
+    if (!message?.chat?.id) return json({ ok: true, ignored: true, reason: "No message chat id in update" });
 
     try {
       const result = await handleMessage(env, message);
       return json({ ok: true, ...result });
     } catch (error) {
-      return json(
-        {
-          ok: false,
-          error: "Failed to handle Telegram update",
-          detail: error?.message || "Unknown error",
-        },
-        500,
-      );
+      return json({ ok: false, error: "Failed to handle Telegram update", detail: error?.message || "Unknown error" }, 500);
     }
   },
 };
