@@ -29,4 +29,5 @@ curl -X POST "https://api.telegram.org/bot$BOT_TOKEN/setWebhook" \
 
 - `/start` shows one keyboard button:
   - `ثبت‌نام انترنت پرو`
+- `/start@BotUsername` is also supported (for groups)
 - Clicking the button returns a temporary confirmation message.

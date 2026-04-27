@@ -38,6 +38,28 @@ async function sendMainMenu(env, chatId) {
   });
 }
 
+function getIncomingMessage(update) {
+  if (update?.message?.chat?.id) {
+    return { chatId: update.message.chat.id, text: (update.message.text || "").trim() };
+  }
+
+  if (update?.callback_query?.message?.chat?.id) {
+    return {
+      chatId: update.callback_query.message.chat.id,
+      text: (update.callback_query.data || "").trim(),
+      callbackQueryId: update.callback_query.id,
+    };
+  }
+
+  return null;
+}
+
+function isStartCommand(text) {
+  if (!text) return false;
+  // Supports both "/start" and "/start@YourBotName" (common in groups)
+  return /^\/start(?:@\w+)?$/i.test(text);
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "GET") {
@@ -62,16 +84,21 @@ export default {
       return json({ ok: false, error: "Invalid JSON" }, 400);
     }
 
-    const message = update?.message;
-    if (!message?.chat?.id) {
+    const incoming = getIncomingMessage(update);
+    if (!incoming?.chatId) {
       return json({ ok: true, ignored: true });
     }
 
-    const chatId = message.chat.id;
-    const text = (message.text || "").trim();
+    const { chatId, text, callbackQueryId } = incoming;
 
     try {
-      if (text === "/start") {
+      if (callbackQueryId) {
+        await telegramApi(env, "answerCallbackQuery", {
+          callback_query_id: callbackQueryId,
+        });
+      }
+
+      if (isStartCommand(text)) {
         await sendMainMenu(env, chatId);
         return json({ ok: true, action: "start_menu_sent" });
       }
