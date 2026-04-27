@@ -1,0 +1,11 @@
+name = "vexaai-telegram-bot"
+main = "src/index.js"
+compatibility_date = "2026-04-27"
+workers_dev = true
+
+[vars]
+# BOT_OWNER = "123456789"
+
+# Set BOT_TOKEN and BOT_OWNER with:
+# wrangler secret put BOT_TOKEN
+# wrangler secret put BOT_OWNER
