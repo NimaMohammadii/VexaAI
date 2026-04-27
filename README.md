@@ -9,22 +9,16 @@ Cloudflare Workers Telegram bot for registering and tracking Internet Pro reques
   - `📄 وضعیت درخواست من`
   - `☎️ پشتیبانی`
   - `📌 شرایط و قوانین`
-- Multi-step request form:
+- Simplified request form (service is currently only for **همراه اول** SIM cards):
   1. Full name
-  2. Mobile number
-  3. National ID
-  4. Request category
-  5. Job/organization relationship description
-  6. Organization/company name
-  7. City
-  8. Operator
-  9. Documents/photos
-  10. Final confirmation
+  2. Mobile number (`09xxxxxxxxx`)
+  3. National ID (10 digits)
+  4. National card image/file (photo or document)
 - Stores in-progress forms and submitted requests in Cloudflare KV
 - Lets users view their latest request statuses
-- Sends new request summaries and uploaded documents to the admin chat
+- Sends new request summaries and uploaded national card document to the admin chat
 - Auto-checks and auto-configures the Telegram webhook from the Worker root URL
-- Includes legal/safety copy stating activation is not guaranteed and depends on operator approval
+- Uses KV binding fallback with either `BOT_KV` or `KV`
 
 ## Environment variables / secrets
 
@@ -55,6 +49,8 @@ The Worker code expects a KV binding named exactly:
 ```text
 BOT_KV
 ```
+
+`KV` is also supported as a fallback binding name.
 
 ### Mobile / dashboard setup
 
@@ -95,7 +91,7 @@ wrangler deploy
 
 ## Webhook
 
-The Worker now includes auto-webhook setup.
+The Worker includes auto-webhook setup.
 
 After deploying, open the Worker root URL once:
 
@@ -123,27 +119,22 @@ https://net.vexaagent.workers.dev/debug/webhook
 https://net.vexaagent.workers.dev/debug/set-webhook
 ```
 
-## Bot description
+## Bot flow
 
-Suggested Telegram bot description:
-
-```text
-ProNetIRBot | ثبت درخواست اینترنت پرو
-
-ثبت، بررسی و پیگیری درخواست اینترنت پرو برای افراد و مجموعه‌های دارای شرایط قابل احراز.
-
-✅ ثبت درخواست
-✅ بررسی مدارک
-✅ پیگیری وضعیت
-✅ پشتیبانی تا اعلام نتیجه
-
-فعال‌سازی نهایی منوط به تأیید اپراتور و مراجع مربوطه است.
-```
+1. User taps `✅ ثبت درخواست جدید`.
+2. Bot starts registration and reminds that the service is currently only for **همراه اول** SIM cards.
+3. Bot collects:
+   - Full name
+   - Mobile number (`09xxxxxxxxx`)
+   - National ID (10 digits)
+4. Bot asks for a clear national card image/file.
+5. On receiving photo/document, request is immediately stored with status `در انتظار بررسی`.
+6. Bot sends request ID to user and forwards request details + national card to admin chat.
 
 ## Notes
 
-- The bot stores Telegram file IDs, not raw document files.
-- New request documents are forwarded to the admin chat.
+- The bot stores Telegram file IDs, not raw files.
+- New request national card document is forwarded to the admin chat.
 - Requests are created with status `در انتظار بررسی`.
 - Use `/cancel` at any time to cancel the current form.
-- `/start` does not require KV, but request registration and status tracking require the `BOT_KV` binding.
+- `/start` shows the main menu.
