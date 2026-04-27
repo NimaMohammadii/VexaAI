@@ -11,11 +11,19 @@ const CALLBACKS = {
   REJECT_COST: "reject_cost",
   ADMIN_APPROVE_PREFIX: "admin_approve:",
   ADMIN_REJECT_PREFIX: "admin_reject:",
+  PAY_CRYPTO_PREFIX: "pay_crypto:",
+  PAY_STARS_PREFIX: "pay_stars:",
+  PAY_RIAL_PREFIX: "pay_rial:",
   PAYMENT_CANCEL_PREFIX: "payment_cancel:",
 };
 
 const SERVICE_OPERATOR = "همراه اول";
 const ACTIVATION_PRICE = "8,500,000 تومان";
+const CRYPTO_NETWORK = "USDT BNB Smart Chain";
+const CRYPTO_AMOUNT = "60 USDT";
+const CRYPTO_WALLET_ADDRESS = "0x7D53be6a6C16e2C2C93e0bEd57596a3FB4f72c82";
+const TELEGRAM_STARS_TEST_AMOUNT = 1;
+const TELEGRAM_STARS_REAL_AMOUNT = 4000;
 const MAX_USER_REQUESTS = 10;
 
 function json(data, status = 200) {
@@ -27,11 +35,7 @@ function json(data, status = 200) {
 
 function mainKeyboard() {
   return {
-    keyboard: [
-      [{ text: BUTTONS.REGISTER }],
-      [{ text: BUTTONS.STATUS }, { text: BUTTONS.SUPPORT }],
-      [{ text: BUTTONS.RULES }],
-    ],
+    keyboard: [[{ text: BUTTONS.REGISTER }], [{ text: BUTTONS.STATUS }, { text: BUTTONS.SUPPORT }], [{ text: BUTTONS.RULES }]],
     resize_keyboard: true,
     one_time_keyboard: false,
   };
@@ -55,6 +59,17 @@ function adminDecisionKeyboard(requestId) {
         { text: "✅ تایید", callback_data: `${CALLBACKS.ADMIN_APPROVE_PREFIX}${requestId}` },
         { text: "❌ رد", callback_data: `${CALLBACKS.ADMIN_REJECT_PREFIX}${requestId}` },
       ],
+    ],
+  };
+}
+
+function paymentMethodKeyboard(requestId) {
+  return {
+    inline_keyboard: [
+      [{ text: "⭐ پرداخت با استارز تلگرام", callback_data: `${CALLBACKS.PAY_STARS_PREFIX}${requestId}` }],
+      [{ text: "₿ پرداخت با کریپتو", callback_data: `${CALLBACKS.PAY_CRYPTO_PREFIX}${requestId}` }],
+      [{ text: "💳 پرداخت ریالی", callback_data: `${CALLBACKS.PAY_RIAL_PREFIX}${requestId}` }],
+      [{ text: "❌ لغو درخواست", callback_data: `${CALLBACKS.PAYMENT_CANCEL_PREFIX}${requestId}` }],
     ],
   };
 }
@@ -100,6 +115,15 @@ function isValidNationalId(nationalId) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function publicRequestId() {
@@ -227,7 +251,7 @@ async function setWebhook(env, webhookUrl) {
   const response = await telegramApi(env, "setWebhook", {
     url: webhookUrl,
     drop_pending_updates: true,
-    allowed_updates: ["message", "callback_query"],
+    allowed_updates: ["message", "callback_query", "pre_checkout_query"],
   });
   return {
     ok: Boolean(response?.ok),
@@ -243,8 +267,9 @@ async function ensureWebhook(env, request) {
   const before = await getWebhookInfo(env);
   const allowedUpdates = before.allowed_updates || [];
   const hasCallbackUpdates = allowedUpdates.length === 0 || allowedUpdates.includes("callback_query");
+  const hasPreCheckoutUpdates = allowedUpdates.length === 0 || allowedUpdates.includes("pre_checkout_query");
 
-  if (before.url === webhookUrl && hasCallbackUpdates) {
+  if (before.url === webhookUrl && hasCallbackUpdates && hasPreCheckoutUpdates) {
     return { changed: false, webhookUrl, before, after: before };
   }
 
@@ -252,11 +277,12 @@ async function ensureWebhook(env, request) {
   return { changed: true, webhookUrl, before, after: setResult.webhookInfo, description: setResult.description };
 }
 
-async function sendMessage(env, chatId, text, replyMarkup = undefined) {
+async function sendMessage(env, chatId, text, replyMarkup = undefined, options = {}) {
   return telegramApi(env, "sendMessage", {
     chat_id: chatId,
     text,
     reply_markup: replyMarkup,
+    ...options,
   });
 }
 
@@ -279,6 +305,36 @@ async function editMessageReplyMarkup(env, chatId, messageId, replyMarkup = unde
     chat_id: chatId,
     message_id: messageId,
     reply_markup: replyMarkup || { inline_keyboard: [] },
+  });
+}
+
+async function editMessageText(env, chatId, messageId, text, replyMarkup = undefined, options = {}) {
+  return telegramApi(env, "editMessageText", {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    reply_markup: replyMarkup,
+    ...options,
+  });
+}
+
+async function answerPreCheckoutQuery(env, preCheckoutQueryId, ok, errorMessage = undefined) {
+  return telegramApi(env, "answerPreCheckoutQuery", {
+    pre_checkout_query_id: preCheckoutQueryId,
+    ok,
+    error_message: errorMessage,
+  });
+}
+
+async function sendStarsInvoice(env, chatId, request) {
+  return telegramApi(env, "sendInvoice", {
+    chat_id: chatId,
+    title: "پرداخت تستی Telegram Stars",
+    description: `پرداخت تستی برای پرونده ${request.id}`,
+    payload: `stars:${request.id}`,
+    provider_token: "",
+    currency: "XTR",
+    prices: [{ label: `Stars test ${request.id}`, amount: TELEGRAM_STARS_TEST_AMOUNT }],
   });
 }
 
@@ -335,9 +391,10 @@ function cancelledByUserAdminText(request) {
     `موبایل: ${request.phone}\n` +
     `کد ملی: ${request.nationalId}\n` +
     `اپراتور: ${request.operator}\n` +
+    `روش پرداخت: ${request.paymentMethod || "انتخاب نشده"}\n` +
     `یوزرنیم تلگرام: ${username}\n` +
     `آیدی کاربر: ${request.telegramUserId}\n` +
-    `زمان لغو: ${nowIso()}`
+    `زمان لغو: ${request.paymentCancelledAt || nowIso()}`
   );
 }
 
@@ -372,9 +429,10 @@ async function notifyAdminPaymentReceipt(env, request, receiptDocument) {
     `نام: ${request.fullName}\n` +
     `موبایل: ${request.phone}\n` +
     `کد ملی: ${request.nationalId}\n` +
-    `مبلغ: ${ACTIVATION_PRICE}\n` +
+    `روش پرداخت: ${request.paymentMethod || "نامشخص"}\n` +
+    `مبلغ: ${request.paymentAmount || ACTIVATION_PRICE}\n` +
     `وضعیت: ${request.status}\n` +
-    `تاریخ ارسال رسید: ${nowIso()}`;
+    `تاریخ ارسال رسید: ${request.paymentReceiptSentAt || nowIso()}`;
 
   const payload = { chat_id: adminChatId, caption };
   if (receiptDocument.type === "photo") {
@@ -492,7 +550,8 @@ async function handlePaymentReceipt(env, message, state) {
     return sendMessage(env, chatId, "پرونده پیدا نشد. لطفاً با پشتیبانی تماس بگیرید.", mainKeyboard());
   }
 
-  request.status = "رسید پرداخت ارسال شد";
+  const methodTitle = request.paymentMethod || state.method || "نامشخص";
+  request.status = `رسید پرداخت ${methodTitle} ارسال شد`;
   request.paymentReceipt = receiptDocument;
   request.paymentReceiptSentAt = nowIso();
   await updateRequest(env, request);
@@ -501,7 +560,7 @@ async function handlePaymentReceipt(env, message, state) {
   await sendMessage(
     env,
     chatId,
-    "✅ رسید پرداخت شما دریافت شد.\n\nدرخواست شما برای دریافت اینترنت پرو وارد مرحله تأیید پرداخت و فعال‌سازی می‌شود.\n\n📩 پس از تأیید نهایی، معمولاً تا ۲۴ ساعت پیامک فعال‌سازی اینترنت پرو را دریافت می‌کنید.",
+    "✅ رسید پرداخت شما دریافت شد.\n\n⚡ درخواست شما برای دریافت اینترنت پرو وارد مرحله تأیید پرداخت و فعال‌سازی می‌شود.\n\n📩 پس از تأیید نهایی، معمولاً تا ۲۴ ساعت پیامک فعال‌سازی اینترنت پرو را دریافت می‌کنید.",
     mainKeyboard(),
   );
   await notifyAdminPaymentReceipt(env, request, receiptDocument);
@@ -576,30 +635,24 @@ async function approveRequest(env, callbackQuery, requestId) {
     return { action: "admin_approve_missing_request" };
   }
 
-  request.status = "در انتظار پرداخت";
+  request.status = "در انتظار انتخاب روش پرداخت";
   request.approvedAt = nowIso();
   await updateRequest(env, request);
 
   if (adminChatId && adminMessageId) await editMessageReplyMarkup(env, adminChatId, adminMessageId);
 
   const paymentMessage =
-    "✅ درخواست شما بررسی و تأیید اولیه شد.\n\n" +
-    `💳 مبلغ قابل پرداخت: ${ACTIVATION_PRICE}\n` +
-    `💳 شماره کارت: ${getPaymentCardNumber(env)}\n\n` +
-    "🧾 لطفاً پس از پرداخت، فقط تصویر رسید پرداخت را همین‌جا ارسال کنید.\n\n" +
-    "⚡ بعد از ارسال رسید و تأیید پرداخت، درخواست شما برای دریافت اینترنت پرو وارد مرحله فعال‌سازی می‌شود.\n" +
-    "📩 پس از تکمیل پرداخت و تأیید نهایی، معمولاً تا ۲۴ ساعت پیامک فعال‌سازی اینترنت پرو را دریافت می‌کنید.";
+    "✅ <b>درخواست شما تایید شد.</b>\n\n" +
+    "حالا بفرمایید پرداخت را با چه روشی انجام می‌دهید؟\n\n" +
+    "⭐ Telegram Stars\n" +
+    "₿ Crypto\n" +
+    "💳 پرداخت ریالی";
 
-  const sent = await sendMessage(env, request.chatId, paymentMessage, paymentCancelKeyboard(request.id));
-  await setState(env, request.chatId, {
-    step: "paymentReceipt",
-    requestId: request.id,
-    paymentMessageId: sent.result?.message_id,
-    startedAt: nowIso(),
-  });
+  await clearState(env, request.chatId);
+  await sendMessage(env, request.chatId, paymentMessage, paymentMethodKeyboard(request.id), { parse_mode: "HTML" });
 
-  await answerCallbackQuery(env, callbackQuery.id, "اطلاعات پرداخت برای کاربر ارسال شد");
-  await sendMessage(env, adminChatId, `✅ اطلاعات پرداخت برای پرونده ${request.id} ارسال شد.`);
+  await answerCallbackQuery(env, callbackQuery.id, "انتخاب روش پرداخت برای کاربر ارسال شد");
+  await sendMessage(env, adminChatId, `✅ انتخاب روش پرداخت برای پرونده ${request.id} ارسال شد.`);
   return { action: "admin_approved_request" };
 }
 
@@ -648,6 +701,157 @@ async function cancelPaymentByUser(env, callbackQuery, requestId) {
   return { action: "payment_cancelled_by_user" };
 }
 
+async function handleCryptoPaymentSelection(env, callbackQuery, requestId) {
+  const chatId = callbackQuery.message?.chat?.id;
+  const messageId = callbackQuery.message?.message_id;
+  const request = await getRequest(env, requestId);
+
+  if (!chatId || !messageId || !request) {
+    await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
+    return { action: "pay_crypto_missing_request" };
+  }
+
+  const paymentText =
+    "₿ <b>پرداخت با کریپتو</b>\n\n" +
+    `<b>شبکه:</b> ${escapeHtml(CRYPTO_NETWORK)}\n` +
+    `<b>مبلغ:</b> ${escapeHtml(CRYPTO_AMOUNT)}\n\n` +
+    "<b>آدرس ولت:</b>\n" +
+    `<code>${escapeHtml(CRYPTO_WALLET_ADDRESS)}</code>\n\n` +
+    "🧾 <b>بعد از پرداخت، فقط تصویر رسید را همین‌جا ارسال کنید.</b>\n\n" +
+    "📩 پس از تأیید پرداخت، معمولاً تا ۲۴ ساعت پیامک فعال‌سازی اینترنت پرو را دریافت می‌کنید.";
+
+  await editMessageText(env, chatId, messageId, paymentText, paymentCancelKeyboard(request.id), { parse_mode: "HTML" });
+
+  await setState(env, chatId, {
+    step: "paymentReceipt",
+    requestId: request.id,
+    method: "crypto",
+    paymentMessageId: messageId,
+    startedAt: nowIso(),
+  });
+
+  request.status = "در انتظار رسید کریپتو";
+  request.paymentMethod = "Crypto USDT BNB Smart Chain";
+  request.paymentAmount = "60 USDT";
+  await updateRequest(env, request);
+
+  await answerCallbackQuery(env, callbackQuery.id, "اطلاعات پرداخت کریپتو نمایش داده شد");
+  return { action: "pay_crypto_selected" };
+}
+
+async function handleRialPaymentSelection(env, callbackQuery, requestId) {
+  const chatId = callbackQuery.message?.chat?.id;
+  const messageId = callbackQuery.message?.message_id;
+  const request = await getRequest(env, requestId);
+
+  if (!chatId || !messageId || !request) {
+    await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
+    return { action: "pay_rial_missing_request" };
+  }
+
+  const paymentText =
+    "💳 <b>پرداخت ریالی</b>\n\n" +
+    `<b>مبلغ قابل پرداخت:</b> ${escapeHtml(ACTIVATION_PRICE)}\n` +
+    "<b>شماره کارت:</b>\n" +
+    `${escapeHtml(getPaymentCardNumber(env))}\n\n` +
+    "🧾 <b>بعد از پرداخت، فقط تصویر رسید را همین‌جا ارسال کنید.</b>\n\n" +
+    "⚡ بعد از ارسال رسید و تأیید پرداخت، درخواست شما برای دریافت اینترنت پرو وارد مرحله فعال‌سازی می‌شود.\n" +
+    "📩 پس از تکمیل پرداخت و تأیید نهایی، معمولاً تا ۲۴ ساعت پیامک فعال‌سازی اینترنت پرو را دریافت می‌کنید.";
+
+  await editMessageText(env, chatId, messageId, paymentText, paymentCancelKeyboard(request.id), { parse_mode: "HTML" });
+
+  await setState(env, chatId, {
+    step: "paymentReceipt",
+    requestId: request.id,
+    method: "rial",
+    paymentMessageId: messageId,
+    startedAt: nowIso(),
+  });
+
+  request.status = "در انتظار رسید ریالی";
+  request.paymentMethod = "پرداخت ریالی";
+  request.paymentAmount = "8,500,000 تومان";
+  await updateRequest(env, request);
+
+  await answerCallbackQuery(env, callbackQuery.id, "اطلاعات پرداخت ریالی نمایش داده شد");
+  return { action: "pay_rial_selected" };
+}
+
+async function handleStarsPaymentSelection(env, callbackQuery, requestId) {
+  const chatId = callbackQuery.message?.chat?.id;
+  const request = await getRequest(env, requestId);
+
+  if (!chatId || !request) {
+    await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
+    return { action: "pay_stars_missing_request" };
+  }
+
+  request.status = "در انتظار پرداخت استارز";
+  request.paymentMethod = "Telegram Stars";
+  request.paymentAmount = `${TELEGRAM_STARS_TEST_AMOUNT} Stars تستی`;
+  request.starsInvoiceSentAt = nowIso();
+  await updateRequest(env, request);
+
+  await sendStarsInvoice(env, chatId, request);
+  await answerCallbackQuery(env, callbackQuery.id, "فاکتور تستی استارز ارسال شد");
+  return { action: "pay_stars_invoice_sent" };
+}
+
+async function handlePreCheckoutQuery(env, preCheckoutQuery) {
+  await answerPreCheckoutQuery(env, preCheckoutQuery.id, true);
+  return { action: "pre_checkout_answered" };
+}
+
+async function handleSuccessfulPayment(env, message) {
+  const chatId = message.chat?.id;
+  const payment = message.successful_payment;
+
+  if (!chatId || !payment?.invoice_payload?.startsWith("stars:")) {
+    return { action: "successful_payment_ignored" };
+  }
+
+  const requestId = payment.invoice_payload.slice("stars:".length);
+  const request = await getRequest(env, requestId);
+  if (!request) return { action: "successful_payment_missing_request" };
+
+  request.status = "پرداخت استارز انجام شد";
+  request.paymentMethod = "Telegram Stars";
+  request.paymentAmount = `${TELEGRAM_STARS_TEST_AMOUNT} Stars تستی`;
+  request.starsPaidAt = nowIso();
+  request.telegramPaymentChargeId = payment.telegram_payment_charge_id || "";
+  request.providerPaymentChargeId = payment.provider_payment_charge_id || "";
+  await updateRequest(env, request);
+  await clearState(env, chatId);
+
+  await sendMessage(
+    env,
+    chatId,
+    "✅ پرداخت استارز با موفقیت انجام شد.\n\n⚡ درخواست شما برای دریافت اینترنت پرو وارد مرحله تأیید نهایی و فعال‌سازی شد.\n\n📩 پس از تأیید نهایی، معمولاً تا ۲۴ ساعت پیامک فعال‌سازی اینترنت پرو را دریافت می‌کنید.",
+    mainKeyboard(),
+  );
+
+  const adminChatId = env.ADMIN_CHAT_ID || env.BOT_OWNER;
+  if (adminChatId) {
+    await sendMessage(
+      env,
+      adminChatId,
+      "⭐ پرداخت استارز انجام شد\n\n" +
+        `شماره پرونده: ${request.id}\n` +
+        `نام: ${request.fullName}\n` +
+        `موبایل: ${request.phone}\n` +
+        `کد ملی: ${request.nationalId}\n` +
+        `روش پرداخت: ${request.paymentMethod}\n` +
+        `مبلغ: ${request.paymentAmount}\n` +
+        `وضعیت: ${request.status}\n` +
+        `Telegram charge id: ${request.telegramPaymentChargeId}\n` +
+        `Provider charge id: ${request.providerPaymentChargeId}\n` +
+        `زمان پرداخت: ${request.starsPaidAt}`,
+    );
+  }
+
+  return { action: "successful_payment_processed" };
+}
+
 async function handleCallbackQuery(env, callbackQuery) {
   const chatId = callbackQuery.message?.chat?.id;
   const messageId = callbackQuery.message?.message_id;
@@ -684,6 +888,18 @@ async function handleCallbackQuery(env, callbackQuery) {
 
   if (data.startsWith(CALLBACKS.ADMIN_REJECT_PREFIX)) {
     return rejectRequestByAdmin(env, callbackQuery, data.slice(CALLBACKS.ADMIN_REJECT_PREFIX.length));
+  }
+
+  if (data.startsWith(CALLBACKS.PAY_CRYPTO_PREFIX)) {
+    return handleCryptoPaymentSelection(env, callbackQuery, data.slice(CALLBACKS.PAY_CRYPTO_PREFIX.length));
+  }
+
+  if (data.startsWith(CALLBACKS.PAY_STARS_PREFIX)) {
+    return handleStarsPaymentSelection(env, callbackQuery, data.slice(CALLBACKS.PAY_STARS_PREFIX.length));
+  }
+
+  if (data.startsWith(CALLBACKS.PAY_RIAL_PREFIX)) {
+    return handleRialPaymentSelection(env, callbackQuery, data.slice(CALLBACKS.PAY_RIAL_PREFIX.length));
   }
 
   if (data.startsWith(CALLBACKS.PAYMENT_CANCEL_PREFIX)) {
@@ -805,6 +1021,11 @@ export default {
     }
 
     try {
+      if (update?.pre_checkout_query) {
+        const result = await handlePreCheckoutQuery(env, update.pre_checkout_query);
+        return json({ ok: true, ...result });
+      }
+
       if (update?.callback_query) {
         const result = await handleCallbackQuery(env, update.callback_query);
         return json({ ok: true, ...result });
@@ -812,6 +1033,11 @@ export default {
 
       const message = update?.message;
       if (!message?.chat?.id) return json({ ok: true, ignored: true, reason: "No message chat id in update" });
+
+      if (message.successful_payment) {
+        const result = await handleSuccessfulPayment(env, message);
+        return json({ ok: true, ...result });
+      }
 
       const result = await handleMessage(env, message);
       return json({ ok: true, ...result });
