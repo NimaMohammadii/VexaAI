@@ -1,4 +1,4 @@
-name = "vexaai-telegram-bot"
+name = "net"
 main = "src/index.js"
 compatibility_date = "2026-04-27"
 workers_dev = true
