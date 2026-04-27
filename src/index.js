@@ -4,17 +4,9 @@ const BUTTONS = {
   SUPPORT: "☎️ پشتیبانی",
   RULES: "📌 شرایط و قوانین",
   CANCEL: "لغو",
-  FINISH_DOCS: "اتمام مدارک",
-  CONFIRM: "تأیید و ثبت",
 };
 
-const CATEGORIES = [
-  ["کارمند شرکت", "پیمانکار / فریلنسر"],
-  ["پزشک / نظام پزشکی", "استاد / دانشگاه"],
-  ["شرکت / کسب‌وکار", "سایر"],
-];
-const OPERATORS = [["همراه اول", "ایرانسل", "رایتل"]];
-const MAX_DOCUMENTS = 8;
+const SERVICE_OPERATOR = "همراه اول";
 const MAX_USER_REQUESTS = 10;
 
 function json(data, status = 200) {
@@ -33,14 +25,6 @@ function mainKeyboard() {
     ],
     resize_keyboard: true,
     one_time_keyboard: false,
-  };
-}
-
-function keyboard(rows, oneTime = true) {
-  return {
-    keyboard: rows.map((row) => row.map((text) => ({ text }))),
-    resize_keyboard: true,
-    one_time_keyboard: oneTime,
   };
 }
 
@@ -226,7 +210,7 @@ async function sendMainMenu(env, chatId) {
   return sendMessage(
     env,
     chatId,
-    "سلام 👋\nبه ProNetIRBot خوش آمدید.\n\nاز این ربات می‌توانید درخواست اینترنت پرو را ثبت و وضعیت پرونده را پیگیری کنید.\n\nبرای شروع یکی از گزینه‌های زیر را انتخاب کنید:",
+    "سلام 👋\nبه ProNetIRBot خوش آمدید.\n\nاز این ربات می‌توانید درخواست اینترنت پرو را ثبت و وضعیت پرونده را پیگیری کنید.\n\nتوجه: ثبت درخواست اینترنت پرو فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n\nبرای شروع یکی از گزینه‌های زیر را انتخاب کنید:",
     mainKeyboard(),
   );
 }
@@ -236,33 +220,17 @@ async function sendRules(env, chatId) {
     env,
     chatId,
     "📌 شرایط و قوانین\n\n" +
-      "• اطلاعات واردشده باید واقعی و قابل احراز باشد.\n" +
-      "• ثبت درخواست به معنی تضمین فعال‌سازی نیست.\n" +
-      "• فعال‌سازی نهایی منوط به تأیید اپراتور و مراجع مربوطه است.\n" +
-      "• هزینه احتمالی بابت ثبت، بررسی و پیگیری دریافت می‌شود، نه تضمین نتیجه.\n" +
-      "• در صورت نقص یا مغایرت مدارک، درخواست رد می‌شود.",
+      "• ثبت درخواست فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n" +
+      "• شماره موبایل باید به نام خود متقاضی باشد.\n" +
+      "• تصویر کارت ملی باید واضح و خوانا باشد.\n" +
+      "• پس از بررسی، نحوه پرداخت برای شما ارسال می‌شود.\n" +
+      "• پس از تکمیل پرداخت و تأیید نهایی، پیامک فعال‌سازی معمولاً تا ۲۴ ساعت برای شما ارسال می‌شود.",
   );
 }
 
 async function sendSupport(env, chatId) {
   const supportLine = env.SUPPORT_TEXT || "برای پیگیری، پیام خود را برای پشتیبانی ارسال کنید یا شماره پرونده را نگه دارید.";
   return sendMessage(env, chatId, `☎️ پشتیبانی\n\n${supportLine}`);
-}
-
-function requestSummary(data, documentsCount = 0) {
-  return (
-    "لطفاً اطلاعات زیر را بررسی کنید:\n\n" +
-    `نام: ${data.fullName}\n` +
-    `موبایل: ${data.phone}\n` +
-    `کد ملی: ${data.nationalId}\n` +
-    `نوع درخواست: ${data.category}\n` +
-    `رابطه شغلی/سازمانی: ${data.relationDesc}\n` +
-    `مجموعه: ${data.orgName}\n` +
-    `شهر: ${data.city}\n` +
-    `اپراتور: ${data.operator}\n` +
-    `تعداد مدارک: ${documentsCount}\n\n` +
-    "آیا تأیید می‌کنید؟"
-  );
 }
 
 function adminSummary(request) {
@@ -273,15 +241,10 @@ function adminSummary(request) {
     `نام: ${request.fullName}\n` +
     `موبایل: ${request.phone}\n` +
     `کد ملی: ${request.nationalId}\n` +
-    `نوع درخواست: ${request.category}\n` +
-    `رابطه شغلی/سازمانی: ${request.relationDesc}\n` +
-    `مجموعه: ${request.orgName}\n` +
-    `شهر: ${request.city}\n` +
     `اپراتور: ${request.operator}\n` +
     `وضعیت: ${request.status}\n` +
     `یوزرنیم تلگرام: ${username}\n` +
     `آیدی کاربر: ${request.telegramUserId}\n` +
-    `تعداد مدارک: ${request.documents.length}\n` +
     `تاریخ ثبت: ${request.createdAt}`
   );
 }
@@ -291,20 +254,26 @@ async function notifyAdmin(env, request) {
   if (!adminChatId) return;
 
   await sendMessage(env, adminChatId, adminSummary(request));
-  for (const doc of request.documents) {
-    const payload = { chat_id: adminChatId, caption: `مدرک پرونده ${request.id}` };
-    if (doc.type === "photo") {
-      await telegramApi(env, "sendPhoto", { ...payload, photo: doc.fileId });
-    } else {
-      await telegramApi(env, "sendDocument", { ...payload, document: doc.fileId });
-    }
+  const nationalCardDocument = request.documents?.[0];
+  if (!nationalCardDocument) return;
+
+  const payload = { chat_id: adminChatId, caption: `کارت ملی پرونده ${request.id}` };
+  if (nationalCardDocument.type === "photo") {
+    await telegramApi(env, "sendPhoto", { ...payload, photo: nationalCardDocument.fileId });
+  } else {
+    await telegramApi(env, "sendDocument", { ...payload, document: nationalCardDocument.fileId });
   }
 }
 
 async function beginRegistration(env, chatId) {
   requireKv(env);
-  await setState(env, chatId, { step: "fullName", data: {}, documents: [], startedAt: nowIso() });
-  return sendMessage(env, chatId, "لطفاً نام و نام خانوادگی متقاضی را وارد کنید:", removeKeyboard());
+  await setState(env, chatId, { step: "fullName", data: {}, startedAt: nowIso() });
+  return sendMessage(
+    env,
+    chatId,
+    "فرآیند ثبت درخواست جدید شروع شد.\n\nتوجه: ثبت درخواست اینترنت پرو فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n\nلطفاً نام و نام خانوادگی متقاضی را وارد کنید:",
+    removeKeyboard(),
+  );
 }
 
 async function sendStatus(env, message) {
@@ -350,6 +319,35 @@ function getIncomingDocument(message) {
   return null;
 }
 
+async function finalizeRequest(env, message, state, nationalCardDocument) {
+  const chatId = message.chat.id;
+  const request = {
+    id: publicRequestId(),
+    telegramUserId: message.from?.id || chatId,
+    chatId,
+    username: message.from?.username || "",
+    firstName: message.from?.first_name || "",
+    lastName: message.from?.last_name || "",
+    fullName: state.data.fullName,
+    phone: state.data.phone,
+    nationalId: state.data.nationalId,
+    operator: SERVICE_OPERATOR,
+    documents: [nationalCardDocument],
+    status: "در انتظار بررسی",
+    createdAt: nowIso(),
+  };
+
+  await saveRequest(env, request);
+  await clearState(env, chatId);
+  await sendMessage(
+    env,
+    chatId,
+    `✅ درخواست شما ثبت شد.\n\nشماره پرونده: ${request.id}\n\nپرونده شما طی چند ساعت آینده بررسی می‌شود و پس از بررسی، نحوه پرداخت برای شما ارسال خواهد شد.\n\nپس از تکمیل پرداخت و تأیید نهایی، پیامک فعال‌سازی معمولاً تا ۲۴ ساعت برای شما ارسال می‌شود.`,
+    mainKeyboard(),
+  );
+  await notifyAdmin(env, request);
+}
+
 async function handleRegistrationStep(env, message, state) {
   const chatId = message.chat.id;
   const text = (message.text || "").trim();
@@ -365,7 +363,7 @@ async function handleRegistrationStep(env, message, state) {
       state.data.fullName = text;
       state.step = "phone";
       await setState(env, chatId, state);
-      return sendMessage(env, chatId, "شماره موبایل متقاضی را وارد کنید. شماره باید به نام خود متقاضی باشد:");
+      return sendMessage(env, chatId, "شماره موبایل همراه اول متقاضی را وارد کنید. شماره باید به نام خود متقاضی باشد:");
 
     case "phone": {
       const phone = cleanPhone(text);
@@ -380,94 +378,21 @@ async function handleRegistrationStep(env, message, state) {
       const nationalId = cleanNationalId(text);
       if (!isValidNationalId(nationalId)) return sendMessage(env, chatId, "کد ملی باید ۱۰ رقم باشد. لطفاً دوباره وارد کنید:");
       state.data.nationalId = nationalId;
-      state.step = "category";
+      state.step = "nationalCard";
       await setState(env, chatId, state);
-      return sendMessage(env, chatId, "نوع درخواست را انتخاب کنید:", keyboard(CATEGORIES));
+      return sendMessage(
+        env,
+        chatId,
+        "لطفاً عکس واضح کارت ملی متقاضی را ارسال کنید.\nبعد از ارسال عکس کارت ملی، درخواست شما ثبت می‌شود.",
+      );
     }
 
-    case "category":
-      if (!CATEGORIES.flat().includes(text)) return sendMessage(env, chatId, "لطفاً نوع درخواست را از گزینه‌های زیر انتخاب کنید:", keyboard(CATEGORIES));
-      state.data.category = text;
-      state.step = "relationDesc";
-      await setState(env, chatId, state);
-      return sendMessage(
-        env,
-        chatId,
-        "رابطه شغلی یا سازمانی متقاضی را توضیح دهید.\nمثلاً: کارمند بخش فروش، پیمانکار تولید محتوا، پزشک عضو نظام پزشکی، استاد دانشگاه و ...",
-        removeKeyboard(),
-      );
-
-    case "relationDesc":
-      if (text.length < 5) return sendMessage(env, chatId, "توضیح رابطه شغلی خیلی کوتاه است. لطفاً کمی کامل‌تر توضیح دهید:");
-      state.data.relationDesc = text;
-      state.step = "orgName";
-      await setState(env, chatId, state);
-      return sendMessage(env, chatId, "نام شرکت، سازمان، دانشگاه، کلینیک یا مجموعه را وارد کنید:");
-
-    case "orgName":
-      if (text.length < 2) return sendMessage(env, chatId, "نام مجموعه معتبر نیست. لطفاً دوباره وارد کنید:");
-      state.data.orgName = text;
-      state.step = "city";
-      await setState(env, chatId, state);
-      return sendMessage(env, chatId, "شهر محل فعالیت را وارد کنید:");
-
-    case "city":
-      if (text.length < 2) return sendMessage(env, chatId, "نام شهر معتبر نیست. لطفاً دوباره وارد کنید:");
-      state.data.city = text;
-      state.step = "operator";
-      await setState(env, chatId, state);
-      return sendMessage(env, chatId, "اپراتور موردنظر را انتخاب کنید:", keyboard(OPERATORS));
-
-    case "operator":
-      if (!OPERATORS.flat().includes(text)) return sendMessage(env, chatId, "لطفاً اپراتور را از گزینه‌های زیر انتخاب کنید:", keyboard(OPERATORS));
-      state.data.operator = text;
-      state.step = "documents";
-      await setState(env, chatId, state);
-      return sendMessage(
-        env,
-        chatId,
-        "لطفاً مدارک را ارسال کنید.\n\nمدارک پیشنهادی:\n۱. تصویر کارت ملی\n۲. مدرک شغلی / معرفی‌نامه / قرارداد / کارت نظام پزشکی / مدرک دانشگاهی\n\n" +
-          `بعد از ارسال همه مدارک، روی «${BUTTONS.FINISH_DOCS}» بزنید یا کلمه «تمام» را بفرستید.`,
-        keyboard([[BUTTONS.FINISH_DOCS], [BUTTONS.CANCEL]], false),
-      );
-
-    case "documents": {
-      if (text === BUTTONS.FINISH_DOCS || text === "تمام") {
-        if (!state.documents.length) return sendMessage(env, chatId, "حداقل یک مدرک باید ارسال شود.");
-        state.step = "confirm";
-        await setState(env, chatId, state);
-        return sendMessage(env, chatId, requestSummary(state.data, state.documents.length), keyboard([[BUTTONS.CONFIRM], [BUTTONS.CANCEL]]));
+    case "nationalCard": {
+      const nationalCardDocument = getIncomingDocument(message);
+      if (!nationalCardDocument) {
+        return sendMessage(env, chatId, "لطفاً فقط عکس یا فایل کارت ملی را ارسال کنید.");
       }
-
-      const incomingDocument = getIncomingDocument(message);
-      if (!incomingDocument) return sendMessage(env, chatId, "لطفاً عکس یا فایل مدرک ارسال کنید، یا پس از اتمام روی «اتمام مدارک» بزنید.");
-      if (state.documents.length >= MAX_DOCUMENTS) return sendMessage(env, chatId, `حداکثر ${MAX_DOCUMENTS} مدرک قابل ثبت است. برای ادامه روی «اتمام مدارک» بزنید.`);
-
-      state.documents.push(incomingDocument);
-      await setState(env, chatId, state);
-      return sendMessage(env, chatId, `مدرک دریافت شد. تعداد مدارک ثبت‌شده: ${state.documents.length}`);
-    }
-
-    case "confirm": {
-      if (text !== BUTTONS.CONFIRM) return sendMessage(env, chatId, "برای ثبت نهایی روی «تأیید و ثبت» بزنید یا «لغو» را انتخاب کنید.");
-
-      const request = {
-        id: publicRequestId(),
-        telegramUserId: message.from?.id || chatId,
-        chatId,
-        username: message.from?.username || "",
-        firstName: message.from?.first_name || "",
-        lastName: message.from?.last_name || "",
-        ...state.data,
-        documents: state.documents,
-        status: "در انتظار بررسی",
-        createdAt: nowIso(),
-      };
-
-      await saveRequest(env, request);
-      await clearState(env, chatId);
-      await sendMessage(env, chatId, `✅ درخواست شما ثبت شد.\n\nشماره پرونده: ${request.id}\nوضعیت فعلی: در انتظار بررسی\n\nنتیجه پس از بررسی مدارک اطلاع‌رسانی می‌شود.`, mainKeyboard());
-      return notifyAdmin(env, request);
+      return finalizeRequest(env, message, state, nationalCardDocument);
     }
 
     default:
