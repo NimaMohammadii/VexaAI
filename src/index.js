@@ -304,12 +304,61 @@ async function upsertUserProfileFromRequest(env, request) {
   return profile;
 }
 
+async function upsertUserProfileFromTelegramUser(env, messageOrCallbackUser, chatId) {
+  const user = messageOrCallbackUser || {};
+  const userId = user.id || chatId;
+  if (!userId || !chatId) return null;
+
+  const current = (await getUserProfile(env, userId)) || {};
+
+  const profile = {
+    userId,
+    chatId,
+    username: user.username || current.username || "",
+    firstName: user.first_name || current.firstName || "",
+    lastName: user.last_name || current.lastName || "",
+    phone: current.phone || "",
+    nationalId: current.nationalId || "",
+    lastRequestId: current.lastRequestId || null,
+    createdAt: current.createdAt || nowIso(),
+    updatedAt: nowIso(),
+    rialPaymentAllowed: typeof current.rialPaymentAllowed === "boolean" ? current.rialPaymentAllowed : false,
+    cryptoPaymentEnabled: typeof current.cryptoPaymentEnabled === "boolean" ? current.cryptoPaymentEnabled : true,
+    starsPaymentEnabled: typeof current.starsPaymentEnabled === "boolean" ? current.starsPaymentEnabled : true,
+    customActivationPrice: current.customActivationPrice || null,
+    customCryptoAmount: current.customCryptoAmount || null,
+    customStarsAmount: current.customStarsAmount || null,
+  };
+
+  await updateUserProfile(env, profile);
+  await addUniqueToJsonArray(env, USERS_INDEX_KEY, userId);
+  return profile;
+}
+
 async function getAllUserProfiles(env, limit = 50) {
   const userIds = await getJsonArray(env, USERS_INDEX_KEY);
   const profiles = [];
   for (const userId of userIds.slice(0, limit)) {
     const profile = await getUserProfile(env, userId);
-    if (profile) profiles.push(profile);
+    if (profile) {
+      profiles.push(profile);
+    } else {
+      profiles.push({
+        userId,
+        chatId: userId,
+        username: "",
+        firstName: "",
+        lastName: "",
+        phone: "",
+        nationalId: "",
+        lastRequestId: null,
+        createdAt: "",
+        updatedAt: "",
+        rialPaymentAllowed: false,
+        cryptoPaymentEnabled: true,
+        starsPaymentEnabled: true,
+      });
+    }
   }
   return profiles;
 }
@@ -885,6 +934,18 @@ async function handleRegistrationStep(env, message, state) {
       state.data.phone = phone;
       state.step = "nationalId";
       await setState(env, chatId, state);
+      const profile = (await getUserProfile(env, message.from?.id || chatId)) || {
+        userId: message.from?.id || chatId,
+        chatId,
+        createdAt: nowIso(),
+      };
+      profile.phone = phone;
+      profile.username = message.from?.username || profile.username || "";
+      profile.firstName = message.from?.first_name || profile.firstName || "";
+      profile.lastName = message.from?.last_name || profile.lastName || "";
+      profile.updatedAt = nowIso();
+      await updateUserProfile(env, profile);
+      await addUniqueToJsonArray(env, USERS_INDEX_KEY, profile.userId);
       return sendMessage(env, chatId, "🪪 کد ملی ۱۰ رقمی متقاضی را وارد کنید:");
     }
 
@@ -894,6 +955,18 @@ async function handleRegistrationStep(env, message, state) {
       state.data.nationalId = nationalId;
       state.step = "nationalCard";
       await setState(env, chatId, state);
+      const profile = (await getUserProfile(env, message.from?.id || chatId)) || {
+        userId: message.from?.id || chatId,
+        chatId,
+        createdAt: nowIso(),
+      };
+      profile.nationalId = nationalId;
+      profile.username = message.from?.username || profile.username || "";
+      profile.firstName = message.from?.first_name || profile.firstName || "";
+      profile.lastName = message.from?.last_name || profile.lastName || "";
+      profile.updatedAt = nowIso();
+      await updateUserProfile(env, profile);
+      await addUniqueToJsonArray(env, USERS_INDEX_KEY, profile.userId);
       return sendMessage(
         env,
         chatId,
@@ -1438,6 +1511,11 @@ async function handleCallbackQuery(env, callbackQuery) {
   const data = callbackQuery.data || "";
 
   if (!chatId) return { action: "callback_ignored" };
+  try {
+    await upsertUserProfileFromTelegramUser(env, callbackQuery.from, chatId);
+  } catch (error) {
+    console.log("Failed to upsert callback user profile", error?.message || error);
+  }
 
   const state = await getState(env, chatId);
   const callbackUserId = callbackQuery.from?.id || chatId;
@@ -1646,6 +1724,11 @@ async function handleCallbackQuery(env, callbackQuery) {
 
 async function handleMessage(env, message) {
   const chatId = message.chat.id;
+  try {
+    await upsertUserProfileFromTelegramUser(env, message.from, chatId);
+  } catch (error) {
+    console.log("Failed to upsert user profile", error?.message || error);
+  }
   const text = (message.text || "").trim();
   const command = normalizeCommand(text);
   const adminChatId = String(env.ADMIN_CHAT_ID || env.BOT_OWNER || "");
