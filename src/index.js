@@ -9,6 +9,9 @@ const BUTTONS = {
 const CALLBACKS = {
   CONFIRM_COST: "confirm_cost",
   REJECT_COST: "reject_cost",
+  ADMIN_APPROVE_PREFIX: "admin_approve:",
+  ADMIN_REJECT_PREFIX: "admin_reject:",
+  PAYMENT_CANCEL_PREFIX: "payment_cancel:",
 };
 
 const SERVICE_OPERATOR = "همراه اول";
@@ -42,6 +45,23 @@ function costConfirmKeyboard() {
         { text: "❌ رد", callback_data: CALLBACKS.REJECT_COST },
       ],
     ],
+  };
+}
+
+function adminDecisionKeyboard(requestId) {
+  return {
+    inline_keyboard: [
+      [
+        { text: "✅ تایید", callback_data: `${CALLBACKS.ADMIN_APPROVE_PREFIX}${requestId}` },
+        { text: "❌ رد", callback_data: `${CALLBACKS.ADMIN_REJECT_PREFIX}${requestId}` },
+      ],
+    ],
+  };
+}
+
+function paymentCancelKeyboard(requestId) {
+  return {
+    inline_keyboard: [[{ text: "❌ لغو درخواست", callback_data: `${CALLBACKS.PAYMENT_CANCEL_PREFIX}${requestId}` }]],
   };
 }
 
@@ -84,6 +104,10 @@ function nowIso() {
 
 function publicRequestId() {
   return `PN-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+}
+
+function getPaymentCardNumber(env) {
+  return env.PAYMENT_CARD_NUMBER || "شماره کارت هنوز تنظیم نشده است";
 }
 
 function getKv(env) {
@@ -131,6 +155,17 @@ async function saveRequest(env, request) {
   const requestIds = existing ? JSON.parse(existing) : [];
   requestIds.unshift(request.id);
   await kv.put(listKey, JSON.stringify(requestIds.slice(0, MAX_USER_REQUESTS)));
+}
+
+async function updateRequest(env, request) {
+  await requireKv(env).put(requestKey(request.id), JSON.stringify(request));
+}
+
+async function getRequest(env, requestId) {
+  const kv = getKv(env);
+  if (!kv) return null;
+  const raw = await kv.get(requestKey(requestId));
+  return raw ? JSON.parse(raw) : null;
 }
 
 async function getUserRequests(env, userId) {
@@ -239,6 +274,14 @@ async function answerCallbackQuery(env, callbackQueryId, text = undefined) {
   });
 }
 
+async function editMessageReplyMarkup(env, chatId, messageId, replyMarkup = undefined) {
+  return telegramApi(env, "editMessageReplyMarkup", {
+    chat_id: chatId,
+    message_id: messageId,
+    reply_markup: replyMarkup || { inline_keyboard: [] },
+  });
+}
+
 async function sendMainMenu(env, chatId) {
   return sendMessage(
     env,
@@ -283,23 +326,61 @@ function adminSummary(request) {
   );
 }
 
+function cancelledByUserAdminText(request) {
+  const username = request.username ? `@${request.username}` : "ندارد";
+  return (
+    "❌ کاربر پرداخت را لغو کرد و واریز نکرد\n\n" +
+    `شماره پرونده: ${request.id}\n` +
+    `نام: ${request.fullName}\n` +
+    `موبایل: ${request.phone}\n` +
+    `کد ملی: ${request.nationalId}\n` +
+    `اپراتور: ${request.operator}\n` +
+    `یوزرنیم تلگرام: ${username}\n` +
+    `آیدی کاربر: ${request.telegramUserId}\n` +
+    `زمان لغو: ${nowIso()}`
+  );
+}
+
 async function notifyAdmin(env, request) {
   const adminChatId = env.ADMIN_CHAT_ID || env.BOT_OWNER;
   if (!adminChatId) return;
 
   const nationalCardDocument = request.documents?.[0];
   const caption = adminSummary(request);
+  const replyMarkup = adminDecisionKeyboard(request.id);
 
   if (!nationalCardDocument) {
-    await sendMessage(env, adminChatId, caption);
+    await sendMessage(env, adminChatId, caption, replyMarkup);
     return;
   }
 
-  const payload = { chat_id: adminChatId, caption };
+  const payload = { chat_id: adminChatId, caption, reply_markup: replyMarkup };
   if (nationalCardDocument.type === "photo") {
     await telegramApi(env, "sendPhoto", { ...payload, photo: nationalCardDocument.fileId });
   } else {
     await telegramApi(env, "sendDocument", { ...payload, document: nationalCardDocument.fileId });
+  }
+}
+
+async function notifyAdminPaymentReceipt(env, request, receiptDocument) {
+  const adminChatId = env.ADMIN_CHAT_ID || env.BOT_OWNER;
+  if (!adminChatId) return;
+
+  const caption =
+    "🧾 رسید پرداخت کاربر دریافت شد\n\n" +
+    `شماره پرونده: ${request.id}\n` +
+    `نام: ${request.fullName}\n` +
+    `موبایل: ${request.phone}\n` +
+    `کد ملی: ${request.nationalId}\n` +
+    `مبلغ: ${ACTIVATION_PRICE}\n` +
+    `وضعیت: ${request.status}\n` +
+    `تاریخ ارسال رسید: ${nowIso()}`;
+
+  const payload = { chat_id: adminChatId, caption };
+  if (receiptDocument.type === "photo") {
+    await telegramApi(env, "sendPhoto", { ...payload, photo: receiptDocument.fileId });
+  } else {
+    await telegramApi(env, "sendDocument", { ...payload, document: receiptDocument.fileId });
   }
 }
 
@@ -397,6 +478,35 @@ async function finalizeRequest(env, message, state, nationalCardDocument) {
   await notifyAdmin(env, request);
 }
 
+async function handlePaymentReceipt(env, message, state) {
+  const chatId = message.chat.id;
+  const receiptDocument = getIncomingDocument(message);
+
+  if (!receiptDocument) {
+    return sendMessage(env, chatId, "🧾 لطفاً فقط تصویر یا فایل رسید پرداخت را ارسال کنید.");
+  }
+
+  const request = await getRequest(env, state.requestId);
+  if (!request) {
+    await clearState(env, chatId);
+    return sendMessage(env, chatId, "پرونده پیدا نشد. لطفاً با پشتیبانی تماس بگیرید.", mainKeyboard());
+  }
+
+  request.status = "رسید پرداخت ارسال شد";
+  request.paymentReceipt = receiptDocument;
+  request.paymentReceiptSentAt = nowIso();
+  await updateRequest(env, request);
+  await clearState(env, chatId);
+
+  await sendMessage(
+    env,
+    chatId,
+    "✅ رسید پرداخت شما دریافت شد.\n\nدرخواست شما برای دریافت اینترنت پرو وارد مرحله تأیید پرداخت و فعال‌سازی می‌شود.\n\n📩 پس از تأیید نهایی، معمولاً تا ۲۴ ساعت پیامک فعال‌سازی اینترنت پرو را دریافت می‌کنید.",
+    mainKeyboard(),
+  );
+  await notifyAdminPaymentReceipt(env, request, receiptDocument);
+}
+
 async function handleRegistrationStep(env, message, state) {
   const chatId = message.chat.id;
   const text = (message.text || "").trim();
@@ -447,16 +557,101 @@ async function handleRegistrationStep(env, message, state) {
       return finalizeRequest(env, message, state, nationalCardDocument);
     }
 
+    case "paymentReceipt":
+      return handlePaymentReceipt(env, message, state);
+
     default:
       await clearState(env, chatId);
       return sendMainMenu(env, chatId);
   }
 }
 
+async function approveRequest(env, callbackQuery, requestId) {
+  const adminChatId = callbackQuery.message?.chat?.id;
+  const adminMessageId = callbackQuery.message?.message_id;
+  const request = await getRequest(env, requestId);
+
+  if (!request) {
+    await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
+    return { action: "admin_approve_missing_request" };
+  }
+
+  request.status = "در انتظار پرداخت";
+  request.approvedAt = nowIso();
+  await updateRequest(env, request);
+
+  if (adminChatId && adminMessageId) await editMessageReplyMarkup(env, adminChatId, adminMessageId);
+
+  const paymentMessage =
+    "✅ درخواست شما بررسی و تأیید اولیه شد.\n\n" +
+    `💳 مبلغ قابل پرداخت: ${ACTIVATION_PRICE}\n` +
+    `💳 شماره کارت: ${getPaymentCardNumber(env)}\n\n` +
+    "🧾 لطفاً پس از پرداخت، فقط تصویر رسید پرداخت را همین‌جا ارسال کنید.\n\n" +
+    "⚡ بعد از ارسال رسید و تأیید پرداخت، درخواست شما برای دریافت اینترنت پرو وارد مرحله فعال‌سازی می‌شود.\n" +
+    "📩 پس از تکمیل پرداخت و تأیید نهایی، معمولاً تا ۲۴ ساعت پیامک فعال‌سازی اینترنت پرو را دریافت می‌کنید.";
+
+  const sent = await sendMessage(env, request.chatId, paymentMessage, paymentCancelKeyboard(request.id));
+  await setState(env, request.chatId, {
+    step: "paymentReceipt",
+    requestId: request.id,
+    paymentMessageId: sent.result?.message_id,
+    startedAt: nowIso(),
+  });
+
+  await answerCallbackQuery(env, callbackQuery.id, "اطلاعات پرداخت برای کاربر ارسال شد");
+  await sendMessage(env, adminChatId, `✅ اطلاعات پرداخت برای پرونده ${request.id} ارسال شد.`);
+  return { action: "admin_approved_request" };
+}
+
+async function rejectRequestByAdmin(env, callbackQuery, requestId) {
+  const adminChatId = callbackQuery.message?.chat?.id;
+  const adminMessageId = callbackQuery.message?.message_id;
+  const request = await getRequest(env, requestId);
+
+  if (!request) {
+    await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
+    return { action: "admin_reject_missing_request" };
+  }
+
+  request.status = "رد شده توسط ادمین";
+  request.rejectedAt = nowIso();
+  await updateRequest(env, request);
+
+  if (adminChatId && adminMessageId) await editMessageReplyMarkup(env, adminChatId, adminMessageId);
+  await sendMessage(env, request.chatId, `❌ درخواست شما رد شد.\n\nشماره پرونده: ${request.id}\n\nبرای اطلاعات بیشتر با پشتیبانی تماس بگیرید.`, mainKeyboard());
+  await answerCallbackQuery(env, callbackQuery.id, "درخواست رد شد");
+  await sendMessage(env, adminChatId, `❌ پرونده ${request.id} رد شد و به کاربر اطلاع داده شد.`);
+  return { action: "admin_rejected_request" };
+}
+
+async function cancelPaymentByUser(env, callbackQuery, requestId) {
+  const chatId = callbackQuery.message?.chat?.id;
+  const messageId = callbackQuery.message?.message_id;
+  const request = await getRequest(env, requestId);
+
+  if (!chatId || !request) {
+    await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
+    return { action: "payment_cancel_missing_request" };
+  }
+
+  request.status = "لغو پرداخت توسط کاربر";
+  request.paymentCancelledAt = nowIso();
+  await updateRequest(env, request);
+  await clearState(env, chatId);
+
+  if (messageId) await deleteMessage(env, chatId, messageId);
+  await answerCallbackQuery(env, callbackQuery.id, "درخواست لغو شد");
+
+  const adminChatId = env.ADMIN_CHAT_ID || env.BOT_OWNER;
+  if (adminChatId) await sendMessage(env, adminChatId, cancelledByUserAdminText(request));
+
+  return { action: "payment_cancelled_by_user" };
+}
+
 async function handleCallbackQuery(env, callbackQuery) {
   const chatId = callbackQuery.message?.chat?.id;
   const messageId = callbackQuery.message?.message_id;
-  const data = callbackQuery.data;
+  const data = callbackQuery.data || "";
 
   if (!chatId) return { action: "callback_ignored" };
 
@@ -481,6 +676,18 @@ async function handleCallbackQuery(env, callbackQuery) {
     await answerCallbackQuery(env, callbackQuery.id, "تأیید شد");
     await sendMessage(env, chatId, "✅ تایید شد.\n\nلطفاً نام و نام خانوادگی متقاضی را وارد کنید:", removeKeyboard());
     return { action: "cost_confirmed" };
+  }
+
+  if (data.startsWith(CALLBACKS.ADMIN_APPROVE_PREFIX)) {
+    return approveRequest(env, callbackQuery, data.slice(CALLBACKS.ADMIN_APPROVE_PREFIX.length));
+  }
+
+  if (data.startsWith(CALLBACKS.ADMIN_REJECT_PREFIX)) {
+    return rejectRequestByAdmin(env, callbackQuery, data.slice(CALLBACKS.ADMIN_REJECT_PREFIX.length));
+  }
+
+  if (data.startsWith(CALLBACKS.PAYMENT_CANCEL_PREFIX)) {
+    return cancelPaymentByUser(env, callbackQuery, data.slice(CALLBACKS.PAYMENT_CANCEL_PREFIX.length));
   }
 
   await answerCallbackQuery(env, callbackQuery.id);
@@ -580,6 +787,7 @@ async function handleGet(request, env) {
       kvBindingName: getKvBindingName(env),
       hasBotKvBinding: Boolean(env.BOT_KV),
       hasKvBinding: Boolean(env.KV),
+      hasPaymentCardNumber: Boolean(env.PAYMENT_CARD_NUMBER),
     },
   });
 }
