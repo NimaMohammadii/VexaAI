@@ -7,6 +7,15 @@ function json(data, status = 200) {
   });
 }
 
+function normalizeCommand(text) {
+  const trimmed = (text || "").trim();
+  if (!trimmed.startsWith("/")) return null;
+
+  const [rawCommand] = trimmed.split(/\s+/, 1);
+  const commandWithoutMention = rawCommand.split("@")[0];
+  return commandWithoutMention.toLowerCase();
+}
+
 async function telegramApi(env, method, payload) {
   const token = env.BOT_TOKEN;
   if (!token) throw new Error("BOT_TOKEN is missing");
@@ -69,9 +78,10 @@ export default {
 
     const chatId = message.chat.id;
     const text = (message.text || "").trim();
+    const command = normalizeCommand(text);
 
     try {
-      if (text === "/start") {
+      if (command === "/start") {
         await sendMainMenu(env, chatId);
         return json({ ok: true, action: "start_menu_sent" });
       }
