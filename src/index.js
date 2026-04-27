@@ -19,6 +19,28 @@ const CALLBACKS = {
   PAY_STARS_PREFIX: "pay_stars:",
   PAY_RIAL_PREFIX: "pay_rial:",
   PAYMENT_CANCEL_PREFIX: "payment_cancel:",
+  ADMIN_PANEL: "admin_panel",
+  ADMIN_USERS: "admin_users",
+  ADMIN_REQUESTS: "admin_requests",
+  ADMIN_WAITING: "admin_waiting",
+  ADMIN_PAID: "admin_paid",
+  ADMIN_PRICING: "admin_pricing",
+  ADMIN_RULES: "admin_rules",
+  ADMIN_BROADCAST: "admin_broadcast",
+  ADMIN_USER_PREFIX: "admin_user:",
+  ADMIN_MESSAGE_USER_PREFIX: "admin_msg_user:",
+  ADMIN_TOGGLE_RIAL_PREFIX: "admin_toggle_rial:",
+  ADMIN_TOGGLE_CRYPTO_PREFIX: "admin_toggle_crypto:",
+  ADMIN_TOGGLE_STARS_PREFIX: "admin_toggle_stars:",
+  ADMIN_SET_USER_PRICE_PREFIX: "admin_set_user_price:",
+  ADMIN_USER_REQUESTS_PREFIX: "admin_user_requests:",
+  ADMIN_REQUEST_PREFIX: "admin_request:",
+  ADMIN_SET_GLOBAL_TOMAN: "admin_set_global_toman",
+  ADMIN_SET_GLOBAL_CRYPTO: "admin_set_global_crypto",
+  ADMIN_SET_GLOBAL_STARS: "admin_set_global_stars",
+  ADMIN_TOGGLE_GLOBAL_RIAL: "admin_toggle_global_rial",
+  ADMIN_TOGGLE_GLOBAL_CRYPTO: "admin_toggle_global_crypto",
+  ADMIN_TOGGLE_GLOBAL_STARS: "admin_toggle_global_stars",
 };
 
 const SERVICE_OPERATOR = "همراه اول";
@@ -178,6 +200,35 @@ const stateKey = (chatId) => `state:${chatId}`;
 const requestKey = (requestId) => `request:${requestId}`;
 const userRequestsKey = (userId) => `user_requests:${userId}`;
 const supportReplyMapKey = (adminMessageId) => `support_reply_map:${adminMessageId}`;
+const userProfileKey = (userId) => `user_profile:${userId}`;
+const USERS_INDEX_KEY = "admin:users";
+const REQUESTS_INDEX_KEY = "admin:requests";
+const PAID_REQUESTS_INDEX_KEY = "admin:paid_requests";
+const WAITING_PAYMENT_INDEX_KEY = "admin:waiting_payment";
+const ADMIN_SETTINGS_KEY = "admin:settings";
+
+function isBotOwner(env, userId) {
+  return String(userId) === String(env.BOT_OWNER);
+}
+
+function isPaidStatus(status = "") {
+  return status.includes("پرداخت") && (status.includes("انجام") || status.includes("ارسال شد") || status.includes("تایید"));
+}
+
+function isWaitingPaymentStatus(status = "") {
+  return status === "در انتظار بررسی" || status === "در انتظار انتخاب روش پرداخت" || status.includes("در انتظار");
+}
+
+function getDefaultRulesText() {
+  return (
+    "📱 ثبت درخواست فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n" +
+    "🪪 شماره موبایل باید به نام خود متقاضی باشد.\n" +
+    `💳 هزینه انجام و پیگیری فعال‌سازی از طرف شرکت ما: ${ACTIVATION_PRICE}\n` +
+    "🧾 تصویر کارت ملی باید واضح و خوانا باشد.\n" +
+    "⏳ پس از بررسی، نحوه پرداخت برای شما ارسال می‌شود.\n" +
+    "✅ پس از تکمیل پرداخت و تأیید نهایی، پیامک فعال‌سازی معمولاً تا ۲۴ ساعت برای شما ارسال می‌شود."
+  );
+}
 
 async function getState(env, chatId) {
   const kv = getKv(env);
@@ -195,6 +246,146 @@ async function clearState(env, chatId) {
   if (kv) await kv.delete(stateKey(chatId));
 }
 
+async function getJsonArray(env, key) {
+  const kv = getKv(env);
+  if (!kv) return [];
+  const raw = await kv.get(key);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+async function addUniqueToJsonArray(env, key, value, max = 1000) {
+  const kv = requireKv(env);
+  const items = await getJsonArray(env, key);
+  const normalized = String(value);
+  const filtered = items.filter((item) => String(item) !== normalized);
+  filtered.unshift(value);
+  await kv.put(key, JSON.stringify(filtered.slice(0, max)));
+}
+
+async function getUserProfile(env, userId) {
+  const kv = getKv(env);
+  if (!kv) return null;
+  const raw = await kv.get(userProfileKey(userId));
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function updateUserProfile(env, profile) {
+  await requireKv(env).put(userProfileKey(profile.userId), JSON.stringify(profile));
+}
+
+async function upsertUserProfileFromRequest(env, request) {
+  const current = (await getUserProfile(env, request.telegramUserId)) || {};
+  const profile = {
+    userId: request.telegramUserId,
+    chatId: request.chatId,
+    username: request.username || current.username || "",
+    firstName: request.firstName || current.firstName || "",
+    lastName: request.lastName || current.lastName || "",
+    phone: request.phone || current.phone || "",
+    nationalId: request.nationalId || current.nationalId || "",
+    lastRequestId: request.id,
+    createdAt: current.createdAt || request.createdAt || nowIso(),
+    updatedAt: nowIso(),
+    rialPaymentAllowed: typeof current.rialPaymentAllowed === "boolean" ? current.rialPaymentAllowed : false,
+    cryptoPaymentEnabled: typeof current.cryptoPaymentEnabled === "boolean" ? current.cryptoPaymentEnabled : true,
+    starsPaymentEnabled: typeof current.starsPaymentEnabled === "boolean" ? current.starsPaymentEnabled : true,
+    customActivationPrice: current.customActivationPrice || null,
+    customCryptoAmount: current.customCryptoAmount || null,
+    customStarsAmount: current.customStarsAmount || null,
+  };
+  if (typeof request.rialPaymentAllowed === "boolean") profile.rialPaymentAllowed = request.rialPaymentAllowed;
+  await updateUserProfile(env, profile);
+  return profile;
+}
+
+async function getAllUserProfiles(env, limit = 50) {
+  const userIds = await getJsonArray(env, USERS_INDEX_KEY);
+  const profiles = [];
+  for (const userId of userIds.slice(0, limit)) {
+    const profile = await getUserProfile(env, userId);
+    if (profile) profiles.push(profile);
+  }
+  return profiles;
+}
+
+async function getAllRequests(env, limit = 50) {
+  const kv = getKv(env);
+  if (!kv) return [];
+  const ids = await getJsonArray(env, REQUESTS_INDEX_KEY);
+  const requests = [];
+  for (const id of ids.slice(0, limit)) {
+    const raw = await kv.get(requestKey(id));
+    if (raw) requests.push(JSON.parse(raw));
+  }
+  return requests;
+}
+
+async function getPaidRequests(env, limit = 50) {
+  const kv = getKv(env);
+  if (!kv) return [];
+  const ids = await getJsonArray(env, PAID_REQUESTS_INDEX_KEY);
+  const requests = [];
+  for (const id of ids.slice(0, limit)) {
+    const raw = await kv.get(requestKey(id));
+    if (raw) requests.push(JSON.parse(raw));
+  }
+  return requests;
+}
+
+async function getWaitingPaymentRequests(env, limit = 50) {
+  const kv = getKv(env);
+  if (!kv) return [];
+  const ids = await getJsonArray(env, WAITING_PAYMENT_INDEX_KEY);
+  const requests = [];
+  for (const id of ids.slice(0, limit)) {
+    const raw = await kv.get(requestKey(id));
+    if (raw) requests.push(JSON.parse(raw));
+  }
+  return requests;
+}
+
+async function getAdminSettings(env) {
+  const kv = getKv(env);
+  const defaults = {
+    activationPrice: ACTIVATION_PRICE,
+    cryptoAmount: CRYPTO_AMOUNT,
+    starsAmount: TELEGRAM_STARS_REAL_AMOUNT,
+    testStarsAmount: TELEGRAM_STARS_TEST_AMOUNT,
+    rulesText: getDefaultRulesText(),
+    rialPaymentGlobalEnabled: true,
+    cryptoPaymentGlobalEnabled: true,
+    starsPaymentGlobalEnabled: true,
+  };
+  if (!kv) return defaults;
+  const raw = await kv.get(ADMIN_SETTINGS_KEY);
+  if (!raw) return defaults;
+  return { ...defaults, ...JSON.parse(raw) };
+}
+
+async function updateAdminSettings(env, patch) {
+  const current = await getAdminSettings(env);
+  const next = { ...current, ...patch };
+  await requireKv(env).put(ADMIN_SETTINGS_KEY, JSON.stringify(next));
+  return next;
+}
+
+async function getEffectivePricing(env, userId) {
+  const settings = await getAdminSettings(env);
+  const profile = await getUserProfile(env, userId);
+  return {
+    activationPrice: profile?.customActivationPrice || settings.activationPrice,
+    cryptoAmount: profile?.customCryptoAmount || settings.cryptoAmount,
+    starsAmount: profile?.customStarsAmount || settings.starsAmount,
+    testStarsAmount: profile?.customStarsAmount || settings.testStarsAmount,
+  };
+}
+
 async function saveRequest(env, request) {
   const kv = requireKv(env);
   await kv.put(requestKey(request.id), JSON.stringify(request));
@@ -204,10 +395,29 @@ async function saveRequest(env, request) {
   const requestIds = existing ? JSON.parse(existing) : [];
   requestIds.unshift(request.id);
   await kv.put(listKey, JSON.stringify(requestIds.slice(0, MAX_USER_REQUESTS)));
+
+  await upsertUserProfileFromRequest(env, request);
+  await addUniqueToJsonArray(env, USERS_INDEX_KEY, request.telegramUserId);
+  await addUniqueToJsonArray(env, REQUESTS_INDEX_KEY, request.id);
+  if (isWaitingPaymentStatus(request.status)) {
+    await addUniqueToJsonArray(env, WAITING_PAYMENT_INDEX_KEY, request.id);
+  }
+  if (isPaidStatus(request.status)) {
+    await addUniqueToJsonArray(env, PAID_REQUESTS_INDEX_KEY, request.id);
+  }
 }
 
 async function updateRequest(env, request) {
   await requireKv(env).put(requestKey(request.id), JSON.stringify(request));
+  await upsertUserProfileFromRequest(env, request);
+  await addUniqueToJsonArray(env, USERS_INDEX_KEY, request.telegramUserId);
+  await addUniqueToJsonArray(env, REQUESTS_INDEX_KEY, request.id);
+  if (isWaitingPaymentStatus(request.status)) {
+    await addUniqueToJsonArray(env, WAITING_PAYMENT_INDEX_KEY, request.id);
+  }
+  if (isPaidStatus(request.status)) {
+    await addUniqueToJsonArray(env, PAID_REQUESTS_INDEX_KEY, request.id);
+  }
 }
 
 async function getRequest(env, requestId) {
@@ -366,7 +576,7 @@ async function answerPreCheckoutQuery(env, preCheckoutQueryId, ok, errorMessage 
   });
 }
 
-async function sendStarsInvoice(env, chatId, request) {
+async function sendStarsInvoice(env, chatId, request, starsAmount) {
   return telegramApi(env, "sendInvoice", {
     chat_id: chatId,
     title: "پرداخت تستی Telegram Stars",
@@ -374,7 +584,7 @@ async function sendStarsInvoice(env, chatId, request) {
     payload: `stars:${request.id}`,
     provider_token: "",
     currency: "XTR",
-    prices: [{ label: `Stars test ${request.id}`, amount: TELEGRAM_STARS_TEST_AMOUNT }],
+    prices: [{ label: `Stars test ${request.id}`, amount: Number(starsAmount) || TELEGRAM_STARS_TEST_AMOUNT }],
   });
 }
 
@@ -388,16 +598,11 @@ async function sendMainMenu(env, chatId) {
 }
 
 async function sendRules(env, chatId) {
+  const settings = await getAdminSettings(env);
   return sendMessage(
     env,
     chatId,
-    "📌 شرایط و قوانین\n\n" +
-      "📱 ثبت درخواست فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n" +
-      "🪪 شماره موبایل باید به نام خود متقاضی باشد.\n" +
-      `💳 هزینه انجام و پیگیری فعال‌سازی از طرف شرکت ما: ${ACTIVATION_PRICE}\n` +
-      "🧾 تصویر کارت ملی باید واضح و خوانا باشد.\n" +
-      "⏳ پس از بررسی، نحوه پرداخت برای شما ارسال می‌شود.\n" +
-      "✅ پس از تکمیل پرداخت و تأیید نهایی، پیامک فعال‌سازی معمولاً تا ۲۴ ساعت برای شما ارسال می‌شود.",
+    `📌 شرایط و قوانین\n\n${settings.rulesText || getDefaultRulesText()}`,
   );
 }
 
@@ -528,14 +733,15 @@ async function notifyAdminSupportMessage(env, message) {
   return true;
 }
 
-async function beginRegistration(env, chatId) {
+async function beginRegistration(env, chatId, userId) {
   requireKv(env);
+  const pricing = await getEffectivePricing(env, userId || chatId);
   await setState(env, chatId, { step: "costConfirm", data: {}, startedAt: nowIso() });
   const sent = await sendMessage(
     env,
     chatId,
     "💎 ثبت درخواست اینترنت پرو\n\n" +
-      `💳 هزینه انجام و پیگیری فعال‌سازی از طرف شرکت ما برای شما ${ACTIVATION_PRICE} است.\n\n` +
+      `💳 هزینه انجام و پیگیری فعال‌سازی از طرف شرکت ما برای شما ${pricing.activationPrice} است.\n\n` +
       "📱 این سرویس فعلاً فقط برای سیم‌کارت همراه اول قابل انجام است.\n" +
       "🪪 سیم‌کارت باید حتماً به نام خودتان باشد.\n\n" +
       "اگر هزینه و شرایط را تأیید می‌کنید، برای ادامه روی دکمه تأیید بزنید.",
@@ -789,6 +995,10 @@ async function allowRialPaymentByAdmin(env, callbackQuery, requestId) {
   request.rialPaymentAllowed = true;
   request.rialPaymentAllowedAt = nowIso();
   await updateRequest(env, request);
+  const profile = (await getUserProfile(env, request.telegramUserId)) || { userId: request.telegramUserId, chatId: request.chatId };
+  profile.rialPaymentAllowed = true;
+  profile.updatedAt = nowIso();
+  await updateUserProfile(env, profile);
 
   await answerCallbackQuery(env, callbackQuery.id, "مجوز پرداخت ریالی فعال شد");
   if (adminChatId) {
@@ -893,11 +1103,19 @@ async function handleCryptoPaymentSelection(env, callbackQuery, requestId) {
     await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
     return { action: "pay_crypto_missing_request" };
   }
+  const settings = await getAdminSettings(env);
+  const profile = await getUserProfile(env, request.telegramUserId);
+  if (!settings.cryptoPaymentGlobalEnabled || profile?.cryptoPaymentEnabled === false) {
+    await answerCallbackQuery(env, callbackQuery.id, "پرداخت کریپتو غیرفعال است");
+    await sendMessage(env, chatId, "₿ پرداخت کریپتو برای حساب شما فعلاً غیرفعال است. لطفاً روش دیگری انتخاب کنید یا با پشتیبانی تماس بگیرید.");
+    return { action: "pay_crypto_disabled" };
+  }
+  const pricing = await getEffectivePricing(env, request.telegramUserId);
 
   const paymentText =
     "₿ <b>پرداخت با کریپتو</b>\n\n" +
     `<b>شبکه:</b> ${escapeHtml(CRYPTO_NETWORK)}\n` +
-    `<b>مبلغ:</b> ${escapeHtml(CRYPTO_AMOUNT)}\n\n` +
+    `<b>مبلغ:</b> ${escapeHtml(pricing.cryptoAmount)}\n\n` +
     "<b>آدرس ولت:</b>\n" +
     `<code>${escapeHtml(CRYPTO_WALLET_ADDRESS)}</code>\n\n` +
     "🧾 <b>بعد از پرداخت، فقط تصویر رسید را همین‌جا ارسال کنید.</b>\n\n" +
@@ -915,7 +1133,7 @@ async function handleCryptoPaymentSelection(env, callbackQuery, requestId) {
 
   request.status = "در انتظار رسید کریپتو";
   request.paymentMethod = "Crypto USDT BNB Smart Chain";
-  request.paymentAmount = "60 USDT";
+  request.paymentAmount = pricing.cryptoAmount;
   await updateRequest(env, request);
 
   await answerCallbackQuery(env, callbackQuery.id, "اطلاعات پرداخت کریپتو نمایش داده شد");
@@ -931,8 +1149,11 @@ async function handleRialPaymentSelection(env, callbackQuery, requestId) {
     await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
     return { action: "pay_rial_missing_request" };
   }
+  const settings = await getAdminSettings(env);
+  const profile = await getUserProfile(env, request.telegramUserId);
+  const rialAllowed = profile?.rialPaymentAllowed === true || request.rialPaymentAllowed === true;
 
-  if (!request.rialPaymentAllowed) {
+  if (!settings.rialPaymentGlobalEnabled || !rialAllowed) {
     await answerCallbackQuery(env, callbackQuery.id, "مجوز پرداخت ریالی ندارید");
     await editMessageHtml(
       env,
@@ -946,10 +1167,11 @@ async function handleRialPaymentSelection(env, callbackQuery, requestId) {
     );
     return { action: "pay_rial_not_allowed" };
   }
+  const pricing = await getEffectivePricing(env, request.telegramUserId);
 
   const paymentText =
     "💳 <b>پرداخت ریالی</b>\n\n" +
-    `<b>مبلغ قابل پرداخت:</b> ${escapeHtml(ACTIVATION_PRICE)}\n` +
+    `<b>مبلغ قابل پرداخت:</b> ${escapeHtml(pricing.activationPrice)}\n` +
     "<b>شماره کارت:</b>\n" +
     `${escapeHtml(getPaymentCardNumber(env))}\n\n` +
     "🧾 <b>بعد از پرداخت، فقط تصویر رسید را همین‌جا ارسال کنید.</b>\n\n" +
@@ -968,7 +1190,7 @@ async function handleRialPaymentSelection(env, callbackQuery, requestId) {
 
   request.status = "در انتظار رسید ریالی";
   request.paymentMethod = "پرداخت ریالی";
-  request.paymentAmount = "8,500,000 تومان";
+  request.paymentAmount = pricing.activationPrice;
   await updateRequest(env, request);
 
   await answerCallbackQuery(env, callbackQuery.id, "اطلاعات پرداخت ریالی نمایش داده شد");
@@ -983,14 +1205,22 @@ async function handleStarsPaymentSelection(env, callbackQuery, requestId) {
     await answerCallbackQuery(env, callbackQuery.id, "پرونده پیدا نشد");
     return { action: "pay_stars_missing_request" };
   }
+  const settings = await getAdminSettings(env);
+  const profile = await getUserProfile(env, request.telegramUserId);
+  if (!settings.starsPaymentGlobalEnabled || profile?.starsPaymentEnabled === false) {
+    await answerCallbackQuery(env, callbackQuery.id, "پرداخت استارز غیرفعال است");
+    await sendMessage(env, chatId, "⭐ پرداخت با استارز برای حساب شما فعلاً غیرفعال است. لطفاً روش دیگری انتخاب کنید یا با پشتیبانی تماس بگیرید.");
+    return { action: "pay_stars_disabled" };
+  }
+  const pricing = await getEffectivePricing(env, request.telegramUserId);
 
   request.status = "در انتظار پرداخت استارز";
   request.paymentMethod = "Telegram Stars";
-  request.paymentAmount = `${TELEGRAM_STARS_TEST_AMOUNT} Stars تستی`;
+  request.paymentAmount = `${pricing.testStarsAmount} Stars تستی`;
   request.starsInvoiceSentAt = nowIso();
   await updateRequest(env, request);
 
-  await sendStarsInvoice(env, chatId, request);
+  await sendStarsInvoice(env, chatId, request, pricing.testStarsAmount);
   await answerCallbackQuery(env, callbackQuery.id, "فاکتور تستی استارز ارسال شد");
   return { action: "pay_stars_invoice_sent" };
 }
@@ -1014,7 +1244,8 @@ async function handleSuccessfulPayment(env, message) {
 
   request.status = "پرداخت استارز انجام شد";
   request.paymentMethod = "Telegram Stars";
-  request.paymentAmount = `${TELEGRAM_STARS_TEST_AMOUNT} Stars تستی`;
+  const pricing = await getEffectivePricing(env, request.telegramUserId);
+  request.paymentAmount = `${pricing.testStarsAmount} Stars تستی`;
   request.starsPaidAt = nowIso();
   request.telegramPaymentChargeId = payment.telegram_payment_charge_id || "";
   request.providerPaymentChargeId = payment.provider_payment_charge_id || "";
@@ -1050,6 +1281,157 @@ async function handleSuccessfulPayment(env, message) {
   return { action: "successful_payment_processed" };
 }
 
+function adminPanelKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: "👥 کاربران", callback_data: CALLBACKS.ADMIN_USERS }],
+      [{ text: "📄 همه درخواست‌ها", callback_data: CALLBACKS.ADMIN_REQUESTS }],
+      [{ text: "⏳ منتظر پرداخت", callback_data: CALLBACKS.ADMIN_WAITING }],
+      [{ text: "✅ پرداخت‌شده‌ها", callback_data: CALLBACKS.ADMIN_PAID }],
+      [{ text: "⚙️ تنظیمات قیمت", callback_data: CALLBACKS.ADMIN_PRICING }],
+      [{ text: "📌 شرایط و قوانین", callback_data: CALLBACKS.ADMIN_RULES }],
+      [{ text: "📣 پیام همگانی", callback_data: CALLBACKS.ADMIN_BROADCAST }],
+    ],
+  };
+}
+
+async function renderAdminPanelText(env) {
+  const usersCount = (await getJsonArray(env, USERS_INDEX_KEY)).length;
+  const requestsCount = (await getJsonArray(env, REQUESTS_INDEX_KEY)).length;
+  const waitingCount = (await getJsonArray(env, WAITING_PAYMENT_INDEX_KEY)).length;
+  const paidCount = (await getJsonArray(env, PAID_REQUESTS_INDEX_KEY)).length;
+  return (
+    "🛠 <b>پنل مدیریت ProNetIRBot</b>\n\n" +
+    `👥 تعداد کاربران: ${usersCount}\n` +
+    `📄 تعداد کل درخواست‌ها: ${requestsCount}\n` +
+    `⏳ منتظر پرداخت/بررسی: ${waitingCount}\n` +
+    `✅ پرداخت‌شده‌ها: ${paidCount}\n\n` +
+    "یکی از بخش‌ها را انتخاب کنید:"
+  );
+}
+
+async function showAdminPanel(env, chatId, messageId = null) {
+  const text = await renderAdminPanelText(env);
+  if (messageId) return editMessageHtml(env, chatId, messageId, text, adminPanelKeyboard());
+  return sendMessage(env, chatId, text, adminPanelKeyboard(), { parse_mode: "HTML" });
+}
+
+async function showAdminUsers(env, chatId, messageId) {
+  const profiles = await getAllUserProfiles(env, 10);
+  const buttons = profiles.map((profile) => {
+    const title = `${profile.firstName || profile.username || profile.userId} - ${profile.phone || profile.userId}`;
+    return [{ text: title, callback_data: `${CALLBACKS.ADMIN_USER_PREFIX}${profile.userId}` }];
+  });
+  buttons.push([{ text: "🔙 برگشت", callback_data: CALLBACKS.ADMIN_PANEL }]);
+  return editMessageHtml(env, chatId, messageId, "👥 <b>آخرین کاربران</b>", { inline_keyboard: buttons });
+}
+
+async function formatUserProfileText(env, userId) {
+  const profile = await getUserProfile(env, userId);
+  if (!profile) return "کاربر یافت نشد.";
+  const req = profile.lastRequestId ? await getRequest(env, profile.lastRequestId) : null;
+  return (
+    "👤 <b>پروفایل کاربر</b>\n\n" +
+    `آیدی عددی: ${escapeHtml(profile.userId)}\n` +
+    `یوزرنیم: ${escapeHtml(profile.username ? `@${profile.username}` : "ندارد")}\n` +
+    `نام تلگرام: ${escapeHtml(`${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "ندارد")}\n` +
+    `موبایل: ${escapeHtml(profile.phone || "ندارد")}\n` +
+    `کد ملی: ${escapeHtml(profile.nationalId || "ندارد")}\n` +
+    `آخرین پرونده: ${escapeHtml(profile.lastRequestId || "ندارد")}\n` +
+    `وضعیت آخرین پرونده: ${escapeHtml(req?.status || "نامشخص")}\n` +
+    `مجوز پرداخت ریالی: ${profile.rialPaymentAllowed ? "فعال" : "غیرفعال"}\n` +
+    `پرداخت کریپتو: ${profile.cryptoPaymentEnabled !== false ? "فعال" : "غیرفعال"}\n` +
+    `پرداخت استارز: ${profile.starsPaymentEnabled !== false ? "فعال" : "غیرفعال"}\n` +
+    `قیمت اختصاصی تومانی: ${escapeHtml(profile.customActivationPrice || "-")}\n` +
+    `مبلغ اختصاصی کریپتو: ${escapeHtml(profile.customCryptoAmount || "-")}\n` +
+    `استارز اختصاصی: ${escapeHtml(profile.customStarsAmount || "-")}`
+  );
+}
+
+function userProfileKeyboard(userId) {
+  return {
+    inline_keyboard: [
+      [{ text: "✉️ پیام به کاربر", callback_data: `${CALLBACKS.ADMIN_MESSAGE_USER_PREFIX}${userId}` }],
+      [{ text: "💳 فعال/غیرفعال ریالی", callback_data: `${CALLBACKS.ADMIN_TOGGLE_RIAL_PREFIX}${userId}` }],
+      [{ text: "₿ فعال/غیرفعال کریپتو", callback_data: `${CALLBACKS.ADMIN_TOGGLE_CRYPTO_PREFIX}${userId}` }],
+      [{ text: "⭐ فعال/غیرفعال استارز", callback_data: `${CALLBACKS.ADMIN_TOGGLE_STARS_PREFIX}${userId}` }],
+      [{ text: "💰 تغییر قیمت اختصاصی", callback_data: `${CALLBACKS.ADMIN_SET_USER_PRICE_PREFIX}${userId}` }],
+      [{ text: "📄 درخواست‌های کاربر", callback_data: `${CALLBACKS.ADMIN_USER_REQUESTS_PREFIX}${userId}` }],
+      [{ text: "🔙 برگشت", callback_data: CALLBACKS.ADMIN_USERS }],
+    ],
+  };
+}
+
+async function showAdminUserProfile(env, chatId, messageId, userId) {
+  return editMessageHtml(env, chatId, messageId, await formatUserProfileText(env, userId), userProfileKeyboard(userId));
+}
+
+async function showAdminRequests(env, chatId, messageId, mode = "all") {
+  const requests =
+    mode === "paid" ? await getPaidRequests(env, 10) : mode === "waiting" ? await getWaitingPaymentRequests(env, 10) : await getAllRequests(env, 10);
+  const buttons = requests.map((request) => [
+    {
+      text: `${request.status} - ${request.phone || request.fullName || request.id}`,
+      callback_data: `${CALLBACKS.ADMIN_REQUEST_PREFIX}${request.id}`,
+    },
+  ]);
+  buttons.push([{ text: "🔙 برگشت", callback_data: CALLBACKS.ADMIN_PANEL }]);
+  const title = mode === "paid" ? "✅ پرداخت‌شده‌ها" : mode === "waiting" ? "⏳ منتظر پرداخت/بررسی" : "📄 همه درخواست‌ها";
+  return editMessageHtml(env, chatId, messageId, `<b>${title}</b>`, { inline_keyboard: buttons });
+}
+
+async function showAdminRequestDetails(env, chatId, messageId, requestId) {
+  const request = await getRequest(env, requestId);
+  if (!request) return editMessageHtml(env, chatId, messageId, "درخواست پیدا نشد.", { inline_keyboard: [[{ text: "🔙 برگشت", callback_data: CALLBACKS.ADMIN_REQUESTS }]] });
+  const text =
+    "📄 <b>جزئیات درخواست</b>\n\n" +
+    `شماره پرونده: ${escapeHtml(request.id)}\n` +
+    `نام: ${escapeHtml(request.fullName || "-")}\n` +
+    `موبایل: ${escapeHtml(request.phone || "-")}\n` +
+    `کد ملی: ${escapeHtml(request.nationalId || "-")}\n` +
+    `اپراتور: ${escapeHtml(request.operator || "-")}\n` +
+    `وضعیت: ${escapeHtml(request.status || "-")}\n` +
+    `روش پرداخت: ${escapeHtml(request.paymentMethod || "-")}\n` +
+    `مبلغ: ${escapeHtml(request.paymentAmount || "-")}\n` +
+    `تاریخ ثبت: ${escapeHtml(request.createdAt || "-")}\n` +
+    `تاریخ رسید: ${escapeHtml(request.paymentReceiptSentAt || "-")}\n` +
+    `تاریخ تایید پرداخت: ${escapeHtml(request.paymentConfirmedAt || "-")}\n` +
+    `chatId/userId: ${escapeHtml(request.chatId || "-")} / ${escapeHtml(request.telegramUserId || "-")}`;
+  const buttons = [];
+  if (request.paymentReceipt && !request.paymentConfirmedAt) {
+    buttons.push([{ text: "✅ تایید رسید", callback_data: `${CALLBACKS.ADMIN_CONFIRM_RECEIPT_PREFIX}${request.id}` }]);
+    buttons.push([{ text: "❌ رد رسید", callback_data: `${CALLBACKS.ADMIN_REJECT_RECEIPT_PREFIX}${request.id}` }]);
+  }
+  buttons.push([{ text: "💳 مجوز پرداخت ریالی", callback_data: `${CALLBACKS.ADMIN_ALLOW_RIAL_PREFIX}${request.id}` }]);
+  buttons.push([{ text: "✉️ پیام به کاربر", callback_data: `${CALLBACKS.ADMIN_MESSAGE_USER_PREFIX}${request.telegramUserId}` }]);
+  buttons.push([{ text: "🔙 برگشت", callback_data: CALLBACKS.ADMIN_REQUESTS }]);
+  return editMessageHtml(env, chatId, messageId, text, { inline_keyboard: buttons });
+}
+
+async function showAdminPricing(env, chatId, messageId) {
+  const settings = await getAdminSettings(env);
+  const text =
+    "⚙️ <b>تنظیمات قیمت</b>\n\n" +
+    `قیمت ریالی همگانی: ${escapeHtml(settings.activationPrice)}\n` +
+    `مبلغ کریپتو: ${escapeHtml(settings.cryptoAmount)}\n` +
+    `استارز واقعی: ${escapeHtml(settings.starsAmount)}\n` +
+    `استارز تستی: ${escapeHtml(settings.testStarsAmount)}\n` +
+    `وضعیت ریالی: ${settings.rialPaymentGlobalEnabled ? "فعال" : "غیرفعال"}\n` +
+    `وضعیت کریپتو: ${settings.cryptoPaymentGlobalEnabled ? "فعال" : "غیرفعال"}\n` +
+    `وضعیت استارز: ${settings.starsPaymentGlobalEnabled ? "فعال" : "غیرفعال"}`;
+  return editMessageHtml(env, chatId, messageId, text, {
+    inline_keyboard: [
+      [{ text: "تغییر قیمت ریالی", callback_data: CALLBACKS.ADMIN_SET_GLOBAL_TOMAN }],
+      [{ text: "تغییر مبلغ کریپتو", callback_data: CALLBACKS.ADMIN_SET_GLOBAL_CRYPTO }],
+      [{ text: "تغییر استارز", callback_data: CALLBACKS.ADMIN_SET_GLOBAL_STARS }],
+      [{ text: "فعال/غیرفعال ریالی همگانی", callback_data: CALLBACKS.ADMIN_TOGGLE_GLOBAL_RIAL }],
+      [{ text: "فعال/غیرفعال کریپتو همگانی", callback_data: CALLBACKS.ADMIN_TOGGLE_GLOBAL_CRYPTO }],
+      [{ text: "فعال/غیرفعال استارز همگانی", callback_data: CALLBACKS.ADMIN_TOGGLE_GLOBAL_STARS }],
+      [{ text: "🔙 برگشت", callback_data: CALLBACKS.ADMIN_PANEL }],
+    ],
+  });
+}
+
 async function handleCallbackQuery(env, callbackQuery) {
   const chatId = callbackQuery.message?.chat?.id;
   const messageId = callbackQuery.message?.message_id;
@@ -1058,6 +1440,22 @@ async function handleCallbackQuery(env, callbackQuery) {
   if (!chatId) return { action: "callback_ignored" };
 
   const state = await getState(env, chatId);
+  const callbackUserId = callbackQuery.from?.id || chatId;
+  const isAdminCallback =
+    data.startsWith("admin_") ||
+    data === CALLBACKS.ADMIN_PANEL ||
+    data === CALLBACKS.ADMIN_USERS ||
+    data === CALLBACKS.ADMIN_REQUESTS ||
+    data === CALLBACKS.ADMIN_WAITING ||
+    data === CALLBACKS.ADMIN_PAID ||
+    data === CALLBACKS.ADMIN_PRICING ||
+    data === CALLBACKS.ADMIN_RULES ||
+    data === CALLBACKS.ADMIN_BROADCAST;
+
+  if (isAdminCallback && !isBotOwner(env, callbackUserId)) {
+    await answerCallbackQuery(env, callbackQuery.id, "دسترسی ندارید");
+    return { action: "admin_callback_denied" };
+  }
 
   if (data === CALLBACKS.REJECT_COST) {
     if (messageId) await deleteMessage(env, chatId, messageId);
@@ -1098,6 +1496,132 @@ async function handleCallbackQuery(env, callbackQuery) {
 
   if (data.startsWith(CALLBACKS.ADMIN_REJECT_RECEIPT_PREFIX)) {
     return rejectReceiptByAdmin(env, callbackQuery, data.slice(CALLBACKS.ADMIN_REJECT_RECEIPT_PREFIX.length));
+  }
+
+  if (data === CALLBACKS.ADMIN_PANEL) {
+    await showAdminPanel(env, chatId, messageId);
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_panel" };
+  }
+  if (data === CALLBACKS.ADMIN_USERS) {
+    await showAdminUsers(env, chatId, messageId);
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_users" };
+  }
+  if (data.startsWith(CALLBACKS.ADMIN_USER_PREFIX)) {
+    await showAdminUserProfile(env, chatId, messageId, data.slice(CALLBACKS.ADMIN_USER_PREFIX.length));
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_user_profile" };
+  }
+  if (data.startsWith(CALLBACKS.ADMIN_MESSAGE_USER_PREFIX)) {
+    const targetUserId = data.slice(CALLBACKS.ADMIN_MESSAGE_USER_PREFIX.length);
+    await setState(env, chatId, { step: "adminMessageUser", targetUserId, startedAt: nowIso() });
+    await answerCallbackQuery(env, callbackQuery.id, "پیام خود را ارسال کنید");
+    await sendMessage(env, chatId, "پیام خود را برای این کاربر بنویسید.");
+    return { action: "admin_message_user_waiting" };
+  }
+  if (data.startsWith(CALLBACKS.ADMIN_TOGGLE_RIAL_PREFIX) || data.startsWith(CALLBACKS.ADMIN_TOGGLE_CRYPTO_PREFIX) || data.startsWith(CALLBACKS.ADMIN_TOGGLE_STARS_PREFIX)) {
+    const prefix = data.startsWith(CALLBACKS.ADMIN_TOGGLE_RIAL_PREFIX)
+      ? CALLBACKS.ADMIN_TOGGLE_RIAL_PREFIX
+      : data.startsWith(CALLBACKS.ADMIN_TOGGLE_CRYPTO_PREFIX)
+        ? CALLBACKS.ADMIN_TOGGLE_CRYPTO_PREFIX
+        : CALLBACKS.ADMIN_TOGGLE_STARS_PREFIX;
+    const userId = data.slice(prefix.length);
+    const profile = (await getUserProfile(env, userId)) || { userId, chatId: userId };
+    if (prefix === CALLBACKS.ADMIN_TOGGLE_RIAL_PREFIX) profile.rialPaymentAllowed = !(profile.rialPaymentAllowed === true);
+    if (prefix === CALLBACKS.ADMIN_TOGGLE_CRYPTO_PREFIX) profile.cryptoPaymentEnabled = !(profile.cryptoPaymentEnabled !== false);
+    if (prefix === CALLBACKS.ADMIN_TOGGLE_STARS_PREFIX) profile.starsPaymentEnabled = !(profile.starsPaymentEnabled !== false);
+    profile.updatedAt = nowIso();
+    await updateUserProfile(env, profile);
+    await showAdminUserProfile(env, chatId, messageId, userId);
+    await answerCallbackQuery(env, callbackQuery.id, "بروزرسانی شد");
+    return { action: "admin_user_toggle_payment" };
+  }
+  if (data.startsWith(CALLBACKS.ADMIN_SET_USER_PRICE_PREFIX)) {
+    const targetUserId = data.slice(CALLBACKS.ADMIN_SET_USER_PRICE_PREFIX.length);
+    await setState(env, chatId, { step: "adminSetUserPrice", targetUserId, startedAt: nowIso() });
+    await answerCallbackQuery(env, callbackQuery.id);
+    await sendMessage(
+      env,
+      chatId,
+      "قیمت اختصاصی را با فرمت زیر بفرست:\n\ntoman=8500000\ncrypto=60\nstars=4000\n\nمی‌توانی فقط یکی یا چندتا را بفرستی.",
+    );
+    return { action: "admin_set_user_price_waiting" };
+  }
+  if (data.startsWith(CALLBACKS.ADMIN_USER_REQUESTS_PREFIX)) {
+    const userId = data.slice(CALLBACKS.ADMIN_USER_REQUESTS_PREFIX.length);
+    const requests = await getUserRequests(env, userId);
+    const buttons = requests.map((request) => [{ text: `${request.status} - ${request.phone || request.fullName || request.id}`, callback_data: `${CALLBACKS.ADMIN_REQUEST_PREFIX}${request.id}` }]);
+    buttons.push([{ text: "🔙 برگشت", callback_data: `${CALLBACKS.ADMIN_USER_PREFIX}${userId}` }]);
+    await editMessageHtml(env, chatId, messageId, "📄 <b>درخواست‌های کاربر</b>", { inline_keyboard: buttons });
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_user_requests" };
+  }
+  if (data === CALLBACKS.ADMIN_REQUESTS) {
+    await showAdminRequests(env, chatId, messageId, "all");
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_requests" };
+  }
+  if (data === CALLBACKS.ADMIN_WAITING) {
+    await showAdminRequests(env, chatId, messageId, "waiting");
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_waiting" };
+  }
+  if (data === CALLBACKS.ADMIN_PAID) {
+    await showAdminRequests(env, chatId, messageId, "paid");
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_paid" };
+  }
+  if (data.startsWith(CALLBACKS.ADMIN_REQUEST_PREFIX)) {
+    await showAdminRequestDetails(env, chatId, messageId, data.slice(CALLBACKS.ADMIN_REQUEST_PREFIX.length));
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_request_details" };
+  }
+  if (data === CALLBACKS.ADMIN_PRICING) {
+    await showAdminPricing(env, chatId, messageId);
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_pricing" };
+  }
+  if (data === CALLBACKS.ADMIN_SET_GLOBAL_TOMAN || data === CALLBACKS.ADMIN_SET_GLOBAL_CRYPTO || data === CALLBACKS.ADMIN_SET_GLOBAL_STARS) {
+    const step =
+      data === CALLBACKS.ADMIN_SET_GLOBAL_TOMAN ? "adminSetGlobalToman" : data === CALLBACKS.ADMIN_SET_GLOBAL_CRYPTO ? "adminSetGlobalCrypto" : "adminSetGlobalStars";
+    await setState(env, chatId, { step, startedAt: nowIso() });
+    await answerCallbackQuery(env, callbackQuery.id);
+    await sendMessage(env, chatId, "مقدار جدید را ارسال کنید.");
+    return { action: "admin_set_global_waiting" };
+  }
+  if (data === CALLBACKS.ADMIN_TOGGLE_GLOBAL_RIAL || data === CALLBACKS.ADMIN_TOGGLE_GLOBAL_CRYPTO || data === CALLBACKS.ADMIN_TOGGLE_GLOBAL_STARS) {
+    const settings = await getAdminSettings(env);
+    if (data === CALLBACKS.ADMIN_TOGGLE_GLOBAL_RIAL) settings.rialPaymentGlobalEnabled = !settings.rialPaymentGlobalEnabled;
+    if (data === CALLBACKS.ADMIN_TOGGLE_GLOBAL_CRYPTO) settings.cryptoPaymentGlobalEnabled = !settings.cryptoPaymentGlobalEnabled;
+    if (data === CALLBACKS.ADMIN_TOGGLE_GLOBAL_STARS) settings.starsPaymentGlobalEnabled = !settings.starsPaymentGlobalEnabled;
+    await updateAdminSettings(env, settings);
+    await showAdminPricing(env, chatId, messageId);
+    await answerCallbackQuery(env, callbackQuery.id, "تنظیم شد");
+    return { action: "admin_toggle_global_payment" };
+  }
+  if (data === CALLBACKS.ADMIN_RULES) {
+    const settings = await getAdminSettings(env);
+    await editMessageHtml(env, chatId, messageId, `📌 <b>متن فعلی قوانین</b>\n\n${escapeHtml(settings.rulesText)}`, {
+      inline_keyboard: [
+        [{ text: "✏️ تغییر متن قوانین", callback_data: "admin_set_rules" }],
+        [{ text: "🔙 برگشت", callback_data: CALLBACKS.ADMIN_PANEL }],
+      ],
+    });
+    await answerCallbackQuery(env, callbackQuery.id);
+    return { action: "admin_rules" };
+  }
+  if (data === "admin_set_rules") {
+    await setState(env, chatId, { step: "adminSetRules", startedAt: nowIso() });
+    await answerCallbackQuery(env, callbackQuery.id);
+    await sendMessage(env, chatId, "متن جدید قوانین را ارسال کنید.");
+    return { action: "admin_set_rules_waiting" };
+  }
+  if (data === CALLBACKS.ADMIN_BROADCAST) {
+    await setState(env, chatId, { step: "adminBroadcast", startedAt: nowIso() });
+    await answerCallbackQuery(env, callbackQuery.id);
+    await sendMessage(env, chatId, "پیام همگانی را ارسال کنید. این پیام برای همه کاربران ثبت‌شده ارسال می‌شود.");
+    return { action: "admin_broadcast_waiting" };
   }
 
   if (data.startsWith(CALLBACKS.PAY_CRYPTO_PREFIX)) {
@@ -1167,7 +1691,84 @@ async function handleMessage(env, message) {
     return { action: "cancelled" };
   }
 
+  if (command === "/admin") {
+    if (!isBotOwner(env, message.from?.id || chatId)) {
+      await sendMessage(env, chatId, "⛔ شما دسترسی ادمین ندارید.");
+      return { action: "admin_denied" };
+    }
+    await showAdminPanel(env, chatId);
+    return { action: "admin_panel_opened" };
+  }
+
   const state = await getState(env, chatId);
+  if (state && isBotOwner(env, message.from?.id || chatId)) {
+    if (state.step === "adminMessageUser") {
+      const profile = await getUserProfile(env, state.targetUserId);
+      if (!profile?.chatId) {
+        await clearState(env, chatId);
+        await sendMessage(env, chatId, "کاربر پیدا نشد.");
+        return { action: "admin_message_user_missing" };
+      }
+      const outgoingDoc = getIncomingDocument(message);
+      if (text) await sendMessage(env, profile.chatId, `✉️ پیام مدیریت:\n\n${text}`);
+      else if (outgoingDoc?.type === "photo") await telegramApi(env, "sendPhoto", { chat_id: profile.chatId, photo: outgoingDoc.fileId, caption: "✉️ پیام مدیریت" });
+      else if (outgoingDoc?.type === "document") await telegramApi(env, "sendDocument", { chat_id: profile.chatId, document: outgoingDoc.fileId, caption: "✉️ پیام مدیریت" });
+      await clearState(env, chatId);
+      await sendMessage(env, chatId, "✅ پیام ارسال شد.");
+      return { action: "admin_message_user_sent" };
+    }
+    if (state.step === "adminSetUserPrice") {
+      const lines = text.split("\n").map((line) => line.trim());
+      const profile = (await getUserProfile(env, state.targetUserId)) || { userId: state.targetUserId, chatId: state.targetUserId };
+      for (const line of lines) {
+        const [key, value] = line.split("=").map((s) => s?.trim());
+        if (!value) continue;
+        if (key === "toman") profile.customActivationPrice = value;
+        if (key === "crypto") profile.customCryptoAmount = value;
+        if (key === "stars") profile.customStarsAmount = value;
+      }
+      profile.updatedAt = nowIso();
+      await updateUserProfile(env, profile);
+      await clearState(env, chatId);
+      await sendMessage(env, chatId, await formatUserProfileText(env, state.targetUserId), userProfileKeyboard(state.targetUserId), { parse_mode: "HTML" });
+      return { action: "admin_user_price_updated" };
+    }
+    if (state.step === "adminSetGlobalToman" || state.step === "adminSetGlobalCrypto" || state.step === "adminSetGlobalStars") {
+      if (state.step === "adminSetGlobalToman") await updateAdminSettings(env, { activationPrice: text });
+      if (state.step === "adminSetGlobalCrypto") await updateAdminSettings(env, { cryptoAmount: text });
+      if (state.step === "adminSetGlobalStars") await updateAdminSettings(env, { starsAmount: Number(toEnglishDigits(text).replace(/\D/g, "")) || text });
+      await clearState(env, chatId);
+      await sendMessage(env, chatId, "✅ تنظیمات بروزرسانی شد.");
+      return { action: "admin_global_price_updated" };
+    }
+    if (state.step === "adminSetRules") {
+      await updateAdminSettings(env, { rulesText: text || getDefaultRulesText() });
+      await clearState(env, chatId);
+      await sendMessage(env, chatId, "✅ متن شرایط و قوانین بروزرسانی شد.");
+      return { action: "admin_rules_updated" };
+    }
+    if (state.step === "adminBroadcast") {
+      const profiles = await getAllUserProfiles(env, 1000);
+      let ok = 0;
+      let fail = 0;
+      for (const profile of profiles) {
+        try {
+          if (!text) {
+            fail += 1;
+            continue;
+          }
+          await sendMessage(env, profile.chatId, text);
+          ok += 1;
+        } catch {
+          fail += 1;
+        }
+      }
+      await clearState(env, chatId);
+      await sendMessage(env, chatId, `نتیجه ارسال همگانی:\nموفق: ${ok}\nناموفق: ${fail}`);
+      return { action: "admin_broadcast_sent" };
+    }
+  }
+
   if (state) {
     await handleRegistrationStep(env, message, state);
     return { action: `registration_${state.step}` };
@@ -1175,7 +1776,7 @@ async function handleMessage(env, message) {
 
   if (text === BUTTONS.REGISTER) {
     try {
-      await beginRegistration(env, chatId);
+      await beginRegistration(env, chatId, message.from?.id || chatId);
     } catch {
       await sendMessage(env, chatId, "برای فعال شدن فرم ثبت درخواست، ذخیره‌سازی BOT_KV باید در Cloudflare به Worker وصل شود. اگر binding را تازه اضافه کرده‌اید، از Cloudflare روی Save and deploy یا Redeploy بزنید.");
     }
