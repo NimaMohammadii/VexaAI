@@ -53,6 +53,16 @@ const USER_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 
 app.use(express.json({ limit: "6mb" }));
 
+const buildServiceMetadata = () => ({
+  service: "VexaAI",
+  status: "ok",
+  timestamp: new Date().toISOString(),
+});
+
+app.get("/healthz", (_req, res) => {
+  res.json(buildServiceMetadata());
+});
+
 const clampNumber = (value, min, max, fallback) => {
   if (!Number.isFinite(value)) {
     return fallback;
