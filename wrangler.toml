@@ -4,12 +4,22 @@ compatibility_date = "2026-04-27"
 workers_dev = true
 
 [vars]
-# BOT_OWNER = "123456789"
+# Optional custom text shown when users tap support.
+# SUPPORT_TEXT = "برای پیگیری، شماره پرونده خود را برای پشتیبانی ارسال کنید."
+
+# Recommended secrets:
+# wrangler secret put BOT_TOKEN
+# wrangler secret put ADMIN_CHAT_ID
+# wrangler secret put BOT_OWNER
+
+# Required for the registration form and request status storage.
+# Create with: wrangler kv namespace create BOT_KV
+# Then uncomment and set the returned namespace id:
+# [[kv_namespaces]]
+# binding = "BOT_KV"
+# id = "YOUR_KV_NAMESPACE_ID"
+
 [observability]
 [observability.logs]
 enabled = false
 invocation_logs = true
-
-# Set BOT_TOKEN and BOT_OWNER with:
-# wrangler secret put BOT_TOKEN
-# wrangler secret put BOT_OWNER
