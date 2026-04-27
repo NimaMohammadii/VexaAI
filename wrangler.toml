@@ -13,11 +13,9 @@ workers_dev = true
 # wrangler secret put BOT_OWNER
 
 # Required for the registration form and request status storage.
-# Create with: wrangler kv namespace create BOT_KV
-# Then uncomment and set the returned namespace id:
-# [[kv_namespaces]]
-# binding = "BOT_KV"
-# id = "YOUR_KV_NAMESPACE_ID"
+[[kv_namespaces]]
+binding = "BOT_KV"
+id = "6208c8245940403e963ffb17bb8e21a5"
 
 [observability]
 [observability.logs]
