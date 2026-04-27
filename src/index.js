@@ -40,14 +40,14 @@ async function sendMainMenu(env, chatId) {
 
 export default {
   async fetch(request, env) {
-    if (!env.BOT_OWNER) {
-      return json({ ok: false, error: "BOT_OWNER is missing" }, 500);
-    }
-
     if (request.method === "GET") {
       return json({
         ok: true,
         service: "Telegram bot webhook is running",
+        config: {
+          hasBotToken: Boolean(env.BOT_TOKEN),
+          hasBotOwner: Boolean(env.BOT_OWNER),
+        },
       });
     }
 
@@ -70,20 +70,31 @@ export default {
     const chatId = message.chat.id;
     const text = (message.text || "").trim();
 
-    if (text === "/start") {
+    try {
+      if (text === "/start") {
+        await sendMainMenu(env, chatId);
+        return json({ ok: true, action: "start_menu_sent" });
+      }
+
+      if (text === REGISTER_BUTTON) {
+        await telegramApi(env, "sendMessage", {
+          chat_id: chatId,
+          text: "✅ درخواست ثبت‌نام انترنت پرو دریافت شد.\nبه‌زودی مرحله‌های بعدی اضافه می‌شود.",
+        });
+        return json({ ok: true, action: "register_clicked" });
+      }
+
       await sendMainMenu(env, chatId);
-      return json({ ok: true, action: "start_menu_sent" });
+      return json({ ok: true, action: "fallback_menu_sent" });
+    } catch (error) {
+      return json(
+        {
+          ok: false,
+          error: "Failed to handle Telegram update",
+          detail: error?.message || "Unknown error",
+        },
+        500,
+      );
     }
-
-    if (text === REGISTER_BUTTON) {
-      await telegramApi(env, "sendMessage", {
-        chat_id: chatId,
-        text: "✅ درخواست ثبت‌نام انترنت پرو دریافت شد.\nبه‌زودی مرحله‌های بعدی اضافه می‌شود.",
-      });
-      return json({ ok: true, action: "register_clicked" });
-    }
-
-    await sendMainMenu(env, chatId);
-    return json({ ok: true, action: "fallback_menu_sent" });
   },
 };

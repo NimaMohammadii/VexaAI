@@ -5,14 +5,13 @@ A minimal Telegram bot designed for Cloudflare Workers.
 ## Environment variables
 
 - `BOT_TOKEN`: Telegram bot token (as a secret)
-- `BOT_OWNER`: Numeric Telegram user ID of bot owner (kept for later features)
+- `BOT_OWNER`: Optional, Numeric Telegram user ID of bot owner (kept for later features)
 
 ## Deploy
 
 ```bash
 npm install -D wrangler
 wrangler secret put BOT_TOKEN
-wrangler secret put BOT_OWNER
 wrangler deploy
 ```
 
