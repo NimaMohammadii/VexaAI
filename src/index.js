@@ -6,7 +6,13 @@ const BUTTONS = {
   CANCEL: "لغو",
 };
 
+const CALLBACKS = {
+  CONFIRM_COST: "confirm_cost",
+  REJECT_COST: "reject_cost",
+};
+
 const SERVICE_OPERATOR = "همراه اول";
+const ACTIVATION_PRICE = "8,500,000 تومان";
 const MAX_USER_REQUESTS = 10;
 
 function json(data, status = 200) {
@@ -25,6 +31,17 @@ function mainKeyboard() {
     ],
     resize_keyboard: true,
     one_time_keyboard: false,
+  };
+}
+
+function costConfirmKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "✅ تایید و ادامه", callback_data: CALLBACKS.CONFIRM_COST },
+        { text: "❌ رد", callback_data: CALLBACKS.REJECT_COST },
+      ],
+    ],
   };
 }
 
@@ -175,7 +192,7 @@ async function setWebhook(env, webhookUrl) {
   const response = await telegramApi(env, "setWebhook", {
     url: webhookUrl,
     drop_pending_updates: true,
-    allowed_updates: ["message"],
+    allowed_updates: ["message", "callback_query"],
   });
   return {
     ok: Boolean(response?.ok),
@@ -189,8 +206,10 @@ async function ensureWebhook(env, request) {
   const currentUrl = new URL(request.url);
   const webhookUrl = `${currentUrl.origin}/`;
   const before = await getWebhookInfo(env);
+  const allowedUpdates = before.allowed_updates || [];
+  const hasCallbackUpdates = allowedUpdates.length === 0 || allowedUpdates.includes("callback_query");
 
-  if (before.url === webhookUrl) {
+  if (before.url === webhookUrl && hasCallbackUpdates) {
     return { changed: false, webhookUrl, before, after: before };
   }
 
@@ -206,11 +225,25 @@ async function sendMessage(env, chatId, text, replyMarkup = undefined) {
   });
 }
 
+async function deleteMessage(env, chatId, messageId) {
+  return telegramApi(env, "deleteMessage", {
+    chat_id: chatId,
+    message_id: messageId,
+  });
+}
+
+async function answerCallbackQuery(env, callbackQueryId, text = undefined) {
+  return telegramApi(env, "answerCallbackQuery", {
+    callback_query_id: callbackQueryId,
+    text,
+  });
+}
+
 async function sendMainMenu(env, chatId) {
   return sendMessage(
     env,
     chatId,
-    "سلام 👋\nبه ProNetIRBot خوش آمدید.\n\nاز این ربات می‌توانید درخواست اینترنت پرو را ثبت و وضعیت پرونده را پیگیری کنید.\n\nتوجه: ثبت درخواست اینترنت پرو فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n\nبرای شروع یکی از گزینه‌های زیر را انتخاب کنید:",
+    "سلام 👋\nبه ProNetIRBot خوش آمدید.\n\n🚀 از این ربات می‌توانید درخواست اینترنت پرو را ثبت و وضعیت پرونده را پیگیری کنید.\n\n📱 توجه: ثبت درخواست اینترنت پرو فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n\nبرای شروع یکی از گزینه‌های زیر را انتخاب کنید:",
     mainKeyboard(),
   );
 }
@@ -220,11 +253,12 @@ async function sendRules(env, chatId) {
     env,
     chatId,
     "📌 شرایط و قوانین\n\n" +
-      "• ثبت درخواست فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n" +
-      "• شماره موبایل باید به نام خود متقاضی باشد.\n" +
-      "• تصویر کارت ملی باید واضح و خوانا باشد.\n" +
-      "• پس از بررسی، نحوه پرداخت برای شما ارسال می‌شود.\n" +
-      "• پس از تکمیل پرداخت و تأیید نهایی، پیامک فعال‌سازی معمولاً تا ۲۴ ساعت برای شما ارسال می‌شود.",
+      "📱 ثبت درخواست فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n" +
+      "🪪 شماره موبایل باید به نام خود متقاضی باشد.\n" +
+      `💳 هزینه انجام و پیگیری فعال‌سازی از طرف شرکت ما: ${ACTIVATION_PRICE}\n` +
+      "🧾 تصویر کارت ملی باید واضح و خوانا باشد.\n" +
+      "⏳ پس از بررسی، نحوه پرداخت برای شما ارسال می‌شود.\n" +
+      "✅ پس از تکمیل پرداخت و تأیید نهایی، پیامک فعال‌سازی معمولاً تا ۲۴ ساعت برای شما ارسال می‌شود.",
   );
 }
 
@@ -253,11 +287,15 @@ async function notifyAdmin(env, request) {
   const adminChatId = env.ADMIN_CHAT_ID || env.BOT_OWNER;
   if (!adminChatId) return;
 
-  await sendMessage(env, adminChatId, adminSummary(request));
   const nationalCardDocument = request.documents?.[0];
-  if (!nationalCardDocument) return;
+  const caption = adminSummary(request);
 
-  const payload = { chat_id: adminChatId, caption: `کارت ملی پرونده ${request.id}` };
+  if (!nationalCardDocument) {
+    await sendMessage(env, adminChatId, caption);
+    return;
+  }
+
+  const payload = { chat_id: adminChatId, caption };
   if (nationalCardDocument.type === "photo") {
     await telegramApi(env, "sendPhoto", { ...payload, photo: nationalCardDocument.fileId });
   } else {
@@ -267,13 +305,24 @@ async function notifyAdmin(env, request) {
 
 async function beginRegistration(env, chatId) {
   requireKv(env);
-  await setState(env, chatId, { step: "fullName", data: {}, startedAt: nowIso() });
-  return sendMessage(
+  await setState(env, chatId, { step: "costConfirm", data: {}, startedAt: nowIso() });
+  const sent = await sendMessage(
     env,
     chatId,
-    "فرآیند ثبت درخواست جدید شروع شد.\n\nتوجه: ثبت درخواست اینترنت پرو فعلاً فقط برای سیم‌کارت همراه اول امکان‌پذیر است.\n\nلطفاً نام و نام خانوادگی متقاضی را وارد کنید:",
-    removeKeyboard(),
+    "💎 ثبت درخواست اینترنت پرو\n\n" +
+      `💳 هزینه انجام و پیگیری فعال‌سازی از طرف شرکت ما برای شما ${ACTIVATION_PRICE} است.\n\n` +
+      "📱 این سرویس فعلاً فقط برای سیم‌کارت همراه اول قابل انجام است.\n" +
+      "🪪 سیم‌کارت باید حتماً به نام خودتان باشد.\n\n" +
+      "اگر هزینه و شرایط را تأیید می‌کنید، برای ادامه روی دکمه تأیید بزنید.",
+    costConfirmKeyboard(),
   );
+
+  await setState(env, chatId, {
+    step: "costConfirm",
+    data: {},
+    costMessageId: sent.result?.message_id,
+    startedAt: nowIso(),
+  });
 }
 
 async function sendStatus(env, message) {
@@ -342,7 +391,7 @@ async function finalizeRequest(env, message, state, nationalCardDocument) {
   await sendMessage(
     env,
     chatId,
-    `✅ درخواست شما ثبت شد.\n\nشماره پرونده: ${request.id}\n\nپرونده شما طی چند ساعت آینده بررسی می‌شود و پس از بررسی، نحوه پرداخت برای شما ارسال خواهد شد.\n\nپس از تکمیل پرداخت و تأیید نهایی، پیامک فعال‌سازی معمولاً تا ۲۴ ساعت برای شما ارسال می‌شود.`,
+    `✅ درخواست شما ثبت شد.\n\nشماره پرونده: ${request.id}\n\n⏳ پرونده شما طی چند ساعت آینده بررسی می‌شود و پس از بررسی، نحوه پرداخت برای شما ارسال خواهد شد.\n\n📩 پس از تکمیل پرداخت و تأیید نهایی، پیامک فعال‌سازی معمولاً تا ۲۴ ساعت برای شما ارسال می‌شود.`,
     mainKeyboard(),
   );
   await notifyAdmin(env, request);
@@ -358,12 +407,15 @@ async function handleRegistrationStep(env, message, state) {
   }
 
   switch (state.step) {
+    case "costConfirm":
+      return sendMessage(env, chatId, "برای ادامه، لطفاً از دکمه‌های تایید یا رد زیر پیام هزینه استفاده کنید.");
+
     case "fullName":
       if (text.length < 3) return sendMessage(env, chatId, "نام واردشده کوتاه است. لطفاً نام و نام خانوادگی را کامل وارد کنید:");
       state.data.fullName = text;
       state.step = "phone";
       await setState(env, chatId, state);
-      return sendMessage(env, chatId, "شماره موبایل همراه اول متقاضی را وارد کنید. شماره باید به نام خود متقاضی باشد:");
+      return sendMessage(env, chatId, "📱 شماره موبایل همراه اول متقاضی را وارد کنید.\n\n🪪 تاکید: سیم‌کارت باید حتماً به نام خودتان باشد.");
 
     case "phone": {
       const phone = cleanPhone(text);
@@ -371,7 +423,7 @@ async function handleRegistrationStep(env, message, state) {
       state.data.phone = phone;
       state.step = "nationalId";
       await setState(env, chatId, state);
-      return sendMessage(env, chatId, "کد ملی ۱۰ رقمی متقاضی را وارد کنید:");
+      return sendMessage(env, chatId, "🪪 کد ملی ۱۰ رقمی متقاضی را وارد کنید:");
     }
 
     case "nationalId": {
@@ -383,7 +435,7 @@ async function handleRegistrationStep(env, message, state) {
       return sendMessage(
         env,
         chatId,
-        "لطفاً عکس واضح کارت ملی متقاضی را ارسال کنید.\nبعد از ارسال عکس کارت ملی، درخواست شما ثبت می‌شود.",
+        "📸 لطفاً عکس واضح کارت ملی متقاضی را ارسال کنید.\n\nبعد از ارسال عکس کارت ملی، درخواست شما ثبت می‌شود.",
       );
     }
 
@@ -399,6 +451,40 @@ async function handleRegistrationStep(env, message, state) {
       await clearState(env, chatId);
       return sendMainMenu(env, chatId);
   }
+}
+
+async function handleCallbackQuery(env, callbackQuery) {
+  const chatId = callbackQuery.message?.chat?.id;
+  const messageId = callbackQuery.message?.message_id;
+  const data = callbackQuery.data;
+
+  if (!chatId) return { action: "callback_ignored" };
+
+  const state = await getState(env, chatId);
+
+  if (data === CALLBACKS.REJECT_COST) {
+    if (messageId) await deleteMessage(env, chatId, messageId);
+    await clearState(env, chatId);
+    await answerCallbackQuery(env, callbackQuery.id, "درخواست لغو شد");
+    return { action: "cost_rejected" };
+  }
+
+  if (data === CALLBACKS.CONFIRM_COST) {
+    if (!state || state.step !== "costConfirm") {
+      await answerCallbackQuery(env, callbackQuery.id, "این درخواست منقضی شده است. دوباره ثبت درخواست جدید را بزنید.");
+      return { action: "cost_confirm_expired" };
+    }
+
+    if (messageId) await deleteMessage(env, chatId, messageId);
+    state.step = "fullName";
+    await setState(env, chatId, state);
+    await answerCallbackQuery(env, callbackQuery.id, "تأیید شد");
+    await sendMessage(env, chatId, "✅ تایید شد.\n\nلطفاً نام و نام خانوادگی متقاضی را وارد کنید:", removeKeyboard());
+    return { action: "cost_confirmed" };
+  }
+
+  await answerCallbackQuery(env, callbackQuery.id);
+  return { action: "callback_unknown" };
 }
 
 async function handleMessage(env, message) {
@@ -510,10 +596,15 @@ export default {
       return json({ ok: false, error: "Invalid JSON" }, 400);
     }
 
-    const message = update?.message;
-    if (!message?.chat?.id) return json({ ok: true, ignored: true, reason: "No message chat id in update" });
-
     try {
+      if (update?.callback_query) {
+        const result = await handleCallbackQuery(env, update.callback_query);
+        return json({ ok: true, ...result });
+      }
+
+      const message = update?.message;
+      if (!message?.chat?.id) return json({ ok: true, ignored: true, reason: "No message chat id in update" });
+
       const result = await handleMessage(env, message);
       return json({ ok: true, ...result });
     } catch (error) {
