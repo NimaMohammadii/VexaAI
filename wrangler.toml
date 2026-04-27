@@ -5,6 +5,14 @@ workers_dev = true
 
 [vars]
 # BOT_OWNER = "123456789"
+{
+  "observability": {
+    "logs": {
+      "enabled": false,
+      "invocation_logs": true
+    }
+  }
+}
 
 # Set BOT_TOKEN and BOT_OWNER with:
 # wrangler secret put BOT_TOKEN
