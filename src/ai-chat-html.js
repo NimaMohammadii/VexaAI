@@ -2,13 +2,13 @@ export const AI_CHAT_HTML = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=overlays-content"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
   <meta name="theme-color" content="#000000"/>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
   <title>AI Chat</title>
-  <link rel="stylesheet" href="/mini-app/chat/styles.css?v=20260801-keyboard-root-2"/>
+  <link rel="stylesheet" href="/mini-app/chat/styles.css?v=20260801-keyboard-single-source-1"/>
 </head>
 <body>
   <section id="aiChatPage" class="ai-chat-page" aria-hidden="false">
@@ -23,6 +23,6 @@ export const AI_CHAT_HTML = `<!doctype html>
   </section>
   <div id="toast" class="toast" role="status"></div>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script type="module" src="/mini-app/chat/app.js?v=20260801-keyboard-root-2"></script>
+  <script type="module" src="/mini-app/chat/app.js?v=20260801-keyboard-single-source-1"></script>
 </body>
 </html>`;
