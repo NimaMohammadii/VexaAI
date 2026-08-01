@@ -1,5 +1,6 @@
 import { AI_CHAT_HTML } from './ai-chat-html.js';
-import { getAiChatClient, getAiChatStyles } from './ai-chat-assets.js';
+import { AI_CHAT_JS } from './ai-chat-client.js';
+import { AI_CHAT_CSS } from './ai-chat-styles.js';
 
 const DEFAULT_APP_URL = 'https://vchat.vexaagent.workers.dev';
 
@@ -17,15 +18,12 @@ export default {
       }
 
       if (url.pathname === '/mini-app/chat/styles.css') {
-        return textResponse(
-          await getAiChatStyles(),
-          'text/css; charset=UTF-8'
-        );
+        return textResponse(AI_CHAT_CSS, 'text/css; charset=UTF-8');
       }
 
       if (url.pathname === '/mini-app/chat/app.js') {
         return textResponse(
-          await getAiChatClient(),
+          AI_CHAT_JS,
           'application/javascript; charset=UTF-8'
         );
       }
