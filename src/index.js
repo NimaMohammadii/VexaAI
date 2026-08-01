@@ -1,34 +1,207 @@
-const style = `* { box-sizing: border-box; }
-html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#050505; }
-body { color:#fff; font-family:Inter,Arial,sans-serif; }
-.app { width:100%; height:100dvh; display:flex; flex-direction:column; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
-.welcome { flex:1; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,.55); font-size:24px; font-weight:700; }
-#messages { flex:1; overflow-y:auto; }
-.input-card { width:100%; display:flex; align-items:center; gap:10px; padding:12px; border-radius:24px; background:#151515; }
-.input-card input { flex:1; height:44px; background:transparent; border:0; outline:none; color:white; font-size:16px; }
-button { width:42px; height:42px; border-radius:50%; border:0; }`;
+import { AI_CHAT_HTML } from './ai-chat-html.js';
+import { getAiChatClient, getAiChatStyles } from './ai-chat-assets.js';
 
-const chat = `const input=document.getElementById('input');const messages=document.getElementById('messages');function addMessage(text){const item=document.createElement('div');item.className='message';item.textContent=text;messages.appendChild(item);}function send(){const text=input.value.trim();if(!text)return;addMessage(text);input.value='';}input.addEventListener('keydown',e=>{if(e.key==='Enter')send();});`;
+const DEFAULT_APP_URL = 'https://vchat.vexaagent.workers.dev';
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname === '/style.css') return new Response(style, {headers:{'content-type':'text/css'}});
-    if (url.pathname === '/chat.js') return new Response(chat, {headers:{'content-type':'application/javascript'}});
-
-    if (url.pathname === '/') {
-      return new Response(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><script src="https://telegram.org/js/telegram-web-app.js"></script><link rel="stylesheet" href="/style.css"></head><body><div class="app"><div class="welcome">How can I help?</div><div id="messages"></div><div class="input-card"><input id="input" placeholder="Message..."><button onclick="send()">↑</button></div></div><script>Telegram.WebApp.ready();Telegram.WebApp.expand();</script><script src="/chat.js"></script></body></html>`, {headers:{'content-type':'text/html;charset=UTF-8'}});
-    }
-
-    if (url.pathname === '/api/telegram') {
-      const update = await request.json();
-      if (update.message) {
-        await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:update.message.chat.id,text:'Open VexaAI Chat'})});
+    if (request.method === 'GET') {
+      if (
+        url.pathname === '/' ||
+        url.pathname === '/mini-app/chat' ||
+        url.pathname === '/mini-app/chat/'
+      ) {
+        return textResponse(AI_CHAT_HTML, 'text/html; charset=UTF-8');
       }
-      return new Response('OK');
+
+      if (url.pathname === '/mini-app/chat/styles.css') {
+        return textResponse(
+          await getAiChatStyles(),
+          'text/css; charset=UTF-8'
+        );
+      }
+
+      if (url.pathname === '/mini-app/chat/app.js') {
+        return textResponse(
+          await getAiChatClient(),
+          'application/javascript; charset=UTF-8'
+        );
+      }
+
+      if (url.pathname === '/mini-app') {
+        return Response.redirect(new URL('/', request.url).toString(), 302);
+      }
     }
 
-    return new Response('Not Found', {status:404});
+    if (
+      request.method === 'POST' &&
+      url.pathname === '/api/telegram'
+    ) {
+      return handleTelegramWebhook(request, env);
+    }
+
+    if (
+      request.method === 'POST' &&
+      url.pathname === '/mini-app/api/session'
+    ) {
+      return jsonResponse({
+        locked: false,
+        aiChatLock: {
+          locked: false
+        },
+        serverNow: Math.floor(Date.now() / 1000)
+      });
+    }
+
+    if (
+      request.method === 'POST' &&
+      url.pathname === '/mini-app/api/section-open'
+    ) {
+      return jsonResponse({ ok: true });
+    }
+
+    if (
+      request.method === 'POST' &&
+      url.pathname === '/mini-app/api/chat'
+    ) {
+      return proxyOrMissing(
+        request,
+        env.AI_CHAT_API_URL,
+        'AI chat backend is not configured',
+        'application/x-ndjson; charset=UTF-8'
+      );
+    }
+
+    if (
+      request.method === 'POST' &&
+      url.pathname === '/mini-app/api/image'
+    ) {
+      return proxyOrMissing(
+        request,
+        env.AI_IMAGE_API_URL,
+        'Image generation backend is not configured',
+        'application/json; charset=UTF-8'
+      );
+    }
+
+    return new Response('Not Found', {
+      status: 404,
+      headers: noStoreHeaders('text/plain; charset=UTF-8')
+    });
   }
 };
+
+async function handleTelegramWebhook(request, env) {
+  if (!env.BOT_TOKEN) {
+    return jsonResponse({ error: 'BOT_TOKEN is not configured' }, 500);
+  }
+
+  let update;
+
+  try {
+    update = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Invalid Telegram update' }, 400);
+  }
+
+  const message = update && update.message;
+  const chatId = message && message.chat && message.chat.id;
+
+  if (chatId) {
+    const appUrl = env.APP_URL || DEFAULT_APP_URL;
+
+    await fetch(
+      `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: 'Open VexaAI Chat',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: 'Open AI Chat',
+                  web_app: {
+                    url: appUrl
+                  }
+                }
+              ]
+            ]
+          }
+        })
+      }
+    );
+  }
+
+  return jsonResponse({ ok: true });
+}
+
+async function proxyOrMissing(
+  request,
+  targetUrl,
+  missingMessage,
+  contentType
+) {
+  if (!targetUrl) {
+    if (contentType.startsWith('application/x-ndjson')) {
+      return textResponse(
+        `${JSON.stringify({
+          type: 'error',
+          error: missingMessage
+        })}\n`,
+        contentType,
+        503
+      );
+    }
+
+    return jsonResponse({ error: missingMessage }, 503);
+  }
+
+  const body = await request.arrayBuffer();
+  const upstream = await fetch(targetUrl, {
+    method: 'POST',
+    headers: {
+      'content-type':
+        request.headers.get('content-type') || 'application/json',
+      accept: request.headers.get('accept') || '*/*'
+    },
+    body
+  });
+
+  const headers = new Headers(upstream.headers);
+  headers.set('cache-control', 'no-store');
+
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers
+  });
+}
+
+function textResponse(body, contentType, status = 200) {
+  return new Response(body, {
+    status,
+    headers: noStoreHeaders(contentType)
+  });
+}
+
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: noStoreHeaders('application/json; charset=UTF-8')
+  });
+}
+
+function noStoreHeaders(contentType) {
+  return {
+    'content-type': contentType,
+    'cache-control': 'no-cache, no-store, must-revalidate',
+    pragma: 'no-cache',
+    expires: '0'
+  };
+}
