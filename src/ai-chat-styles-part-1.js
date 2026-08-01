@@ -3,7 +3,7 @@ export const AI_CHAT_STYLES_PART_1 = String.raw`
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--ai-chat-layout-height:100dvh;--ai-chat-keyboard-inset:0px}
 html,body{margin:0;width:100%;height:var(--ai-chat-layout-height);min-height:var(--ai-chat-layout-height);background:#000!important;color:#fff;overflow:hidden;overscroll-behavior:none;font-family:var(--font-main)}
-body{position:relative}
+body{position:fixed;inset:0}
 button,textarea{font:inherit;font-family:var(--font-main)}
 button{border:0}
 .toast{position:fixed;left:50%;right:auto;bottom:calc(20px + env(safe-area-inset-bottom));width:max-content;max-width:min(410px,calc(100vw - 32px));min-height:39px;padding:10px 16px;border:1px solid rgba(255,255,255,.46);border-radius:15px;background:rgba(3,3,3,.96);box-shadow:0 16px 50px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;z-index:90;color:#fff;font-size:12.5px;font-weight:560;line-height:1.35;letter-spacing:-.012em;text-align:center;white-space:normal;opacity:0;visibility:hidden;transform:translate(-50%,14px) scale(.96);pointer-events:none;transition:opacity .22s ease,transform .3s cubic-bezier(.18,.86,.22,1),visibility 0s linear .3s}.toast.show{opacity:1;visibility:visible;transform:translate(-50%,0) scale(1);transition-delay:0s}
