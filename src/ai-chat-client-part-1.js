@@ -15,10 +15,12 @@ export const AI_CHAT_CLIENT_PART_1 = String.raw`
   var aiThinkingFrame=0;
   var aiThinkingSearchMix=0;
   var aiThinkingLastFrame=0;
+  var aiChatLayoutHeight=Math.max(1,Math.round(Number(document.documentElement.clientHeight)||Number(window.innerHeight)||0));
   function q(id){return document.getElementById(id)}
   function withoutTrailingDot(value){return String(value==null?'':value).replace(/[.!؟。]+$/u,'')}
   function toast(value){var node=q('toast');if(!node)return;node.textContent=withoutTrailingDot(value);node.classList.remove('show');void node.offsetWidth;node.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){node.classList.remove('show')},3200)}
-  function syncAiChatKeyboardInset(){var viewport=window.visualViewport;var layoutHeight=Math.max(1,Number(document.documentElement.clientHeight)||Number(window.innerHeight)||0);var visibleHeight=viewport&&Number(viewport.height)>0?Number(viewport.height):layoutHeight;var inset=Math.max(0,Math.round(layoutHeight-visibleHeight));document.documentElement.style.setProperty('--ai-chat-keyboard-inset',inset+'px')}
+  document.documentElement.style.setProperty('--ai-chat-layout-height',aiChatLayoutHeight+'px');
+  function syncAiChatKeyboardInset(){var viewport=window.visualViewport;var visibleHeight=viewport&&Number(viewport.height)>0?Number(viewport.height):aiChatLayoutHeight;var inset=Math.max(0,Math.round(aiChatLayoutHeight-visibleHeight));document.documentElement.style.setProperty('--ai-chat-keyboard-inset',inset+'px')}
   syncAiChatKeyboardInset();
   if(window.visualViewport)window.visualViewport.addEventListener('resize',syncAiChatKeyboardInset,{passive:true});
   async function api(path,body){var response;try{response=await fetch(path,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},cache:'no-store',body:JSON.stringify(Object.assign({initData:initData},body||{}))})}catch(error){throw new Error('Connection interrupted · Try again')}var data=await response.json().catch(function(){return{error:'Invalid response'}});if(!response.ok)throw new Error(data.error||'Request failed');return data}
