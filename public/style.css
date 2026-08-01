@@ -1,0 +1,57 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #050505;
+  color: white;
+  font-family: Inter, Arial, sans-serif;
+}
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.welcome {
+  opacity: .7;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+
+#messages {
+  width: min(700px, 90%);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.input-card {
+  width: min(700px, 90%);
+  margin-bottom: 24px;
+  padding: 12px;
+  border-radius: 22px;
+  background: #151515;
+  display: flex;
+  gap: 10px;
+}
+
+.input-card input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: white;
+  font-size: 16px;
+}
+
+button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+}
