@@ -15,14 +15,16 @@ export const AI_CHAT_CLIENT_PART_1 = String.raw`
   var aiThinkingFrame=0;
   var aiThinkingSearchMix=0;
   var aiThinkingLastFrame=0;
-  var aiChatLayoutHeight=Math.max(1,Math.round(Number(document.documentElement.clientHeight)||Number(window.innerHeight)||0));
+  var stableViewportHeight=0;
   function q(id){return document.getElementById(id)}
   function withoutTrailingDot(value){return String(value==null?'':value).replace(/[.!؟。]+$/u,'')}
   function toast(value){var node=q('toast');if(!node)return;node.textContent=withoutTrailingDot(value);node.classList.remove('show');void node.offsetWidth;node.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){node.classList.remove('show')},3200)}
-  document.documentElement.style.setProperty('--ai-chat-layout-height',aiChatLayoutHeight+'px');
-  function syncAiChatKeyboardInset(){var viewport=window.visualViewport;var visibleHeight=viewport&&Number(viewport.height)>0?Number(viewport.height):aiChatLayoutHeight;var inset=Math.max(0,Math.round(aiChatLayoutHeight-visibleHeight));document.documentElement.style.setProperty('--ai-chat-keyboard-inset',inset+'px')}
-  syncAiChatKeyboardInset();
-  if(window.visualViewport)window.visualViewport.addEventListener('resize',syncAiChatKeyboardInset,{passive:true});
+  function telegramViewportHeight(){var value=tg&&Number(tg.viewportHeight);return value>0?value:Number(window.innerHeight)||0}
+  function setAiChatKeyboardOffset(value){document.documentElement.style.setProperty('--ai-chat-keyboard-offset',Math.max(0,Math.round(Number(value)||0))+'px')}
+  function setAiChatPageHeight(value){document.documentElement.style.setProperty('--ai-chat-page-height',Math.max(1,Math.round(Number(value)||0))+'px')}
+  function syncAiChatKeyboardOffset(){var current=telegramViewportHeight();if(current>stableViewportHeight){stableViewportHeight=current;setAiChatPageHeight(stableViewportHeight)}setAiChatKeyboardOffset(stableViewportHeight-current)}
+  stableViewportHeight=Math.max(Number(tg&&tg.viewportStableHeight)||0,telegramViewportHeight());setAiChatPageHeight(stableViewportHeight);setAiChatKeyboardOffset(0);
+  if(tg&&tg.onEvent){try{tg.onEvent('viewportChanged',syncAiChatKeyboardOffset)}catch(e){}}
   async function api(path,body){var response;try{response=await fetch(path,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},cache:'no-store',body:JSON.stringify(Object.assign({initData:initData},body||{}))})}catch(error){throw new Error('Connection interrupted · Try again')}var data=await response.json().catch(function(){return{error:'Invalid response'}});if(!response.ok)throw new Error(data.error||'Request failed');return data}
   function aiOrbSpherePoint(index,count){var golden=Math.PI*(3-Math.sqrt(5));var y=1-2*(index+.5)/count;var radius=Math.sqrt(1-y*y);var angle=index*golden;return[radius*Math.cos(angle),y,radius*Math.sin(angle)]}
   function aiOrbProject(yaw,pitch,cx,cy){var sy=Math.sin(yaw),cyaw=Math.cos(yaw),sp=Math.sin(pitch),cp=Math.cos(pitch);return function(x,y,z){var rx=x*cyaw+z*sy;var rz=-x*sy+z*cyaw;var ry=y*cp-rz*sp;var depth=y*sp+rz*cp;return[cx+rx,cy-ry,depth]}}
