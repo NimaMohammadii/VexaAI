@@ -7,7 +7,7 @@ export const AI_CHAT_CLIENT_PART_4 = String.raw`  async function streamAiChat(bo
   var composer=q('aiChatComposer');if(composer)composer.addEventListener('submit',function(event){event.preventDefault();sendAiChat()});
   var send=q('aiChatSend');if(send)send.addEventListener('pointerdown',function(){var input=q('aiChatInput');aiChatSendKeepsKeyboard=!!(input&&document.activeElement===input)});
   var page=q('aiChatPage');if(page)page.addEventListener('pointerdown',function(event){var target=event.target;if(target&&target.closest&&target.closest('#aiChatComposer'))return;closeAiChatKeyboard()});
-  var input=q('aiChatInput');if(input)input.addEventListener('input',resizeAiChatInput);
+  var input=q('aiChatInput');if(input){input.addEventListener('pointerdown',function(event){if(document.activeElement===input)return;event.preventDefault();try{input.focus({preventScroll:true})}catch(error){input.focus()}});input.addEventListener('input',resizeAiChatInput)}
   var attach=q('aiChatAttach');if(attach)attach.addEventListener('click',function(){var file=q('aiChatFile');if(file)file.click()});
   var file=q('aiChatFile');if(file)file.addEventListener('change',function(){selectAiChatAttachment(file.files&&file.files[0])});
   syncAiChatEmptyState();startAiThinkingOrb();loadAiChat();
