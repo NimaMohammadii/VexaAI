@@ -79,30 +79,52 @@ function aiCodeParticleLine(target,from,to,count){
   }
 }
 
-function aiCodeCubeParticles(target,cx,cy,cz,size,count){
-  var half=size/2;
-  var vertices=[
-    [-half,-half,-half],[half,-half,-half],
-    [-half,half,-half],[half,half,-half],
-    [-half,-half,half],[half,-half,half],
-    [-half,half,half],[half,half,half]
-  ];
-  var edges=[
-    [0,1],[1,3],[3,2],[2,0],
-    [4,5],[5,7],[7,6],[6,4],
-    [0,4],[1,5],[2,6],[3,7]
-  ];
+function aiCodeParticleCircle(target,cx,cy,radius,count,z){
+  for(var index=0;index<count;index+=1){
+    var angle=-Math.PI/2+index/count*Math.PI*2;
+    target.push(aiCodeParticle(
+      cx+Math.cos(angle)*radius,
+      cy+Math.sin(angle)*radius,
+      z+Math.sin(angle*2)*.22
+    ));
+  }
+}
 
-  edges.forEach(function(edge){
-    var first=vertices[edge[0]];
-    var second=vertices[edge[1]];
-    aiCodeParticleLine(
-      target,
-      [cx+first[0],cy+first[1],cz+first[2]],
-      [cx+second[0],cy+second[1],cz+second[2]],
-      count
-    );
-  });
+function aiCodeParticleSquircle(target,count,width,height){
+  for(var index=0;index<count;index+=1){
+    var angle=-Math.PI/2+index/count*Math.PI*2;
+    var cosine=Math.cos(angle);
+    var sine=Math.sin(angle);
+    var x=Math.sign(cosine)*Math.pow(Math.abs(cosine),.5)*width/2;
+    var y=Math.sign(sine)*Math.pow(Math.abs(sine),.5)*height/2;
+    target.push(aiCodeParticle(
+      x,
+      y,
+      Math.sin(angle*2)*.42
+    ));
+  }
+}
+
+function aiCodeParticleCheck(target,count){
+  for(var index=0;index<count;index+=1){
+    var ratio=index/Math.max(1,count-1);
+    var x;
+    var y;
+
+    if(ratio<.38){
+      var first=ratio/.38;
+      var inverse=1-first;
+      x=inverse*inverse*-7.2+2*inverse*first*-4.2+first*first*-1.7;
+      y=inverse*inverse*-.1+2*inverse*first*3.4+first*first*5.1;
+    }else{
+      var second=(ratio-.38)/.62;
+      var remaining=1-second;
+      x=remaining*remaining*-1.7+2*remaining*second*2.5+second*second*8.1;
+      y=remaining*remaining*5.1+2*remaining*second*.8+second*second*-6.7;
+    }
+
+    target.push(aiCodeParticle(x,y,Math.sin(ratio*Math.PI)*.5));
+  }
 }
 
 function aiCodeBuildParticleShapes(){
@@ -112,230 +134,146 @@ function aiCodeBuildParticleShapes(){
   var writing=[];
   var applying=[];
   var checking=[];
+  var shapes=[inspect,writing,applying,checking];
 
-  aiCodeCubeParticles(inspect,0,0,0,20,10);
-  aiCodeParticleLine(inspect,[-8,0,-8],[8,0,-8],8);
-  aiCodeParticleLine(inspect,[0,-8,-8],[0,8,-8],8);
-  aiCodeParticleLine(inspect,[-8,0,8],[8,0,8],8);
-  aiCodeParticleLine(inspect,[0,-8,8],[0,8,8],8);
-  aiCodeParticleLine(inspect,[-5,0,-8],[-5,0,8],8);
-  aiCodeParticleLine(inspect,[5,0,-8],[5,0,8],8);
-
-  function writingZ(x,y){
-    return x*.18+y*.055;
-  }
-  aiCodeParticleLine(writing,[-12,-15,writingZ(-12,-15)],[12,-15,writingZ(12,-15)],10);
-  aiCodeParticleLine(writing,[12,-15,writingZ(12,-15)],[12,15,writingZ(12,15)],10);
-  aiCodeParticleLine(writing,[12,15,writingZ(12,15)],[-12,15,writingZ(-12,15)],10);
-  aiCodeParticleLine(writing,[-12,15,writingZ(-12,15)],[-12,-15,writingZ(-12,-15)],10);
-  aiCodeParticleLine(writing,[5,-15,writingZ(5,-15)],[12,-8,writingZ(12,-8)],6);
-  aiCodeParticleLine(writing,[12,-8,writingZ(12,-8)],[5,-8,writingZ(5,-8)],6);
-  aiCodeParticleLine(writing,[5,-8,writingZ(5,-8)],[5,-15,writingZ(5,-15)],6);
-  var rowLengths=[15,10,17,12,14,8,16,11];
-  rowLengths.forEach(function(length,row){
-    var y=-9+row*3.05;
-    aiCodeParticleLine(
-      writing,
-      [-8.5,y,writingZ(-8.5,y)],
-      [-8.5+length,y,writingZ(-8.5+length,y)],
-      12
-    );
+  shapes.forEach(function(shape){
+    aiCodeParticleSquircle(shape,96,24,24);
   });
-  aiCodeParticleLine(
-    writing,
-    [8.5,4.2,writingZ(8.5,4.2)],
-    [8.5,9.5,writingZ(8.5,9.5)],
-    14
-  );
 
-  aiCodeCubeParticles(applying,-6.4,0,0,11.6,5);
-  aiCodeCubeParticles(applying,6.4,0,0,11.6,5);
-  aiCodeParticleLine(applying,[-1.2,-4.5,-4.5],[1.2,-4.5,-4.5],8);
-  aiCodeParticleLine(applying,[-1.2,4.5,-4.5],[1.2,4.5,-4.5],8);
-  aiCodeParticleLine(applying,[-1.2,-4.5,4.5],[1.2,-4.5,4.5],8);
-  aiCodeParticleLine(applying,[-1.2,4.5,4.5],[1.2,4.5,4.5],8);
-  aiCodeParticleLine(applying,[-6.4,0,-7.4],[6.4,0,7.4],8);
-  aiCodeParticleLine(applying,[-6.4,0,7.4],[6.4,0,-7.4],8);
+  aiCodeParticleCircle(inspect,0,0,6.7,48,.1);
+  aiCodeParticleLine(inspect,[-6.2,0,.2],[6.2,0,.2],24);
 
-  for(var ring=0;ring<96;ring+=1){
-    var angle=ring/96*Math.PI*2;
-    checking.push(aiCodeParticle(
-      Math.cos(angle)*14.3,
-      Math.sin(angle)*14.3,
-      Math.sin(angle*2)*2.2
-    ));
+  aiCodeParticleLine(writing,[-7.2,-5.1,.1],[7.2,-5.1,.1],24);
+  aiCodeParticleLine(writing,[-7.2,0,.1],[5.2,0,.1],24);
+  aiCodeParticleLine(writing,[-7.2,5.1,.1],[2.9,5.1,.1],24);
+
+  aiCodeParticleCircle(applying,-4.4,0,4.1,24,.1);
+  aiCodeParticleCircle(applying,4.4,0,4.1,24,.1);
+  aiCodeParticleLine(applying,[-3.2,0,.25],[3.2,0,.25],24);
+
+  aiCodeParticleCheck(checking,72);
+
+  if(
+    inspect.length!==168
+    ||writing.length!==168
+    ||applying.length!==168
+    ||checking.length!==168
+  ){
+    throw new Error('Repository loader particle count mismatch');
   }
-  aiCodeParticleLine(checking,[-7,.3,-.8],[-2.1,5.3,.8],26);
-  aiCodeParticleLine(checking,[-2.1,5.3,.8],[8.3,-7.2,-.5],46);
 
-  aiCodeParticleShapes=[inspect,writing,applying,checking];
+  aiCodeParticleShapes=shapes;
   return aiCodeParticleShapes;
 }
 
 function drawAiCodeLoader(ctx,seconds,mix,stage,width,height,sourceDots){
   var amount=aiSmoothMorph(mix);
-  if(amount<.01)return;
+  if(amount<.001)return;
 
   var shapes=aiCodeBuildParticleShapes();
   var safeStage=Math.max(0,Math.min(3,stage));
   var fromStage=Math.floor(safeStage);
   var toStage=Math.min(3,fromStage+1);
-  var rawMorph=safeStage-fromStage;
-  var morph=aiSmoothMorph(rawMorph);
-  var transition=Math.sin(rawMorph*Math.PI);
+  var morph=aiSmoothMorph(safeStage-fromStage);
   var inspect=aiCodeStageWeight(safeStage,0);
   var writing=aiCodeStageWeight(safeStage,1);
   var applying=aiCodeStageWeight(safeStage,2);
   var checking=aiCodeStageWeight(safeStage,3);
-  var size=Math.min(width,height);
-  var scale=size/56;
-  var pulse=.5+.5*Math.sin(seconds*3.1);
-  var points=[];
-  var sourceCount=sourceDots&&sourceDots.length?sourceDots.length:0;
-
-  var rotateX=.52*inspect+.08*writing+.38*applying+.1*checking;
-  var rotateY=seconds*.58*inspect
-    +Math.sin(seconds*.7)*.09*writing
-    +seconds*.92*applying
-    +Math.sin(seconds*.55)*.13*checking;
-  var rotateZ=Math.sin(seconds*.48)*.14*inspect
-    -.11*writing
-    +Math.sin(seconds*.8)*.2*applying
-    +.04*checking;
-  var cosX=Math.cos(rotateX);
-  var sinX=Math.sin(rotateX);
-  var cosY=Math.cos(rotateY);
-  var sinY=Math.sin(rotateY);
-  var cosZ=Math.cos(rotateZ);
-  var sinZ=Math.sin(rotateZ);
   var from=shapes[fromStage];
   var to=shapes[toStage];
+  var sourceCount=sourceDots&&sourceDots.length?sourceDots.length:0;
+  var size=Math.min(width,height);
+  var scale=size/52;
+  var breathe=1+.018*Math.sin(seconds*2.15);
+  var rotation=Math.sin(seconds*.58)*.035;
+  var cosine=Math.cos(rotation);
+  var sine=Math.sin(rotation);
+  var scanY=-5.5+11*((seconds*.31)%1);
+  var merge=.5+.5*Math.sin(seconds*2.35);
+  var verify=1+.025*Math.sin(seconds*2.7);
+  var points=[];
 
   for(var index=0;index<from.length;index+=1){
     var first=from[index];
     var second=to[index];
-    var seed=Math.sin((index+1)*91.713)*43758.5453;
-    seed-=Math.floor(seed);
-    var arc=transition*(.55+seed*1.55);
     var x=first.x+(second.x-first.x)*morph;
     var y=first.y+(second.y-first.y)*morph;
     var z=first.z+(second.z-first.z)*morph;
+    var brightness=1;
 
-    x+=Math.sin(index*1.731+seconds*.82)*arc;
-    y+=Math.cos(index*1.247-seconds*.71)*arc;
-    z+=Math.sin(index*.913+seconds*.66)*arc*1.35;
-
-    if(inspect>.01){
-      var scan=(-15+30*((seconds*.34)%1));
-      z+=Math.max(0,1-Math.abs(y-scan)/5.5)*1.2*inspect;
-    }
-
-    if(writing>.01){
-      var rowWave=.5+.5*Math.sin(seconds*5.4-index*.31);
-      z+=rowWave*.55*writing;
-    }
-
-    if(applying>.01){
-      var mergePulse=.5+.5*Math.sin(seconds*2.7);
-      if(index<60)x+=mergePulse*1.15*applying;
-      else if(index<120)x-=mergePulse*1.15*applying;
-      else x+=Math.sin(seconds*4.6+index*.52)*.7*applying;
-    }
-
-    if(checking>.01){
-      if(index<96){
-        z+=Math.sin(seconds*2.2+index*.16)*.65*checking;
+    if(index<96){
+      x*=breathe;
+      y*=breathe;
+      brightness=.78+.16*(.5+.5*Math.sin(seconds*1.8+index*.11));
+    }else if(inspect>.01){
+      if(index>=144){
+        y+=scanY*inspect;
+        brightness=.72+.28*Math.max(0,1-Math.abs(y-scanY)/2.6);
       }else{
-        var checkPulse=1+.035*Math.sin(seconds*3.5);
-        x*=1+(checkPulse-1)*checking;
-        y*=1+(checkPulse-1)*checking;
+        brightness=.74+.22*(.5+.5*Math.sin(seconds*2.4+index*.12));
       }
     }
 
-    var y1=y*cosX-z*sinX;
-    var z1=y*sinX+z*cosX;
-    var x2=x*cosY+z1*sinY;
-    var z2=-x*sinY+z1*cosY;
-    var x3=x2*cosZ-y1*sinZ;
-    var y3=x2*sinZ+y1*cosZ;
-    var perspective=34/(34+z2);
-    var depth=Math.max(0,Math.min(1,(perspective-.62)/.85));
-    var brightness=.42+.58*depth;
-
-    if(inspect>.01){
-      brightness*=.72+.28*Math.max(0,1-Math.abs(y-scan)/6.5)*inspect;
-    }
-    if(writing>.01&&index>=154){
-      brightness*=.28+.72*(Math.sin(seconds*8)>0?1:0);
-    }
-    if(applying>.01){
-      brightness*=.7+.3*(.5+.5*Math.sin(seconds*5.2-index*.27));
-    }
-    if(checking>.01&&index<96){
-      brightness*=.74+.26*(.5+.5*Math.sin(seconds*3.7-index*.12));
+    if(writing>.01&&index>=96){
+      var local=index-96;
+      var row=Math.floor(local/24);
+      var position=local%24;
+      var cursor=(seconds*.72-row*.18)%1;
+      if(cursor<0)cursor+=1;
+      var progress=position/23;
+      brightness*=.56+.44*Math.max(0,1-Math.abs(progress-cursor)*4.8)*writing;
     }
 
-    var targetX=width/2+x3*perspective*scale;
-    var targetY=height/2+y3*perspective*scale;
-    var targetRadius=(.38+.31*depth+.08*pulse)*scale;
+    if(applying>.01&&index>=96){
+      if(index<120){
+        x+=merge*.82*applying;
+      }else if(index<144){
+        x-=merge*.82*applying;
+      }else{
+        brightness*=.64+.36*merge;
+      }
+    }
+
+    if(checking>.01&&index>=96){
+      x*=1+(verify-1)*checking;
+      y*=1+(verify-1)*checking;
+      var reveal=(seconds*.42)%1;
+      var checkProgress=(index-96)/71;
+      brightness*=.5+.5*Math.max(0,1-Math.abs(checkProgress-reveal)*5.2)*checking;
+    }
+
+    var rotatedX=x*cosine-y*sine;
+    var rotatedY=x*sine+y*cosine;
+    var depth=Math.max(0,Math.min(1,.5+z*.24));
+    var targetX=width/2+rotatedX*scale;
+    var targetY=height/2+rotatedY*scale;
+    var targetRadius=(.48+.15*depth)*scale;
+    var targetAlpha=Math.min(1,(.58+.34*depth)*brightness);
+    var targetWhite=.025+.13*(1-depth);
     var source=sourceCount
       ?sourceDots[Math.min(
         sourceCount-1,
-        Math.floor(index*sourceCount/from.length)
+        Math.round(index*(sourceCount-1)/(from.length-1))
       )]
       :null;
+    var sourceX=source&&Number.isFinite(source.x)?source.x:targetX;
+    var sourceY=source&&Number.isFinite(source.y)?source.y:targetY;
+    var sourceZ=source&&Number.isFinite(source.z)?source.z:z;
+    var sourceRadius=source&&Number.isFinite(source.r)?source.r:targetRadius;
+    var sourceAlpha=source&&Number.isFinite(source.a)?source.a:0;
+    var sourceWhite=source&&Number.isFinite(source.white)?source.white:targetWhite;
 
     points.push({
-      x:source?source.x+(targetX-source.x)*amount:targetX,
-      y:source?source.y+(targetY-source.y)*amount:targetY,
-      z:source?source.z+(z2-source.z)*amount:z2,
-      r:source?source.r+(targetRadius-source.r)*amount:targetRadius,
-      a:amount*brightness
+      x:sourceX+(targetX-sourceX)*amount,
+      y:sourceY+(targetY-sourceY)*amount,
+      z:sourceZ+(z-sourceZ)*amount,
+      r:sourceRadius+(targetRadius-sourceRadius)*amount,
+      a:sourceAlpha+(targetAlpha-sourceAlpha)*amount,
+      white:sourceWhite+(targetWhite-sourceWhite)*amount
     });
   }
 
-  points.sort(function(first,second){return second.z-first.z});
-
-  ctx.save();
-  ctx.globalCompositeOperation='lighter';
-
-  var halo=ctx.createRadialGradient(
-    width/2,height/2,0,
-    width/2,height/2,size*.31
-  );
-  halo.addColorStop(0,'rgba(177,83,226,'+(.11*amount)+')');
-  halo.addColorStop(1,'rgba(112,39,161,0)');
-  ctx.fillStyle=halo;
-  ctx.beginPath();
-  ctx.arc(width/2,height/2,size*.31,0,Math.PI*2);
-  ctx.fill();
-
-  points.forEach(function(point){
-    ctx.fillStyle='rgba(174,88,224,'+(point.a*.2)+')';
-    ctx.beginPath();
-    ctx.arc(point.x,point.y,point.r*2.7,0,Math.PI*2);
-    ctx.fill();
-  });
-
-  points.forEach(function(point){
-    ctx.fillStyle='rgba(211,153,242,'+(point.a*.54)+')';
-    ctx.beginPath();
-    ctx.arc(point.x,point.y,point.r*1.28,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle='rgba(255,250,255,'+(point.a*.9)+')';
-    ctx.beginPath();
-    ctx.arc(
-      point.x-point.r*.14,
-      point.y-point.r*.18,
-      point.r*.58,
-      0,
-      Math.PI*2
-    );
-    ctx.fill();
-  });
-
-  ctx.restore();
+  aiOrbPaint(ctx,points);
 }
 
 `;
@@ -424,21 +362,19 @@ const GHOST_ALPHA_MARKER = `        a:
           *(1-searchMorph)`;
 const GHOST_ALPHA_VALUE = `        a:
           (.1+.22*ghostDepth)
-          *(1-searchMorph)
-          *(1-codeMorph)`;
+          *(1-searchMorph)`;
 const DOT_ALPHA_MARKER = `          a:
             (.4+.6*depth)
             *(1-searchMorph)
             +(.16+.66*depth)
             *searchMorph
             *searchVisible`;
-const DOT_ALPHA_VALUE = `          a:(
+const DOT_ALPHA_VALUE = `          a:
             (.4+.6*depth)
             *(1-searchMorph)
             +(.16+.66*depth)
             *searchMorph
-            *searchVisible
-          )*(1-codeMorph)`;
+            *searchVisible`;
 const VOICE_BODY_MARKER = `      voiceMorph,
       width,
       height
@@ -449,16 +385,19 @@ const VOICE_BODY_VALUE = `      voiceMorph*(1-codeMorph),
       height
     );
     var aiCodeSourceDots=dots.slice();
-    aiOrbPaint(ctx,dots);
-    drawAiCodeLoader(
-      ctx,
-      seconds,
-      codeMorph,
-      codeStage,
-      width,
-      height,
-      aiCodeSourceDots
-    );`;
+    if(codeMorph<.001){
+      aiOrbPaint(ctx,dots);
+    }else{
+      drawAiCodeLoader(
+        ctx,
+        seconds,
+        codeMorph,
+        codeStage,
+        width,
+        height,
+        aiCodeSourceDots
+      );
+    }`;
 const INITIAL_MIX_MARKER = `    aiThinkingVoiceMix=
       initialState==='generating_voice'?1:0;
     aiThinkingLastFrame=0;`;
@@ -504,13 +443,13 @@ const APPROACH_VALUE = `        aiThinkingVoiceMix=approachAiThinkingMix(
           aiThinkingCodeMix,
           codeTarget,
           delta,
-          2.25
+          1.72
         );
         aiThinkingCodeStage=approachAiThinkingMix(
           aiThinkingCodeStage,
           codeStageTarget,
           delta,
-          2.4
+          1.58
         );`;
 const ACTIVE_DRAW_MARKER = `          aiThinkingSearchMix,
           aiThinkingVoiceMix
