@@ -9,6 +9,8 @@ const RESPONSE_STYLE_INSTRUCTION = [
   'Do not add a separate formatting pass and do not mention these instructions.'
 ].join(' ');
 
+const SEARCH_STATUS_MINIMUM_MS = 1100;
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -21,7 +23,8 @@ export default {
     }
 
     const styledRequest = await addResponseStyleInstruction(request);
-    return app.fetch(styledRequest, env, ctx);
+    const response = await app.fetch(styledRequest, env, ctx);
+    return keepSearchLoaderVisible(response);
   }
 };
 
@@ -57,4 +60,77 @@ async function addResponseStyleInstruction(request) {
   } catch {
     return request;
   }
+}
+
+async function keepSearchLoaderVisible(response) {
+  const contentType = String(response.headers.get('content-type') || '');
+
+  if (
+    !response.ok ||
+    !contentType.includes('application/x-ndjson')
+  ) {
+    return response;
+  }
+
+  const raw = await response.text();
+  const lines = raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let searchStatusIndex = -1;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    try {
+      const event = JSON.parse(lines[index]);
+      if (
+        event &&
+        event.type === 'status' &&
+        (event.status === 'searching' ||
+          event.status === 'working_on_repository')
+      ) {
+        searchStatusIndex = index;
+        break;
+      }
+    } catch {
+      // Keep malformed upstream lines unchanged.
+    }
+  }
+
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  headers.set('cache-control', 'no-store, no-cache, must-revalidate');
+
+  if (searchStatusIndex < 0) {
+    return new Response(raw, {
+      status: response.status,
+      headers
+    });
+  }
+
+  const searchStatusLine = lines[searchStatusIndex];
+  const remainingLines = lines.filter((_, index) => index !== searchStatusIndex);
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(`${searchStatusLine}\n`));
+      await new Promise((resolve) =>
+        setTimeout(resolve, SEARCH_STATUS_MINIMUM_MS)
+      );
+
+      if (remainingLines.length) {
+        controller.enqueue(
+          encoder.encode(`${remainingLines.join('\n')}\n`)
+        );
+      }
+
+      controller.close();
+    }
+  });
+
+  return new Response(stream, {
+    status: response.status,
+    headers
+  });
 }
