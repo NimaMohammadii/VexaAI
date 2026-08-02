@@ -18,12 +18,17 @@ const CHAT_REFINEMENTS = `
 .wave-seek{height:27px}
 .wave-svg{top:2px;height:23px}
 .wave-actions{gap:4px}
-.ai-chat-message.assistant.has-actions{flex-direction:column;align-items:flex-start;justify-content:flex-start;margin-bottom:31px}
+.ai-chat-message.assistant.has-actions{flex-direction:column;align-items:flex-start;justify-content:flex-start;margin-bottom:34px}
 .ai-chat-message.assistant.rtl.has-actions .ai-chat-message-content{align-self:flex-end}
-.ai-chat-message-actions{display:flex;align-items:center;justify-content:flex-start;gap:5px;margin-top:7px}
-.ai-chat-message-action{width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:rgba(255,255,255,.045);color:rgba(255,255,255,.56);box-shadow:inset 0 1px 0 rgba(255,255,255,.035);transition:transform .18s cubic-bezier(.2,.9,.2,1),background .18s ease,color .18s ease}
-.ai-chat-message-action svg{width:15px;height:15px}
-.ai-chat-message-action:active{transform:scale(.86);background:rgba(255,255,255,.1);color:#fff}
+.ai-chat-message-actions{position:relative;display:inline-flex;align-items:center;justify-content:flex-start;gap:4px;margin-top:9px;padding:3px;border:1px solid rgba(255,255,255,.055);border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.038),rgba(255,255,255,.018));box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 8px 24px rgba(0,0,0,.16);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.ai-chat-message-action{position:relative;width:31px;height:31px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:transparent;color:rgba(255,255,255,.55);box-shadow:none;-webkit-tap-highlight-color:transparent;transition:transform .2s cubic-bezier(.2,.9,.2,1),background .18s ease,color .18s ease,box-shadow .18s ease}
+.ai-chat-message-action:before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.018));opacity:0;transition:opacity .18s ease}
+.ai-chat-message-action svg{position:relative;z-index:1;width:16.5px;height:16.5px;display:block;overflow:visible;filter:drop-shadow(0 1px 1px rgba(0,0,0,.28));shape-rendering:geometricPrecision}
+.ai-chat-message-action svg *{vector-effect:non-scaling-stroke}
+@media(hover:hover){.ai-chat-message-action:hover{color:rgba(255,255,255,.92);background:rgba(255,255,255,.045);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}.ai-chat-message-action:hover:before{opacity:1}}
+.ai-chat-message-action:focus-visible{outline:2px solid rgba(174,151,255,.78);outline-offset:2px;color:#fff}
+.ai-chat-message-action:active{transform:scale(.9);background:rgba(255,255,255,.09);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.ai-chat-message-action:active:before{opacity:1}
 .ai-chat-rich-content{width:min(100%,680px);max-width:100%;white-space:normal!important;line-height:1.7!important;letter-spacing:-.012em;overflow-wrap:anywhere}
 .ai-chat-rich-content p{margin:0 0 12px}.ai-chat-rich-content p:last-child{margin-bottom:0}
 .ai-chat-rich-content strong{font-weight:720;color:#fff}
@@ -58,7 +63,7 @@ const CHAT_REFINEMENTS = `
 .ai-chat-message.rtl .github-connect-copy{text-align:right;align-self:flex-end}
 .ai-chat-message.rtl .github-card-body{text-align:right}
 .ai-thinking-row[data-state="working_on_repository"] span{color:rgba(232,227,255,.9)}
-@media(max-width:420px){.ai-chat-message.github-connect-message,.ai-chat-message.github-result-message{width:100%;max-width:100%}.github-connect-card,.github-result-card{border-radius:18px;padding:11px}.github-card-icon{width:40px;height:40px;flex-basis:40px;border-radius:13px}.github-card-button{min-width:70px;padding:0 13px}.github-card-body span{max-width:160px}.ai-code-block{border-radius:15px}.ai-code-block pre{padding:14px}}
+@media(max-width:420px){.ai-chat-message.github-connect-message,.ai-chat-message.github-result-message{width:100%;max-width:100%}.github-connect-card,.github-result-card{border-radius:18px;padding:11px}.github-card-icon{width:40px;height:40px;flex-basis:40px;border-radius:13px}.github-card-button{min-width:70px;padding:0 13px}.github-card-body span{max-width:160px}.ai-code-block{border-radius:15px}.ai-code-block pre{padding:14px}.ai-chat-message-actions{border-radius:12px}.ai-chat-message-action{width:32px;height:32px}}
 `;
 
 export const AI_CHAT_CSS = AI_CHAT_STYLES_SOURCE
