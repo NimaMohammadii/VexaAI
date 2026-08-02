@@ -193,6 +193,28 @@ async function handleAgentChat(request, env) {
   });
 }
 
+function getGitHubActivityStatus(action) {
+  const name = String((action && action.action) || '');
+
+  if (
+    name === 'create_pull_request' ||
+    name === 'update_pull_request' ||
+    name === 'merge_pull_request'
+  ) {
+    return 'applying_changes';
+  }
+
+  if (
+    name === 'pull_request_status' ||
+    name === 'rerun_workflow' ||
+    name === 'dispatch_workflow'
+  ) {
+    return 'checking_changes';
+  }
+
+  return 'inspecting_repo';
+}
+
 async function runAgentChat({
   apiKey,
   initData,
@@ -244,7 +266,7 @@ async function runAgentChat({
 
     usedGitHub = true;
     lastActionName = String(result.action || '');
-    emitStatus('working_on_repository');
+    emitStatus(getGitHubActivityStatus(result));
 
     try {
       lastActionResult = await executeGitHubAction(
@@ -334,6 +356,7 @@ async function askModel(apiKey, input, preferredVoice, emitStatus) {
   let completedResponse = null;
   let outputText = '';
   let searchReported = false;
+  let codeWritingReported = false;
 
   await readOpenAiEventStream(response.body, (event) => {
     if (!event || typeof event !== 'object') return;
@@ -348,6 +371,10 @@ async function askModel(apiKey, input, preferredVoice, emitStatus) {
       typeof event.delta === 'string'
     ) {
       outputText += event.delta;
+      if (!codeWritingReported && isCodeWritingOutput(outputText)) {
+        codeWritingReported = true;
+        emitStatus('writing_code');
+      }
     }
 
     if (event.type === 'response.completed' && event.response) {
@@ -384,6 +411,16 @@ function isWebSearchEvent(event) {
     event.type === 'response.output_item.added' &&
     event.item &&
     event.item.type === 'web_search_call'
+  );
+}
+
+function isCodeWritingOutput(text) {
+  const compact = String(text || '').replace(/\s+/g, '');
+  return !!(
+    compact.includes('"type":"github_action"') &&
+    (compact.includes('"action":"create_pull_request"') ||
+      compact.includes('"action":"update_pull_request"')) &&
+    compact.includes('"files":[')
   );
 }
 
