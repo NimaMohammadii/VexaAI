@@ -1,5 +1,5 @@
 name = "vchat"
-main = "src/github-worker.js"
+main = "src/chat-worker.js"
 compatibility_date = "2026-08-01"
 
 [vars]
