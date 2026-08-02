@@ -45,171 +45,295 @@ const GITHUB_HELPERS = `  var githubConnectionStorageKey='vexaGithubConnection';
 `;
 
 const CODE_LOADER_HELPERS = `  function aiCodeStateStage(state){
-    if(state==='writing_code')return 1;
-    if(state==='applying_changes')return 2;
-    if(state==='checking_changes')return 3;
-    return 0;
+  if(state==='writing_code')return 1;
+  if(state==='applying_changes')return 2;
+  if(state==='checking_changes')return 3;
+  return 0;
+}
+
+function aiIsCodeState(state){
+  return state==='inspecting_repo'
+    ||state==='writing_code'
+    ||state==='applying_changes'
+    ||state==='checking_changes';
+}
+
+function aiCodeStageWeight(stage,index){
+  return aiSmoothMorph(Math.max(0,1-Math.abs(stage-index)));
+}
+
+var aiCodeParticleShapes=null;
+
+function aiCodeParticle(x,y,z){
+  return{x:x,y:y,z:z};
+}
+
+function aiCodeParticleLine(target,from,to,count){
+  for(var index=0;index<count;index+=1){
+    var ratio=count===1?0:index/(count-1);
+    target.push(aiCodeParticle(
+      from[0]+(to[0]-from[0])*ratio,
+      from[1]+(to[1]-from[1])*ratio,
+      from[2]+(to[2]-from[2])*ratio
+    ));
   }
+}
 
-  function aiIsCodeState(state){
-    return state==='inspecting_repo'
-      ||state==='writing_code'
-      ||state==='applying_changes'
-      ||state==='checking_changes';
+function aiCodeCubeParticles(target,cx,cy,cz,size,count){
+  var half=size/2;
+  var vertices=[
+    [-half,-half,-half],[half,-half,-half],
+    [-half,half,-half],[half,half,-half],
+    [-half,-half,half],[half,-half,half],
+    [-half,half,half],[half,half,half]
+  ];
+  var edges=[
+    [0,1],[1,3],[3,2],[2,0],
+    [4,5],[5,7],[7,6],[6,4],
+    [0,4],[1,5],[2,6],[3,7]
+  ];
+
+  edges.forEach(function(edge){
+    var first=vertices[edge[0]];
+    var second=vertices[edge[1]];
+    aiCodeParticleLine(
+      target,
+      [cx+first[0],cy+first[1],cz+first[2]],
+      [cx+second[0],cy+second[1],cz+second[2]],
+      count
+    );
+  });
+}
+
+function aiCodeBuildParticleShapes(){
+  if(aiCodeParticleShapes)return aiCodeParticleShapes;
+
+  var inspect=[];
+  var writing=[];
+  var applying=[];
+  var checking=[];
+
+  aiCodeCubeParticles(inspect,0,0,0,20,10);
+  aiCodeParticleLine(inspect,[-8,0,-8],[8,0,-8],8);
+  aiCodeParticleLine(inspect,[0,-8,-8],[0,8,-8],8);
+  aiCodeParticleLine(inspect,[-8,0,8],[8,0,8],8);
+  aiCodeParticleLine(inspect,[0,-8,8],[0,8,8],8);
+  aiCodeParticleLine(inspect,[-5,0,-8],[-5,0,8],8);
+  aiCodeParticleLine(inspect,[5,0,-8],[5,0,8],8);
+
+  function writingZ(x,y){
+    return x*.18+y*.055;
   }
+  aiCodeParticleLine(writing,[-12,-15,writingZ(-12,-15)],[12,-15,writingZ(12,-15)],10);
+  aiCodeParticleLine(writing,[12,-15,writingZ(12,-15)],[12,15,writingZ(12,15)],10);
+  aiCodeParticleLine(writing,[12,15,writingZ(12,15)],[-12,15,writingZ(-12,15)],10);
+  aiCodeParticleLine(writing,[-12,15,writingZ(-12,15)],[-12,-15,writingZ(-12,-15)],10);
+  aiCodeParticleLine(writing,[5,-15,writingZ(5,-15)],[12,-8,writingZ(12,-8)],6);
+  aiCodeParticleLine(writing,[12,-8,writingZ(12,-8)],[5,-8,writingZ(5,-8)],6);
+  aiCodeParticleLine(writing,[5,-8,writingZ(5,-8)],[5,-15,writingZ(5,-15)],6);
+  var rowLengths=[15,10,17,12,14,8,16,11];
+  rowLengths.forEach(function(length,row){
+    var y=-9+row*3.05;
+    aiCodeParticleLine(
+      writing,
+      [-8.5,y,writingZ(-8.5,y)],
+      [-8.5+length,y,writingZ(-8.5+length,y)],
+      12
+    );
+  });
+  aiCodeParticleLine(
+    writing,
+    [8.5,4.2,writingZ(8.5,4.2)],
+    [8.5,9.5,writingZ(8.5,9.5)],
+    14
+  );
 
-  function aiCodeStageWeight(stage,index){
-    return aiSmoothMorph(Math.max(0,1-Math.abs(stage-index)));
+  aiCodeCubeParticles(applying,-6.4,0,0,11.6,5);
+  aiCodeCubeParticles(applying,6.4,0,0,11.6,5);
+  aiCodeParticleLine(applying,[-1.2,-4.5,-4.5],[1.2,-4.5,-4.5],8);
+  aiCodeParticleLine(applying,[-1.2,4.5,-4.5],[1.2,4.5,-4.5],8);
+  aiCodeParticleLine(applying,[-1.2,-4.5,4.5],[1.2,-4.5,4.5],8);
+  aiCodeParticleLine(applying,[-1.2,4.5,4.5],[1.2,4.5,4.5],8);
+  aiCodeParticleLine(applying,[-6.4,0,-7.4],[6.4,0,7.4],8);
+  aiCodeParticleLine(applying,[-6.4,0,7.4],[6.4,0,-7.4],8);
+
+  for(var ring=0;ring<96;ring+=1){
+    var angle=ring/96*Math.PI*2;
+    checking.push(aiCodeParticle(
+      Math.cos(angle)*14.3,
+      Math.sin(angle)*14.3,
+      Math.sin(angle*2)*2.2
+    ));
   }
+  aiCodeParticleLine(checking,[-7,.3,-.8],[-2.1,5.3,.8],26);
+  aiCodeParticleLine(checking,[-2.1,5.3,.8],[8.3,-7.2,-.5],46);
 
-  function drawAiCodeLoader(ctx,seconds,mix,stage,width,height){
-    var amount=aiSmoothMorph(mix);
-    if(amount<.01)return;
+  aiCodeParticleShapes=[inspect,writing,applying,checking];
+  return aiCodeParticleShapes;
+}
 
-    var size=Math.min(width,height);
-    var scale=size/48;
-    var inspect=aiCodeStageWeight(stage,0);
-    var writing=aiCodeStageWeight(stage,1);
-    var applying=aiCodeStageWeight(stage,2);
-    var checking=aiCodeStageWeight(stage,3);
-    var pulse=.5+.5*Math.sin(seconds*3.4);
-    var open=1.1*inspect+.96*writing+.73*applying+1.03*checking;
-    var drift=Math.sin(seconds*1.7)*.55*scale;
+function drawAiCodeLoader(ctx,seconds,mix,stage,width,height){
+  var amount=aiSmoothMorph(mix);
+  if(amount<.01)return;
 
-    ctx.save();
-    ctx.globalCompositeOperation='destination-out';
-    ctx.globalAlpha=amount;
-    ctx.fillRect(0,0,width,height);
-    ctx.restore();
+  var shapes=aiCodeBuildParticleShapes();
+  var safeStage=Math.max(0,Math.min(3,stage));
+  var fromStage=Math.floor(safeStage);
+  var toStage=Math.min(3,fromStage+1);
+  var rawMorph=safeStage-fromStage;
+  var morph=aiSmoothMorph(rawMorph);
+  var transition=Math.sin(rawMorph*Math.PI);
+  var inspect=aiCodeStageWeight(safeStage,0);
+  var writing=aiCodeStageWeight(safeStage,1);
+  var applying=aiCodeStageWeight(safeStage,2);
+  var checking=aiCodeStageWeight(safeStage,3);
+  var size=Math.min(width,height);
+  var scale=size/56;
+  var pulse=.5+.5*Math.sin(seconds*3.1);
+  var points=[];
 
-    ctx.save();
-    ctx.translate(width/2,height/2);
-    ctx.scale(.68+.32*amount,.68+.32*amount);
-    ctx.rotate((1-amount)*-.16);
-    ctx.globalCompositeOperation='lighter';
-    ctx.lineCap='round';
-    ctx.lineJoin='round';
+  ctx.save();
+  ctx.globalCompositeOperation='destination-out';
+  ctx.globalAlpha=amount;
+  ctx.fillRect(0,0,width,height);
+  ctx.restore();
 
-    var braceGradient=ctx.createLinearGradient(-17*scale,-16*scale,17*scale,16*scale);
-    braceGradient.addColorStop(0,'rgba(255,255,255,'+(.44+.4*amount)+')');
-    braceGradient.addColorStop(.5,'rgba(205,145,242,'+(.62+.35*amount)+')');
-    braceGradient.addColorStop(1,'rgba(255,255,255,'+(.38+.4*amount)+')');
-    ctx.strokeStyle=braceGradient;
-    ctx.lineWidth=(1.38+.38*pulse)*scale;
-    ctx.shadowColor='rgba(188,105,238,.58)';
-    ctx.shadowBlur=(4.2+3.8*pulse)*scale;
+  var rotateX=.52*inspect+.08*writing+.38*applying+.1*checking;
+  var rotateY=seconds*.58*inspect
+    +Math.sin(seconds*.7)*.09*writing
+    +seconds*.92*applying
+    +Math.sin(seconds*.55)*.13*checking;
+  var rotateZ=Math.sin(seconds*.48)*.14*inspect
+    -.11*writing
+    +Math.sin(seconds*.8)*.2*applying
+    +.04*checking;
+  var cosX=Math.cos(rotateX);
+  var sinX=Math.sin(rotateX);
+  var cosY=Math.cos(rotateY);
+  var sinY=Math.sin(rotateY);
+  var cosZ=Math.cos(rotateZ);
+  var sinZ=Math.sin(rotateZ);
+  var from=shapes[fromStage];
+  var to=shapes[toStage];
 
-    function brace(side){
-      var edge=side*11.4*scale*open;
-      var inner=side*6.3*scale*open;
-      var middle=side*14.1*scale*open;
-      ctx.beginPath();
-      ctx.moveTo(inner,-16*scale+drift);
-      ctx.bezierCurveTo(edge,-16*scale+drift,edge,-10.2*scale+drift,edge,-6.1*scale+drift);
-      ctx.bezierCurveTo(edge,-2.1*scale+drift,middle,-2*scale+drift,middle,drift);
-      ctx.bezierCurveTo(middle,2*scale+drift,edge,2.1*scale+drift,edge,6.1*scale+drift);
-      ctx.bezierCurveTo(edge,10.2*scale+drift,edge,16*scale+drift,inner,16*scale+drift);
-      ctx.stroke();
+  for(var index=0;index<from.length;index+=1){
+    var first=from[index];
+    var second=to[index];
+    var seed=Math.sin((index+1)*91.713)*43758.5453;
+    seed-=Math.floor(seed);
+    var arc=transition*(.55+seed*1.55);
+    var x=first.x+(second.x-first.x)*morph;
+    var y=first.y+(second.y-first.y)*morph;
+    var z=first.z+(second.z-first.z)*morph;
+
+    x+=Math.sin(index*1.731+seconds*.82)*arc;
+    y+=Math.cos(index*1.247-seconds*.71)*arc;
+    z+=Math.sin(index*.913+seconds*.66)*arc*1.35;
+
+    if(inspect>.01){
+      var scan=(-15+30*((seconds*.34)%1));
+      z+=Math.max(0,1-Math.abs(y-scan)/5.5)*1.2*inspect;
     }
 
-    brace(-1);
-    brace(1);
-    ctx.shadowBlur=0;
-
-    var coreRadius=(2.8+.55*pulse+1.5*applying)*scale;
-    var core=ctx.createRadialGradient(0,0,.2*scale,0,0,coreRadius*2);
-    core.addColorStop(0,'rgba(255,255,255,'+(.9*amount)+')');
-    core.addColorStop(.32,'rgba(218,175,255,'+(.65*amount)+')');
-    core.addColorStop(1,'rgba(135,50,190,0)');
-    ctx.fillStyle=core;
-    ctx.beginPath();
-    ctx.arc(0,0,coreRadius*2,0,Math.PI*2);
-    ctx.fill();
-
-    for(var ring=0;ring<20;ring+=1){
-      var angle=ring/20*Math.PI*2+seconds*(.5+applying*1.55+checking*.35);
-      var radius=coreRadius*(.9+.13*Math.sin(seconds*2.8+ring*.72));
-      var alpha=(.24+.55*(.5+.5*Math.sin(angle-seconds)))*amount;
-      ctx.fillStyle='rgba(240,218,255,'+alpha+')';
-      ctx.beginPath();
-      ctx.arc(Math.cos(angle)*radius,Math.sin(angle)*radius,(.3+.16*pulse)*scale,0,Math.PI*2);
-      ctx.fill();
+    if(writing>.01){
+      var rowWave=.5+.5*Math.sin(seconds*5.4-index*.31);
+      z+=rowWave*.55*writing;
     }
 
-    var lengths=[.88,.61,.76,.49];
-    var typing=(seconds*.48)%1;
-    var scan=(seconds*.36)%1;
-    var verify=(seconds*.3)%1;
-    for(var row=0;row<4;row+=1){
-      var y=(row-1.5)*5.05*scale;
-      var contraction=1-.49*applying;
-      var left=-7.7*scale*contraction;
-      var full=15.4*scale*lengths[row]*contraction;
-      var inspectVisible=.2+.8*Math.max(0,1-Math.abs(row/3-scan)*2.8);
-      var writeVisible=Math.min(1,Math.max(0,typing*1.55-row*.13));
-      var checkVisible=.24+.76*Math.max(0,1-Math.abs(row/3-verify)*3.3);
-      var visible=inspect*inspectVisible+writing*writeVisible+applying*(.44+.56*pulse)+checking*checkVisible;
-      visible=Math.max(.08,Math.min(1,visible));
-      ctx.strokeStyle='rgba(248,237,255,'+(visible*.84*amount)+')';
-      ctx.lineWidth=(.68+.32*visible)*scale;
-      ctx.beginPath();
-      ctx.moveTo(left,y);
-      ctx.lineTo(left+full*visible,y+Math.sin(seconds*3.2+row)*.28*scale*writing);
-      ctx.stroke();
+    if(applying>.01){
+      var mergePulse=.5+.5*Math.sin(seconds*2.7);
+      if(index<60)x+=mergePulse*1.15*applying;
+      else if(index<120)x-=mergePulse*1.15*applying;
+      else x+=Math.sin(seconds*4.6+index*.52)*.7*applying;
+    }
 
-      for(var dot=0;dot<9;dot+=1){
-        var progress=dot/8;
-        var dotVisible=progress<=visible?1:.07;
-        var travel=writing*Math.sin(seconds*4.3+dot*.55+row)*.35*scale+applying*(.5-progress)*2.7*scale*pulse;
-        ctx.fillStyle='rgba(213,166,241,'+((.18+.62*dotVisible)*amount)+')';
-        ctx.beginPath();
-        ctx.arc(left+full*progress+travel,y,(.27+.15*dotVisible)*scale,0,Math.PI*2);
-        ctx.fill();
+    if(checking>.01){
+      if(index<96){
+        z+=Math.sin(seconds*2.2+index*.16)*.65*checking;
+      }else{
+        var checkPulse=1+.035*Math.sin(seconds*3.5);
+        x*=1+(checkPulse-1)*checking;
+        y*=1+(checkPulse-1)*checking;
       }
     }
 
-    if(inspect+checking>.01){
-      var sweepY=(-14+28*((seconds*.37)%1))*scale;
-      var sweep=ctx.createLinearGradient(-9*scale,0,9*scale,0);
-      sweep.addColorStop(0,'rgba(255,255,255,0)');
-      sweep.addColorStop(.5,'rgba(255,255,255,'+(.48*(inspect+checking)*amount)+')');
-      sweep.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.strokeStyle=sweep;
-      ctx.lineWidth=.72*scale;
-      ctx.beginPath();
-      ctx.moveTo(-9*scale,sweepY);
-      ctx.lineTo(9*scale,sweepY);
-      ctx.stroke();
+    var y1=y*cosX-z*sinX;
+    var z1=y*sinX+z*cosX;
+    var x2=x*cosY+z1*sinY;
+    var z2=-x*sinY+z1*cosY;
+    var x3=x2*cosZ-y1*sinZ;
+    var y3=x2*sinZ+y1*cosZ;
+    var perspective=34/(34+z2);
+    var depth=Math.max(0,Math.min(1,(perspective-.62)/.85));
+    var brightness=.42+.58*depth;
+
+    if(inspect>.01){
+      brightness*=.72+.28*Math.max(0,1-Math.abs(y-scan)/6.5)*inspect;
+    }
+    if(writing>.01&&index>=154){
+      brightness*=.28+.72*(Math.sin(seconds*8)>0?1:0);
+    }
+    if(applying>.01){
+      brightness*=.7+.3*(.5+.5*Math.sin(seconds*5.2-index*.27));
+    }
+    if(checking>.01&&index<96){
+      brightness*=.74+.26*(.5+.5*Math.sin(seconds*3.7-index*.12));
     }
 
-    if(writing>.05){
-      var cursorAlpha=(.28+.72*(Math.sin(seconds*8)>0?1:0))*writing*amount;
-      ctx.strokeStyle='rgba(255,255,255,'+cursorAlpha+')';
-      ctx.lineWidth=1.05*scale;
-      ctx.beginPath();
-      ctx.moveTo(6.9*scale,-1.9*scale);
-      ctx.lineTo(6.9*scale,2.2*scale);
-      ctx.stroke();
-    }
-
-    if(checking>.05){
-      var checkAmount=aiSmoothMorph(checking)*amount;
-      ctx.strokeStyle='rgba(255,255,255,'+(.9*checkAmount)+')';
-      ctx.lineWidth=1.55*scale;
-      ctx.shadowColor='rgba(202,139,242,.7)';
-      ctx.shadowBlur=4*scale;
-      ctx.beginPath();
-      ctx.moveTo(-3.7*scale,1.2*scale);
-      ctx.lineTo(-.8*scale,4.2*scale);
-      ctx.lineTo(5.1*scale,-3.5*scale);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    points.push({
+      x:width/2+x3*perspective*scale,
+      y:height/2+y3*perspective*scale,
+      z:z2,
+      r:(.38+.31*depth+.08*pulse)*scale,
+      a:amount*brightness
+    });
   }
 
-`;
+  points.sort(function(first,second){return second.z-first.z});
 
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+
+  var halo=ctx.createRadialGradient(
+    width/2,height/2,0,
+    width/2,height/2,size*.31
+  );
+  halo.addColorStop(0,'rgba(177,83,226,'+(.11*amount)+')');
+  halo.addColorStop(1,'rgba(112,39,161,0)');
+  ctx.fillStyle=halo;
+  ctx.beginPath();
+  ctx.arc(width/2,height/2,size*.31,0,Math.PI*2);
+  ctx.fill();
+
+  points.forEach(function(point){
+    ctx.fillStyle='rgba(174,88,224,'+(point.a*.2)+')';
+    ctx.beginPath();
+    ctx.arc(point.x,point.y,point.r*2.7,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  points.forEach(function(point){
+    ctx.fillStyle='rgba(211,153,242,'+(point.a*.54)+')';
+    ctx.beginPath();
+    ctx.arc(point.x,point.y,point.r*1.28,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle='rgba(255,250,255,'+(point.a*.9)+')';
+    ctx.beginPath();
+    ctx.arc(
+      point.x-point.r*.14,
+      point.y-point.r*.18,
+      point.r*.58,
+      0,
+      Math.PI*2
+    );
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+`;
 const APPEND_MESSAGE_MARKER = `  function appendAiChatMessage`;
 const THINKING_MARKER = `  function showAiThinking`;
 const CONTENT_MARKER = `item.appendChild(content);list.appendChild(item);`;
