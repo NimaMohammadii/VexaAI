@@ -347,6 +347,9 @@ const TARGETS_VALUE = `      var voiceTarget=
       var codeStageTarget=codeTarget
         ?aiCodeStateStage(state)
         :aiThinkingCodeStage;
+      if(codeTarget&&aiThinkingCodeMix<.02){
+        aiThinkingCodeStage=codeStageTarget;
+      }
       var delta=aiThinkingLastFrame`;
 const REDUCED_MARKER = `        aiThinkingSearchMix=searchTarget;
         aiThinkingVoiceMix=voiceTarget;`;
