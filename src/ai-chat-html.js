@@ -25,6 +25,25 @@ export const AI_CHAT_HTML = `<!doctype html>
   <div id="toast" class="toast" role="status"></div>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="/mini-app/chat/creature.js?v=20260801-ai-chat-creature-rounded-jelly-2"></script>
-  <script type="module" src="/mini-app/chat/app.js?v=20260802-direct-search-loader-9"></script>
+  <script>
+    (function(){
+      if(typeof window.matchMedia!=='function')return;
+      var nativeMatchMedia=window.matchMedia.bind(window);
+      window.matchMedia=function(query){
+        var result=nativeMatchMedia(query);
+        if(String(query).trim()!=='(prefers-reduced-motion: reduce)'){
+          return result;
+        }
+        return new Proxy(result,{
+          get:function(target,property){
+            if(property==='matches')return false;
+            var value=Reflect.get(target,property,target);
+            return typeof value==='function'?value.bind(target):value;
+          }
+        });
+      };
+    })();
+  </script>
+  <script type="module" src="/mini-app/chat/app.js?v=20260802-smooth-search-morph-10"></script>
 </body>
 </html>`;
