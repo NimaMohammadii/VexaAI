@@ -86,40 +86,7 @@ const FINAL_REFINEMENTS = `
 @media(max-width:420px){.ai-chat-message-actions{gap:8px!important}.ai-chat-message-action{width:27px!important;height:27px!important}.github-result-link{max-width:calc(100vw - 116px)!important;font-size:12.5px!important}}
 `;
 
-const CODE_LOADER_THEME = `
-.ai-thinking-row[data-state="inspecting_repo"] .ai-thinking-orb,
-.ai-thinking-row[data-state="writing_code"] .ai-thinking-orb,
-.ai-thinking-row[data-state="applying_changes"] .ai-thinking-orb,
-.ai-thinking-row[data-state="checking_changes"] .ai-thinking-orb{
-  border-radius:50%;
-  filter:grayscale(1) saturate(0) brightness(1.18) contrast(1.16);
-  transform-origin:50% 50%;
-  animation:ai-code-orb-breathe 3.8s cubic-bezier(.4,0,.2,1) infinite;
-  will-change:transform,filter;
-}
-.ai-thinking-row[data-state="inspecting_repo"] span,
-.ai-thinking-row[data-state="writing_code"] span,
-.ai-thinking-row[data-state="applying_changes"] span,
-.ai-thinking-row[data-state="checking_changes"] span{
-  color:rgba(255,255,255,.86)!important;
-}
-@keyframes ai-code-orb-breathe{
-  0%,100%{transform:scale(1.055)}
-  50%{transform:scale(1.105)}
-}
-@media(prefers-reduced-motion:reduce){
-  .ai-thinking-row[data-state="inspecting_repo"] .ai-thinking-orb,
-  .ai-thinking-row[data-state="writing_code"] .ai-thinking-orb,
-  .ai-thinking-row[data-state="applying_changes"] .ai-thinking-orb,
-  .ai-thinking-row[data-state="checking_changes"] .ai-thinking-orb{
-    animation:none;
-    transform:scale(1.075);
-  }
-}
-`;
-
 export const AI_CHAT_CSS = AI_CHAT_STYLES_SOURCE
   .replace(OLD_SHARE_STYLE, NEW_SHARE_STYLE)
   + CHAT_REFINEMENTS
-  + FINAL_REFINEMENTS
-  + CODE_LOADER_THEME;
+  + FINAL_REFINEMENTS;
