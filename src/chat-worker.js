@@ -4,12 +4,12 @@ const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const FORMAT_MODEL = 'gpt-5.6-luna';
 
 const FORMAT_INSTRUCTIONS = `
-You select the most important phrases in an assistant response.
+You select only genuinely important phrases in an assistant response.
 Return exactly one JSON object: {"phrases":["exact phrase 1","exact phrase 2"]}.
-Choose 1 to 3 short, genuinely important phrases copied exactly from the input.
-Good choices are conclusions, important actions, warnings, statuses, file names, or key values.
+Choose zero, one, or at most two short phrases copied exactly from the input.
+Return an empty phrases array when the response has no important conclusion, warning, action, status, file name, or key value.
+Never select greetings, filler, routine confirmations, ordinary explanation, an entire sentence, or an entire paragraph.
 Each phrase must be a verbatim contiguous substring of the input.
-Do not select an entire sentence or paragraph unless the response is extremely short.
 Do not select text inside inline code, fenced code blocks, or URLs.
 Do not explain your choices and do not change the phrases.
 `;
@@ -103,7 +103,7 @@ async function addMeaningfulEmphasis(original, env) {
         model: FORMAT_MODEL,
         instructions: FORMAT_INSTRUCTIONS,
         input: [{ role: 'user', content: text.slice(0, 16000) }],
-        max_output_tokens: 1000,
+        max_output_tokens: 700,
         store: false
       })
     });
@@ -126,18 +126,18 @@ function applyPhraseEmphasis(text, rawPhrases) {
   const selected = [];
   const seen = new Set();
 
-  for (const rawPhrase of rawPhrases.slice(0, 8)) {
+  for (const rawPhrase of rawPhrases.slice(0, 5)) {
     const phrase = String(rawPhrase || '');
     const normalized = phrase.trim();
 
     if (
       !normalized ||
       normalized.length < 2 ||
-      normalized.length > 120 ||
+      normalized.length > 90 ||
       normalized.includes('\n') ||
       normalized.includes('**') ||
       seen.has(normalized) ||
-      normalized.length >= Math.max(12, text.trim().length * 0.72)
+      normalized.length >= Math.max(12, text.trim().length * 0.45)
     ) {
       continue;
     }
@@ -147,7 +147,7 @@ function applyPhraseEmphasis(text, rawPhrases) {
 
     seen.add(normalized);
     selected.push(range);
-    if (selected.length === 3) break;
+    if (selected.length === 2) break;
   }
 
   if (!selected.length) return text;
