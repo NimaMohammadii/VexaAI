@@ -44,6 +44,9 @@ const GITHUB_HELPERS = `  var githubConnectionStorageKey='vexaGithubConnection';
   function appendGitHubResultLink(data){if(!data||typeof data!=='object')return;var list=q('aiChatMessages');if(!list)return;var url=String(data.url||'');if(!url)return;var label='View changes';var kind=String(data.kind||'');if(kind==='pull_request'&&data.number)label='Open pull request #'+String(data.number);else if(kind==='merged'&&data.number)label='View merged pull request #'+String(data.number);else if(kind==='status'&&data.number)label='View pull request #'+String(data.number);else if(kind==='workflow')label='View workflow';var messages=list.querySelectorAll('.ai-chat-message.assistant.has-actions');var item=messages[messages.length-1];var actions=item&&item.querySelector('.ai-chat-message-actions');if(!actions)return;var oldLink=actions.querySelector('.github-result-link');if(oldLink)oldLink.remove();var link=document.createElement('button');link.type='button';link.className='github-result-link';link.textContent=label;link.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openGitHubExternal(url)});actions.insertBefore(link,actions.firstChild);item.classList.add('has-github-result');scrollAiChat()}
 `;
 
+const SEARCH_LOADER_HELPERS = `  function shouldUseAiSearchLoader(value){var text=String(value||'').toLowerCase().replace(/[\u200c\u200f]/g,' ');return /(^|\s)(search|browse|look\s*up|web\s*search|online\s*search|سرچ|جستجو|جست\s+وجو|اینترنت|آنلاین)(\s|$)/i.test(text)||/(latest|current|today|news|price|weather|جدیدترین|آخرین|امروز|اخبار|قیمت|هوا)/i.test(text)}
+`;
+
 const APPEND_MESSAGE_MARKER = `  function appendAiChatMessage`;
 const THINKING_MARKER = `  function showAiThinking`;
 const CONTENT_MARKER = `item.appendChild(content);list.appendChild(item);`;
@@ -76,6 +79,11 @@ const WORKING_STATUS_VALUE = `    }else if(state==='working_on_repository'){
       next='generating_voice';
       labelText='Generating voice';
     }`;
+const SHOW_THINKING_MARKER = `    showAiThinking();`;
+const SHOW_THINKING_WITH_SEARCH = `    showAiThinking();
+    if(shouldUseAiSearchLoader(message)){
+      setAiThinkingState('searching');
+    }`;
 const LOAD_MARKER = `  async function loadAiChat(){`;
 const LOAD_WITH_CAPTURE = `  captureGitHubConnection();
   async function loadAiChat(){`;
@@ -92,13 +100,14 @@ const SECTION_OPEN_WITH_RESUME = `      api(
 let builtSource = AI_CHAT_SOURCE;
 builtSource = replaceRequired(builtSource, OLD_SCROLL, NEW_SCROLL, 'scroll');
 builtSource = replaceRequired(builtSource, OLD_SHARE_ICON, NEW_SHARE_ICON, 'share icon');
-builtSource = replaceRequired(builtSource, APPEND_MESSAGE_MARKER, MESSAGE_ACTION_HELPERS + APPEND_MESSAGE_MARKER, 'message helpers');
+builtSource = replaceRequired(builtSource, APPEND_MESSAGE_MARKER, SEARCH_LOADER_HELPERS + MESSAGE_ACTION_HELPERS + APPEND_MESSAGE_MARKER, 'message helpers');
 builtSource = replaceRequired(builtSource, THINKING_MARKER, GITHUB_HELPERS + THINKING_MARKER, 'GitHub helpers');
 builtSource = replaceRequired(builtSource, CONTENT_MARKER, CONTENT_WITH_ACTIONS, 'message actions');
 builtSource = replaceRequired(builtSource, RENDER_MARKER, RENDER_WITH_CODE_DECORATION, 'code blocks');
 builtSource = replaceRequired(builtSource, GITHUB_REQUEST_MARKER, GITHUB_REQUEST_VALUE, 'GitHub connection request');
 builtSource = replaceRequired(builtSource, RESULT_MARKER, RESULT_WITH_GITHUB, 'GitHub result');
 builtSource = replaceRequired(builtSource, WORKING_STATUS_MARKER, WORKING_STATUS_VALUE, 'repository status');
+builtSource = replaceRequired(builtSource, SHOW_THINKING_MARKER, SHOW_THINKING_WITH_SEARCH, 'search loader start');
 builtSource = replaceRequired(builtSource, LOAD_MARKER, LOAD_WITH_CAPTURE, 'connection capture');
 builtSource = replaceRequired(builtSource, SECTION_OPEN_MARKER, SECTION_OPEN_WITH_RESUME, 'connection resume');
 
