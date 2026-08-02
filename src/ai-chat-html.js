@@ -43,55 +43,7 @@ export const AI_CHAT_HTML = `<!doctype html>
         });
       };
     })();
-
-    (function(){
-      var searchRequested=false;
-      var thinkingHoldMs=160;
-
-      function isSearchRequest(value){
-        var text=String(value||'')
-          .toLowerCase()
-          .replace(/[\u200c\u200f]/g,' ');
-
-        return /(search|browse|look\s*up|find\s+online|web|internet|latest|current|today|news|price|weather|github|repository|سرچ|جستجو|جست\s+وجو|بگرد|پیدا\s+کن|چک\s+کن|بررسی\s+کن|تحقیق\s+کن|اینترنت|آنلاین|وب|آخرین|جدیدترین|به\s*روز|امروز|اخبار|قیمت|آب\s*و\s*هوا|هوا|گیت\s*هاب|گیتهاب|ریپو)/i.test(text);
-      }
-
-      document.addEventListener('submit',function(event){
-        var form=event.target;
-        if(!form||form.id!=='aiChatComposer')return;
-        var input=document.getElementById('aiChatInput');
-        searchRequested=isSearchRequest(input&&input.value);
-      },true);
-
-      new MutationObserver(function(){
-        if(!searchRequested)return;
-
-        var row=document.getElementById('aiThinkingRow');
-        if(!row||row.getAttribute('data-search-transition')==='1')return;
-
-        row.setAttribute('data-search-transition','1');
-        row.setAttribute('data-state','thinking');
-
-        var label=row.querySelector('span');
-        if(label)label.textContent='Thinking';
-
-        searchRequested=false;
-
-        setTimeout(function(){
-          if(!row.isConnected||document.getElementById('aiThinkingRow')!==row){
-            return;
-          }
-
-          row.setAttribute('data-state','searching');
-          var currentLabel=row.querySelector('span');
-          if(currentLabel)currentLabel.textContent='Searching…';
-        },thinkingHoldMs);
-      }).observe(document.documentElement,{
-        childList:true,
-        subtree:true
-      });
-    })();
   </script>
-  <script type="module" src="/mini-app/chat/app.js?v=20260802-thinking-then-search-12"></script>
+  <script type="module" src="/mini-app/chat/app.js?v=20260802-live-ai-tool-states-13"></script>
 </body>
 </html>`;
