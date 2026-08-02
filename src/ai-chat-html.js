@@ -8,11 +8,11 @@ export const AI_CHAT_HTML = `<!doctype html>
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
   <title>AI Chat</title>
-  <link rel="stylesheet" href="/mini-app/chat/styles.css?v=20260802-minimal-actions-link-4"/>
+  <link rel="stylesheet" href="/mini-app/chat/styles.css?v=20260802-message-actions-brighter-5"/>
   <style>
-    .ai-chat-message-action[aria-label="Copy message"] svg rect,
-    .ai-chat-message-action[aria-label="Copy message"] svg path{opacity:1}
-    .ai-chat-message-action[aria-label="Copy message"] svg path{stroke-linecap:butt}
+    .ai-chat-message-action{color:rgba(255,255,255,.72)!important}
+    .ai-chat-message-action svg,.ai-chat-message-action svg *{opacity:1!important}
+    @media(hover:hover){.ai-chat-message-action:hover{color:rgba(255,255,255,.94)!important}}
   </style>
 </head>
 <body>
@@ -47,7 +47,32 @@ export const AI_CHAT_HTML = `<!doctype html>
         });
       };
     })();
+
+    (function(){
+      var copySvg='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+        +'<path d="M9.2 7.6h7A2.8 2.8 0 0 1 19 10.4v6a2.8 2.8 0 0 1-2.8 2.8h-6a2.8 2.8 0 0 1-2.8-2.8v-7a1.8 1.8 0 0 1 1.8-1.8Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>'
+        +'<path d="M15.8 7.6v-.8A2.8 2.8 0 0 0 13 4H6.8A2.8 2.8 0 0 0 4 6.8V13a2.8 2.8 0 0 0 2.8 2.8h.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>'
+        +'</svg>';
+
+      function refreshCopyIcons(root){
+        var scope=root&&root.querySelectorAll?root:document;
+        scope.querySelectorAll('.ai-chat-message-action[aria-label="Copy message"]').forEach(function(button){
+          if(button.getAttribute('data-clean-copy-icon')==='1')return;
+          button.setAttribute('data-clean-copy-icon','1');
+          button.innerHTML=copySvg;
+        });
+      }
+
+      refreshCopyIcons(document);
+      new MutationObserver(function(records){
+        records.forEach(function(record){
+          record.addedNodes.forEach(function(node){
+            if(node.nodeType===1)refreshCopyIcons(node);
+          });
+        });
+      }).observe(document.documentElement,{childList:true,subtree:true});
+    })();
   </script>
-  <script type="module" src="/mini-app/chat/app.js?v=20260802-live-ai-tool-states-13"></script>
+  <script type="module" src="/mini-app/chat/app.js?v=20260802-clean-copy-svg-14"></script>
 </body>
 </html>`;
