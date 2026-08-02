@@ -28,6 +28,8 @@ Use the user's explicitly requested voice. Otherwise use the preferred voice sup
 For speech requests, the text field must contain only the text that should be spoken.
 Eleven v3 audio tags are supported. When the user asks for a specific emotion, delivery, or non-verbal reaction, you may add suitable tags such as [whispers], [shouts], [sad], [happily], [laughs], [sighs], or [clears throat]. Do not add tags unnecessarily or change the intended words.
 
+Use web search whenever the user asks to search, needs current information, or the answer depends on facts that may have changed. Base the answer on the search results and keep the final response inside the required JSON object.
+
 When the user explicitly requests an image:
 {"type":"image_request","prompt":"the image prompt","size":"1024x1024"}
 `;
@@ -190,6 +192,13 @@ async function handleAiChat(request, env) {
         instructions:
           `${AI_CHAT_INSTRUCTIONS}\nPreferred voice: ${preferredVoice}`,
         input,
+        tools: [
+          {
+            type: 'web_search',
+            search_context_size: 'medium'
+          }
+        ],
+        tool_choice: 'auto',
         max_output_tokens: 2048,
         store: false
       })
@@ -232,7 +241,9 @@ async function handleAiChat(request, env) {
       status:
         result.type === 'speech_request'
           ? 'generating_voice'
-          : 'thinking'
+          : responseUsedWebSearch(data)
+            ? 'searching'
+            : 'thinking'
     },
     {
       type: 'result',
@@ -542,6 +553,11 @@ function buildOpenAiMessage(message) {
     role,
     content
   };
+}
+
+function responseUsedWebSearch(data) {
+  const output = data && Array.isArray(data.output) ? data.output : [];
+  return output.some((item) => item && item.type === 'web_search_call');
 }
 
 function extractOpenAiText(data) {
