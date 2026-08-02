@@ -46,24 +46,25 @@ const CHAT_REFINEMENTS = `
 .ai-code-block pre{margin:0;padding:15px 16px 17px;overflow:auto;-webkit-overflow-scrolling:touch}
 .ai-code-block code{display:block;min-width:max-content;white-space:pre;tab-size:2;font:500 12.5px/1.62 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;color:rgba(244,241,255,.91);direction:ltr;text-align:left}
 .ai-chat-message.rtl .ai-chat-rich-content{text-align:right}.ai-chat-message.rtl .ai-code-block{direction:ltr;text-align:left}
-.ai-chat-message.github-connect-message,.ai-chat-message.github-result-message{width:min(100%,430px);max-width:430px;display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-top:1px;margin-bottom:22px}
+.ai-chat-message.github-connect-message{width:min(100%,430px);max-width:430px;display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-top:1px;margin-bottom:22px}
 .github-connect-copy{max-width:92%;font-size:15px;line-height:1.62;letter-spacing:-.012em;color:rgba(255,255,255,.9);white-space:pre-wrap;overflow-wrap:anywhere}
-.github-connect-card,.github-result-card{position:relative;width:100%;min-height:76px;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 13px;border:1px solid rgba(255,255,255,.085);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.061),rgba(255,255,255,.024));box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 16px 40px rgba(0,0,0,.24);overflow:hidden;isolation:isolate}
-.github-connect-card:before,.github-result-card:before{content:"";position:absolute;z-index:-1;left:-30px;top:-44px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(92,64,190,.17),rgba(92,64,190,0) 70%);pointer-events:none}
-.github-result-card{min-height:70px;margin-top:-3px}
-.github-card-icon{width:43px;height:43px;flex:0 0 43px;display:grid;place-items:center;border-radius:14px;background:rgba(114,88,205,.14);border:1px solid rgba(172,151,255,.1);color:rgba(229,224,255,.94);box-shadow:inset 0 1px 0 rgba(255,255,255,.055)}
-.github-card-icon svg{width:23px;height:23px;display:block}
-.github-card-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px;text-align:left}
-.github-card-body strong{font-size:14px;line-height:1.15;font-weight:650;letter-spacing:-.015em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.github-card-body span{font-size:11.5px;line-height:1.35;font-weight:430;letter-spacing:-.006em;color:rgba(255,255,255,.48);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.github-card-button{height:36px;min-width:76px;display:grid;place-items:center;padding:0 15px;border:0;border-radius:12px;background:#f4f2f8;color:#0b0a0d;font-size:12px;font-weight:680;letter-spacing:-.01em;box-shadow:0 5px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.72);transition:transform .18s cubic-bezier(.2,.9,.2,1),opacity .18s ease,background .18s ease}
-.github-card-button.compact{min-width:61px;height:34px;padding:0 13px}
-.github-card-button:active{transform:scale(.94);background:#fff}
-.github-card-button:disabled{opacity:.5}
+.github-connect-row{width:100%;display:flex;align-items:center;gap:10px}
+.github-connect-icon{width:28px;height:40px;flex:0 0 28px;display:grid;place-items:center;color:rgba(255,255,255,.78)}
+.github-connect-icon svg{width:22px;height:22px;display:block}
+.github-connect-card{position:relative;min-width:0;min-height:40px;flex:1;display:flex;align-items:center;gap:6px;padding:3px;border:0;border-radius:16px;background:var(--ticket-glass-bg);box-shadow:var(--ticket-glass-shadow);backdrop-filter:blur(10px) saturate(1.12);-webkit-backdrop-filter:blur(10px) saturate(1.12)}
+.github-card-body{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 8px;text-align:left}
+.github-card-body strong{font-size:13px;line-height:1.1;font-weight:650;letter-spacing:-.015em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.github-card-body span{font-size:10.5px;line-height:1.2;font-weight:430;letter-spacing:-.006em;color:rgba(255,255,255,.42);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.github-card-button{width:auto;min-width:72px;height:34px;flex:0 0 auto;display:grid;place-items:center;padding:0 14px;border:0;border-radius:13px;background:linear-gradient(145deg,rgba(54,18,72,.88),rgba(23,8,31,.82));color:rgba(255,255,255,.9);font-size:12px;font-weight:680;letter-spacing:-.01em;box-shadow:inset 0 1px 0 rgba(232,202,255,.15),inset 0 -1px 0 rgba(0,0,0,.18),inset 0 0 18px rgba(121,52,161,.12),0 10px 24px rgba(0,0,0,.24);transition:transform .2s cubic-bezier(.16,1,.3,1),opacity .18s ease,background .2s ease,box-shadow .2s ease}
+.github-card-button:active{transform:scale(.88)}
+.github-card-button:disabled{opacity:.3}
 .ai-chat-message.rtl .github-connect-copy{text-align:right;align-self:flex-end}
 .ai-chat-message.rtl .github-card-body{text-align:right}
+.ai-chat-message.github-result-message{width:auto;display:flex;justify-content:flex-start;margin-top:-10px;margin-bottom:22px}
+.github-result-link{display:inline-flex;align-items:center;padding:0;border:0;background:transparent;color:rgba(210,185,255,.9);font-size:13px;font-weight:620;line-height:1.45;letter-spacing:-.012em;text-decoration:none;transition:opacity .18s ease,transform .18s ease}
+.github-result-link:active{opacity:.62;transform:scale(.98)}
 .ai-thinking-row[data-state="working_on_repository"] span{color:rgba(232,227,255,.9)}
-@media(max-width:420px){.ai-chat-message.github-connect-message,.ai-chat-message.github-result-message{width:100%;max-width:100%}.github-connect-card,.github-result-card{border-radius:18px;padding:11px}.github-card-icon{width:40px;height:40px;flex-basis:40px;border-radius:13px}.github-card-button{min-width:70px;padding:0 13px}.github-card-body span{max-width:160px}.ai-code-block{border-radius:15px}.ai-code-block pre{padding:14px}.ai-chat-message-actions{border-radius:12px}.ai-chat-message-action{width:32px;height:32px}}
+@media(max-width:420px){.ai-chat-message.github-connect-message{width:100%;max-width:100%}.github-connect-row{gap:8px}.github-connect-icon{width:24px;flex-basis:24px}.github-connect-icon svg{width:20px;height:20px}.github-card-body span{max-width:150px}.github-card-button{min-width:68px;padding:0 12px}.ai-code-block{border-radius:15px}.ai-code-block pre{padding:14px}.ai-chat-message-actions{border-radius:12px}.ai-chat-message-action{width:32px;height:32px}}
 `;
 
 export const AI_CHAT_CSS = AI_CHAT_STYLES_SOURCE
