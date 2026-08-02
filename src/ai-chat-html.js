@@ -9,7 +9,11 @@ export const AI_CHAT_HTML = `<!doctype html>
   <meta http-equiv="Expires" content="0"/>
   <title>AI Chat</title>
   <link rel="stylesheet" href="/mini-app/chat/styles.css?v=20260802-minimal-actions-link-4"/>
-  <style>.ai-chat-message-action[aria-label="Copy message"] svg path{stroke-linecap:butt;opacity:.72}</style>
+  <style>
+    .ai-chat-message-action[aria-label="Copy message"] svg rect,
+    .ai-chat-message-action[aria-label="Copy message"] svg path{opacity:1}
+    .ai-chat-message-action[aria-label="Copy message"] svg path{stroke-linecap:butt}
+  </style>
 </head>
 <body>
   <section id="aiChatPage" class="ai-chat-page" aria-hidden="false">
