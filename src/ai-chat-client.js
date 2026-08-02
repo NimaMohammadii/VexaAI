@@ -10,18 +10,26 @@ const AI_CHAT_SOURCE = [
   AI_CHAT_CLIENT_PART_4
 ].join('').replace(/\\\\/g, '\\');
 
+function replaceRequired(source, marker, replacement, label) {
+  if (!source.includes(marker)) {
+    throw new Error(`AI chat build marker missing: ${label}`);
+  }
+  return source.replace(marker, replacement);
+}
+
 const OLD_SCROLL = `  function scrollAiChat(){var list=q('aiChatMessages');if(!list)return;requestAnimationFrame(function(){var messages=list.querySelectorAll('.ai-chat-message');var latest=messages[messages.length-1];if(!latest)return;var top=parseFloat(getComputedStyle(list).paddingTop)||0;list.scrollTop=Math.max(0,list.scrollTop+latest.getBoundingClientRect().top-list.getBoundingClientRect().top-top)})}`;
 const NEW_SCROLL = `  function scrollAiChat(){var list=q('aiChatMessages');if(!list)return;requestAnimationFrame(function(){var messages=list.querySelectorAll('.ai-chat-message.user');var latest=messages[messages.length-1];if(!latest)return;var top=(parseFloat(getComputedStyle(list).paddingTop)||0)+22;list.scrollTop=Math.max(0,list.scrollTop+latest.getBoundingClientRect().top-list.getBoundingClientRect().top-top)})}`;
+
 const OLD_SHARE_ICON = `      +'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
       +'<path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 13.5v4A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-4" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>'`;
 const NEW_SHARE_ICON = `      +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
       +'<path d="M12 15.5V4m0 0L7.5 8.5M12 4l4.5 4.5M5.5 13.5v4A2.5 2.5 0 0 0 8 20h8a2.5 2.5 0 0 0 2.5-2.5v-4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'`;
+
 const MESSAGE_ACTION_HELPERS = `  function copyAiChatMessageText(value){var text=String(value||'');if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(text);return new Promise(function(resolve,reject){var field=document.createElement('textarea');field.value=text;field.setAttribute('readonly','');field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();try{document.execCommand('copy');resolve()}catch(error){reject(error)}finally{field.remove()}})}
-  function escapeAiChatHtml(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;')}
-  function renderAiChatInline(value){var text=escapeAiChatHtml(value);text=text.replace(/\\\\`([^\\\\`]+)\\\\`/g,'<code class="ai-inline-code">$1</code>');text=text.replace(/\\*\\*([^*\\n]+)\\*\\*/g,'<strong>$1</strong>');text=text.replace(/__([^_\\n]+)__/g,'<strong>$1</strong>');return text}
-  function renderAiChatMarkdown(container,value){if(!container)return;var source=String(value==null?'':value).replace(/\\r\\n?/g,'\\n').trim();if(!source){container.textContent='';return}var blocks=[];source=source.replace(/\\\`\\\`\\\`([A-Za-z0-9_+.#-]*)\\n?([\\s\\S]*?)\\\`\\\`\\\`/g,function(match,language,code){var index=blocks.length;blocks.push({language:String(language||'').trim(),code:String(code||'').replace(/\\n$/,'')});return '\\n@@VEXA_CODE_'+index+'@@\\n'});var lines=source.split('\\n');var html=[];var paragraph=[];var listType='';var listItems=[];function flushParagraph(){if(!paragraph.length)return;html.push('<p>'+renderAiChatInline(paragraph.join('\\n')).replace(/\\n/g,'<br>')+'</p>');paragraph=[]}function flushList(){if(!listItems.length)return;var tag=listType==='ol'?'ol':'ul';html.push('<'+tag+'>'+listItems.map(function(item){return'<li>'+renderAiChatInline(item)+'</li>'}).join('')+'</'+tag+'>');listItems=[];listType=''}lines.forEach(function(raw){var line=String(raw||'');var codeMatch=line.match(/^@@VEXA_CODE_(\\d+)@@$/);if(codeMatch){flushParagraph();flushList();var block=blocks[Number(codeMatch[1])];var label=block.language?'<span>'+escapeAiChatHtml(block.language)+'</span>':'';html.push('<div class="ai-code-block"><div class="ai-code-head">'+label+'<button type="button" aria-label="Copy code">Copy</button></div><pre><code>'+escapeAiChatHtml(block.code)+'</code></pre></div>');return}var heading=line.match(/^(#{1,3})\\s+(.+)$/);if(heading){flushParagraph();flushList();var level=Math.min(3,heading[1].length);html.push('<h'+level+'>'+renderAiChatInline(heading[2])+'</h'+level+'>');return}var unordered=line.match(/^\\s*[-*]\\s+(.+)$/);var ordered=line.match(/^\\s*\\d+[.)]\\s+(.+)$/);if(unordered||ordered){flushParagraph();var nextType=ordered?'ol':'ul';if(listType&&listType!==nextType)flushList();listType=nextType;listItems.push((ordered||unordered)[1]);return}if(!line.trim()){flushParagraph();flushList();return}if(listItems.length)flushList();paragraph.push(line)});flushParagraph();flushList();container.innerHTML=html.join('');container.querySelectorAll('.ai-code-head button').forEach(function(button){button.addEventListener('click',function(){var code=button.closest('.ai-code-block').querySelector('code').textContent;copyAiChatMessageText(code).then(function(){button.textContent='Copied';setTimeout(function(){button.textContent='Copy'},1300)}).catch(function(){toast('Could not copy')})})})}
+  function decorateAiChatCodeBlocks(container){if(!container)return;container.querySelectorAll('pre:not([data-vexa-code])').forEach(function(pre){pre.setAttribute('data-vexa-code','true');var code=pre.querySelector('code');if(!code)return;var block=document.createElement('div');block.className='ai-code-block';var head=document.createElement('div');head.className='ai-code-head';var label=document.createElement('span');label.textContent='Code';var button=document.createElement('button');button.type='button';button.setAttribute('aria-label','Copy code');button.textContent='Copy';button.addEventListener('click',function(){copyAiChatMessageText(code.textContent).then(function(){button.textContent='Copied';setTimeout(function(){button.textContent='Copy'},1300)}).catch(function(){toast('Could not copy')})});head.appendChild(label);head.appendChild(button);pre.parentNode.insertBefore(block,pre);block.appendChild(head);block.appendChild(pre)})}
   function buildAiChatMessageActions(text){var actions=document.createElement('div');actions.className='ai-chat-message-actions';actions.innerHTML='<button class="ai-chat-message-action" type="button" aria-label="Copy message"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="3" stroke="currentColor" stroke-width="2.2"/><path d="M16 8V6.8A2.8 2.8 0 0 0 13.2 4H6.8A2.8 2.8 0 0 0 4 6.8v6.4A2.8 2.8 0 0 0 6.8 16H8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button><button class="ai-chat-message-action" type="button" aria-label="Share message"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4m0 0L7.8 8.2M12 4l4.2 4.2M5 13.5v3.7A2.8 2.8 0 0 0 7.8 20h8.4a2.8 2.8 0 0 0 2.8-2.8v-3.7" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';var buttons=actions.querySelectorAll('button');buttons[0].addEventListener('click',function(){copyAiChatMessageText(text).then(function(){toast('Copied')}).catch(function(){toast('Could not copy')})});buttons[1].addEventListener('click',async function(){if(navigator.share){try{await navigator.share({text:String(text||'')});return}catch(error){if(error&&error.name==='AbortError')return}}copyAiChatMessageText(text).then(function(){toast('Copied for sharing')}).catch(function(){toast('Could not share')})});return actions}
 `;
+
 const GITHUB_HELPERS = `  var githubConnectionStorageKey='vexaGithubConnection';
   var githubPendingPromptStorageKey='vexaGithubPendingPrompt';
   var githubJustConnected=false;
@@ -33,12 +41,15 @@ const GITHUB_HELPERS = `  var githubConnectionStorageKey='vexaGithubConnection';
   async function openGitHubConnection(connectUrl){if(aiChatBusy)return;rememberGitHubPendingPrompt();var target=String(connectUrl||'');try{if(!target){var data=await api('/mini-app/api/github/connect',{});target=String(data.url||'')}if(!target)throw new Error('GitHub connection is unavailable');window.location.assign(target)}catch(error){toast(error.message||'Could not connect GitHub')}}
   function appendGitHubConnect(data){var list=q('aiChatMessages');if(!list)return;var item=document.createElement('div');item.className='ai-chat-message assistant github-connect-message';var message=document.createElement('div');message.className='github-connect-copy';message.textContent=String(data&&data.message||'Connect your GitHub repository so I can access the code and work on it.');var row=document.createElement('div');row.className='github-connect-row';var icon=document.createElement('div');icon.className='github-connect-icon';icon.innerHTML=githubMark();var card=document.createElement('section');card.className='github-connect-card';card.innerHTML='<div class="github-card-body"><strong>Connect GitHub</strong><span>Choose the repositories Vexa can work on</span></div><button class="github-card-button" type="button">Connect</button>';var button=card.querySelector('.github-card-button');button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openGitHubConnection(data&&data.connectUrl)});row.appendChild(icon);row.appendChild(card);item.appendChild(message);item.appendChild(row);list.appendChild(item);aiChatMessages.push({role:'assistant',content:message.textContent});syncAiChatEmptyState();scrollAiChat()}
   function openGitHubExternal(url){var target=String(url||'');if(!target)return;if(tg&&typeof tg.openLink==='function'){try{tg.openLink(target);return}catch(error){}}window.open(target,'_blank','noopener,noreferrer')}
-  function appendGitHubResultCard(data){if(!data||typeof data!=='object')return;var list=q('aiChatMessages');if(!list)return;var url=String(data.url||'');if(!url)return;var label='View changes';if(String(data.kind||'')==='pull_request'&&data.number)label='Open pull request #'+String(data.number);else if(String(data.kind||'')==='merged'&&data.number)label='View merged pull request #'+String(data.number);else if(String(data.kind||'')==='status'&&data.number)label='View pull request #'+String(data.number);else if(String(data.kind||'')==='workflow')label='View workflow';var item=document.createElement('div');item.className='ai-chat-message assistant github-result-message';var link=document.createElement('button');link.type='button';link.className='github-result-link';link.textContent=label;link.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openGitHubExternal(url)});item.appendChild(link);list.appendChild(item);syncAiChatEmptyState();scrollAiChat()}
+  function appendGitHubResultLink(data){if(!data||typeof data!=='object')return;var list=q('aiChatMessages');if(!list)return;var url=String(data.url||'');if(!url)return;var label='View changes';var kind=String(data.kind||'');if(kind==='pull_request'&&data.number)label='Open pull request #'+String(data.number);else if(kind==='merged'&&data.number)label='View merged pull request #'+String(data.number);else if(kind==='status'&&data.number)label='View pull request #'+String(data.number);else if(kind==='workflow')label='View workflow';var item=document.createElement('div');item.className='ai-chat-message assistant github-result-message';var link=document.createElement('button');link.type='button';link.className='github-result-link';link.textContent=label;link.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openGitHubExternal(url)});item.appendChild(link);list.appendChild(item);syncAiChatEmptyState();scrollAiChat()}
 `;
+
 const APPEND_MESSAGE_MARKER = `  function appendAiChatMessage`;
 const THINKING_MARKER = `  function showAiThinking`;
 const CONTENT_MARKER = `item.appendChild(content);list.appendChild(item);`;
-const CONTENT_WITH_ACTIONS = `if(cleanRole==='assistant'){content.classList.add('ai-chat-rich-content');renderAiChatMarkdown(content,value)}item.appendChild(content);if(cleanRole==='assistant'){item.classList.add('has-actions');item.appendChild(buildAiChatMessageActions(value))}list.appendChild(item);`;
+const CONTENT_WITH_ACTIONS = `item.appendChild(content);if(cleanRole==='assistant'){content.classList.add('ai-chat-rich-content');item.classList.add('has-actions');item.appendChild(buildAiChatMessageActions(value))}list.appendChild(item);`;
+const RENDER_MARKER = `function render(displayValue){if(cleanRole==='assistant')renderAiChatMarkdown(content,displayValue);else content.textContent=displayValue}`;
+const RENDER_WITH_CODE_DECORATION = `function render(displayValue){if(cleanRole==='assistant'){renderAiChatMarkdown(content,displayValue);decorateAiChatCodeBlocks(content)}else content.textContent=displayValue}`;
 const GITHUB_REQUEST_MARKER = `{messages:requestMessages},`;
 const GITHUB_REQUEST_VALUE = `{messages:requestMessages,githubConnection:getGitHubConnection()},`;
 const RESULT_MARKER = `      if(data.type==='image_request'){`;
@@ -52,7 +63,7 @@ const RESULT_WITH_GITHUB = `      if(data.type==='github_connect'){
           String(data.message||''),
           true
         );
-        appendGitHubResultCard(data.github);
+        appendGitHubResultLink(data.github);
       }else if(data.type==='image_request'){`;
 const WORKING_STATUS_MARKER = `    }else if(state==='generating_voice'){
       next='generating_voice';
@@ -78,14 +89,17 @@ const SECTION_OPEN_WITH_RESUME = `      api(
       ).catch(function(){});
       resumeGitHubPendingPrompt();`;
 
-export const AI_CHAT_JS = AI_CHAT_SOURCE
-  .replace(OLD_SCROLL, NEW_SCROLL)
-  .replace(OLD_SHARE_ICON, NEW_SHARE_ICON)
-  .replace(APPEND_MESSAGE_MARKER, MESSAGE_ACTION_HELPERS + APPEND_MESSAGE_MARKER)
-  .replace(THINKING_MARKER, GITHUB_HELPERS + THINKING_MARKER)
-  .replace(CONTENT_MARKER, CONTENT_WITH_ACTIONS)
-  .replace(GITHUB_REQUEST_MARKER, GITHUB_REQUEST_VALUE)
-  .replace(RESULT_MARKER, RESULT_WITH_GITHUB)
-  .replace(WORKING_STATUS_MARKER, WORKING_STATUS_VALUE)
-  .replace(LOAD_MARKER, LOAD_WITH_CAPTURE)
-  .replace(SECTION_OPEN_MARKER, SECTION_OPEN_WITH_RESUME);
+let builtSource = AI_CHAT_SOURCE;
+builtSource = replaceRequired(builtSource, OLD_SCROLL, NEW_SCROLL, 'scroll');
+builtSource = replaceRequired(builtSource, OLD_SHARE_ICON, NEW_SHARE_ICON, 'share icon');
+builtSource = replaceRequired(builtSource, APPEND_MESSAGE_MARKER, MESSAGE_ACTION_HELPERS + APPEND_MESSAGE_MARKER, 'message helpers');
+builtSource = replaceRequired(builtSource, THINKING_MARKER, GITHUB_HELPERS + THINKING_MARKER, 'GitHub helpers');
+builtSource = replaceRequired(builtSource, CONTENT_MARKER, CONTENT_WITH_ACTIONS, 'message actions');
+builtSource = replaceRequired(builtSource, RENDER_MARKER, RENDER_WITH_CODE_DECORATION, 'code blocks');
+builtSource = replaceRequired(builtSource, GITHUB_REQUEST_MARKER, GITHUB_REQUEST_VALUE, 'GitHub connection request');
+builtSource = replaceRequired(builtSource, RESULT_MARKER, RESULT_WITH_GITHUB, 'GitHub result');
+builtSource = replaceRequired(builtSource, WORKING_STATUS_MARKER, WORKING_STATUS_VALUE, 'repository status');
+builtSource = replaceRequired(builtSource, LOAD_MARKER, LOAD_WITH_CAPTURE, 'connection capture');
+builtSource = replaceRequired(builtSource, SECTION_OPEN_MARKER, SECTION_OPEN_WITH_RESUME, 'connection resume');
+
+export const AI_CHAT_JS = builtSource;
