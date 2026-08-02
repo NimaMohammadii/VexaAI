@@ -86,7 +86,23 @@ const FINAL_REFINEMENTS = `
 @media(max-width:420px){.ai-chat-message-actions{gap:8px!important}.ai-chat-message-action{width:27px!important;height:27px!important}.github-result-link{max-width:calc(100vw - 116px)!important;font-size:12.5px!important}}
 `;
 
+const TOPBAR_SPACING_FIX = `
+.ai-chat-topbar{
+  top:0!important;
+  height:calc(88px + env(safe-area-inset-top))!important;
+  padding:0 14px 12px!important;
+  background:linear-gradient(180deg,#000 0%,rgba(0,0,0,.98) 58%,rgba(0,0,0,.82) 82%,rgba(0,0,0,0) 100%)!important;
+}
+.ai-chat-messages{
+  padding-top:calc(116px + env(safe-area-inset-top))!important;
+}
+.ai-chat-drawer{
+  padding-top:calc(45px + env(safe-area-inset-top))!important;
+}
+`;
+
 export const AI_CHAT_CSS = AI_CHAT_STYLES_SOURCE
   .replace(OLD_SHARE_STYLE, NEW_SHARE_STYLE)
   + CHAT_REFINEMENTS
-  + FINAL_REFINEMENTS;
+  + FINAL_REFINEMENTS
+  + TOPBAR_SPACING_FIX;
