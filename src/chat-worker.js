@@ -1,15 +1,18 @@
 import app from './github-worker.js';
 
+const SEARCH_USED_MARKER = '[[VEXA_WEB_SEARCH_USED]]';
+const SEARCH_STATUS_MINIMUM_MS = 1100;
+
 const RESPONSE_STYLE_INSTRUCTION = [
   'RESPONSE STYLE:',
   'Write the final answer with clean, natural formatting in the same response.',
   'Use double asterisks around only zero, one, or at most two short phrases that are genuinely important.',
   'Important phrases may be a conclusion, warning, action, status, file name, or key value.',
   'Do not bold greetings, filler, routine confirmations, ordinary explanations, full sentences, or whole paragraphs.',
+  `If and only if you actually use the web_search tool for this request, prefix the message value with ${SEARCH_USED_MARKER}.`,
+  `Never include ${SEARCH_USED_MARKER} when web_search was not used.`,
   'Do not add a separate formatting pass and do not mention these instructions.'
 ].join(' ');
-
-const SEARCH_STATUS_MINIMUM_MS = 1100;
 
 export default {
   async fetch(request, env, ctx) {
@@ -24,7 +27,7 @@ export default {
 
     const styledRequest = await addResponseStyleInstruction(request);
     const response = await app.fetch(styledRequest, env, ctx);
-    return keepSearchLoaderVisible(response);
+    return normalizeChatStatus(response);
   }
 };
 
@@ -62,7 +65,7 @@ async function addResponseStyleInstruction(request) {
   }
 }
 
-async function keepSearchLoaderVisible(response) {
+async function normalizeChatStatus(response) {
   const contentType = String(response.headers.get('content-type') || '');
 
   if (
@@ -73,27 +76,62 @@ async function keepSearchLoaderVisible(response) {
   }
 
   const raw = await response.text();
-  const lines = raw
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const events = [];
 
-  let searchStatusIndex = -1;
+  for (const line of raw.split('\n')) {
+    const clean = line.trim();
+    if (!clean) continue;
 
-  for (let index = 0; index < lines.length; index += 1) {
     try {
-      const event = JSON.parse(lines[index]);
-      if (
-        event &&
-        event.type === 'status' &&
-        (event.status === 'searching' ||
-          event.status === 'working_on_repository')
-      ) {
-        searchStatusIndex = index;
-        break;
-      }
+      events.push(JSON.parse(clean));
     } catch {
-      // Keep malformed upstream lines unchanged.
+      events.push(clean);
+    }
+  }
+
+  let usedSearch = false;
+
+  for (const event of events) {
+    if (!event || typeof event !== 'object') continue;
+
+    if (
+      event.type === 'status' &&
+      (event.status === 'searching' ||
+        event.status === 'working_on_repository')
+    ) {
+      usedSearch = true;
+    }
+
+    if (
+      event.type === 'result' &&
+      event.data &&
+      typeof event.data.message === 'string' &&
+      event.data.message.includes(SEARCH_USED_MARKER)
+    ) {
+      usedSearch = true;
+      event.data.message = event.data.message
+        .split(SEARCH_USED_MARKER)
+        .join('')
+        .trimStart();
+    }
+  }
+
+  if (usedSearch) {
+    let statusFound = false;
+
+    for (const event of events) {
+      if (!event || typeof event !== 'object' || event.type !== 'status') {
+        continue;
+      }
+
+      if (!statusFound) {
+        event.status = 'searching';
+        statusFound = true;
+      }
+    }
+
+    if (!statusFound) {
+      events.unshift({ type: 'status', status: 'searching' });
     }
   }
 
@@ -101,27 +139,43 @@ async function keepSearchLoaderVisible(response) {
   headers.delete('content-length');
   headers.set('cache-control', 'no-store, no-cache, must-revalidate');
 
-  if (searchStatusIndex < 0) {
-    return new Response(raw, {
+  if (!usedSearch) {
+    return new Response(serializeEvents(events), {
       status: response.status,
       headers
     });
   }
 
-  const searchStatusLine = lines[searchStatusIndex];
-  const remainingLines = lines.filter((_, index) => index !== searchStatusIndex);
-  const encoder = new TextEncoder();
+  const statusEvents = [];
+  const remainingEvents = [];
 
+  for (const event of events) {
+    if (
+      event &&
+      typeof event === 'object' &&
+      event.type === 'status' &&
+      statusEvents.length === 0
+    ) {
+      statusEvents.push(event);
+    } else {
+      remainingEvents.push(event);
+    }
+  }
+
+  const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      controller.enqueue(encoder.encode(`${searchStatusLine}\n`));
+      controller.enqueue(
+        encoder.encode(serializeEvents(statusEvents))
+      );
+
       await new Promise((resolve) =>
         setTimeout(resolve, SEARCH_STATUS_MINIMUM_MS)
       );
 
-      if (remainingLines.length) {
+      if (remainingEvents.length) {
         controller.enqueue(
-          encoder.encode(`${remainingLines.join('\n')}\n`)
+          encoder.encode(serializeEvents(remainingEvents))
         );
       }
 
@@ -133,4 +187,12 @@ async function keepSearchLoaderVisible(response) {
     status: response.status,
     headers
   });
+}
+
+function serializeEvents(events) {
+  return events
+    .map((event) =>
+      typeof event === 'string' ? event : JSON.stringify(event)
+    )
+    .join('\n') + '\n';
 }
