@@ -1,9 +1,12 @@
 name = "vchat"
-main = "src/index.js"
+main = "src/github-worker.js"
 compatibility_date = "2026-08-01"
 
 [vars]
 APP_URL = "https://vchat.vexaagent.workers.dev"
 
-# Add secret with:
+# Add secrets with:
 # wrangler secret put BOT_TOKEN
+# wrangler secret put GITHUB_APP_ID
+# wrangler secret put GITHUB_PRIVATE_KEY
+# wrangler secret put GITHUB_WEBHOOK_SECRET
