@@ -72,7 +72,56 @@ export const AI_CHAT_HTML = `<!doctype html>
         });
       }).observe(document.documentElement,{childList:true,subtree:true});
     })();
+
+    (function(){
+      var telegram=window.Telegram&&window.Telegram.WebApp;
+      var backButton=telegram&&telegram.BackButton;
+      if(!backButton)return;
+
+      var githubNavigationArmed=false;
+
+      function hideGitHubBackButton(){
+        githubNavigationArmed=false;
+        try{backButton.offClick(handleGitHubBack)}catch(error){}
+        try{backButton.hide()}catch(error){}
+      }
+
+      function handleGitHubBack(){
+        if(!githubNavigationArmed)return;
+        hideGitHubBackButton();
+        if(history.length>1){history.back();return;}
+        window.location.replace('/');
+      }
+
+      document.addEventListener('click',function(event){
+        var target=event.target;
+        var button=target&&target.closest?target.closest('.github-card-button'):null;
+        if(!button)return;
+
+        githubNavigationArmed=true;
+        try{
+          sessionStorage.setItem('vexaGithubBackActive','1');
+          history.pushState({vexaGithubReturn:true},'',window.location.href);
+        }catch(error){}
+
+        try{backButton.offClick(handleGitHubBack)}catch(error){}
+        try{backButton.onClick(handleGitHubBack)}catch(error){}
+        try{backButton.show()}catch(error){}
+      },true);
+
+      window.addEventListener('pageshow',function(){
+        var shouldHide=true;
+        try{shouldHide=sessionStorage.getItem('vexaGithubBackActive')!=='1'}catch(error){}
+        if(shouldHide)hideGitHubBackButton();
+      });
+
+      var currentUrl=new URL(window.location.href);
+      if(currentUrl.searchParams.has('github_connection')||currentUrl.searchParams.has('github_connected')){
+        try{sessionStorage.removeItem('vexaGithubBackActive')}catch(error){}
+        hideGitHubBackButton();
+      }
+    })();
   </script>
-  <script type="module" src="/mini-app/chat/app.js?v=20260802-copy-opaque-front-16"></script>
+  <script type="module" src="/mini-app/chat/app.js?v=20260802-github-back-button-17"></script>
 </body>
 </html>`;
