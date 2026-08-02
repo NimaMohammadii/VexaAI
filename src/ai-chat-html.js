@@ -14,7 +14,7 @@ export const AI_CHAT_HTML = `<!doctype html>
     .ai-chat-message-action svg,.ai-chat-message-action svg *{opacity:1!important}
     @media(hover:hover){.ai-chat-message-action:hover{color:rgba(255,255,255,.94)!important}}
 
-    .ai-chat-topbar{position:absolute;z-index:40;top:0;left:0;right:0;height:calc(56px + env(safe-area-inset-top));display:flex;align-items:flex-end;justify-content:space-between;padding:0 14px 10px;background:linear-gradient(180deg,rgba(0,0,0,.96) 0%,rgba(0,0,0,.82) 72%,rgba(0,0,0,0) 100%);pointer-events:none}
+    .ai-chat-topbar{position:absolute;z-index:40;top:14px;left:0;right:0;height:calc(56px + env(safe-area-inset-top));display:flex;align-items:flex-end;justify-content:space-between;padding:0 14px 10px;background:linear-gradient(180deg,rgba(0,0,0,.96) 0%,rgba(0,0,0,.82) 72%,rgba(0,0,0,0) 100%);pointer-events:none}
     .ai-chat-topbar button{pointer-events:auto;-webkit-tap-highlight-color:transparent}
     .ai-chat-menu-toggle{position:relative;width:38px;height:38px;display:grid;place-items:center;padding:0;border:0;border-radius:14px;background:rgba(255,255,255,.045);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.055);transition:transform .25s cubic-bezier(.2,.9,.2,1),background .2s ease}
     .ai-chat-menu-toggle:active{transform:scale(.9);background:rgba(255,255,255,.085)}
@@ -40,7 +40,7 @@ export const AI_CHAT_HTML = `<!doctype html>
 
     .ai-chat-drawer-backdrop{position:fixed;z-index:48;inset:0;background:rgba(0,0,0,.48);opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
     .chat-drawer-open .ai-chat-drawer-backdrop{opacity:1;visibility:visible}
-    .ai-chat-drawer{position:fixed;z-index:50;top:0;bottom:0;left:0;width:50vw;overflow:hidden;display:flex;flex-direction:column;padding:calc(17px + env(safe-area-inset-top)) 10px calc(14px + env(safe-area-inset-bottom));background:rgba(10,10,12,.97);border-right:1px solid rgba(255,255,255,.065);box-shadow:18px 0 55px rgba(0,0,0,.42);transform:translateX(-102%);transition:transform .42s cubic-bezier(.2,.85,.2,1);will-change:transform}
+    .ai-chat-drawer{position:fixed;z-index:50;top:0;bottom:0;left:0;width:50vw;overflow:hidden;display:flex;flex-direction:column;padding:calc(31px + env(safe-area-inset-top)) 10px calc(14px + env(safe-area-inset-bottom));background:rgba(10,10,12,.97);border-right:1px solid rgba(255,255,255,.065);box-shadow:18px 0 55px rgba(0,0,0,.42);transform:translateX(-102%);transition:transform .42s cubic-bezier(.2,.85,.2,1);will-change:transform}
     .chat-drawer-open .ai-chat-drawer{transform:translateX(0)}
     .ai-chat-drawer-head{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 5px 0 8px}
     .ai-chat-drawer-head strong{font:650 14px/1 -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;letter-spacing:-.025em;color:rgba(255,255,255,.92)}
@@ -53,7 +53,7 @@ export const AI_CHAT_HTML = `<!doctype html>
     .ai-chat-history-item strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:570 12px/1.15 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;letter-spacing:-.015em}
     .ai-chat-history-item small{font:450 9.5px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;color:rgba(255,255,255,.26)}
     .ai-chat-drawer-foot{padding:9px 8px 2px;border-top:1px solid rgba(255,255,255,.045);font:480 10px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;color:rgba(255,255,255,.27)}
-    .ai-chat-messages{padding-top:calc(74px + env(safe-area-inset-top))!important}
+    .ai-chat-messages{padding-top:calc(88px + env(safe-area-inset-top))!important}
     @media(max-width:430px){.ai-chat-drawer{width:50vw}.ai-chat-history-item{padding-left:8px;padding-right:8px}.ai-chat-history-item strong{font-size:11.5px}}
   </style>
 </head>
