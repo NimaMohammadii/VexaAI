@@ -70,7 +70,7 @@ const WORKING_STATUS_MARKER = `    }else if(state==='generating_voice'){
       labelText='Generating voice';
     }`;
 const WORKING_STATUS_VALUE = `    }else if(state==='working_on_repository'){
-      next='working_on_repository';
+      next='searching';
       labelText='Working on repository';
     }else if(state==='generating_voice'){
       next='generating_voice';
