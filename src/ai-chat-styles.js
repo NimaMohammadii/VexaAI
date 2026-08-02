@@ -24,6 +24,23 @@ const CHAT_REFINEMENTS = `
 .ai-chat-message-action{width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:rgba(255,255,255,.045);color:rgba(255,255,255,.56);box-shadow:inset 0 1px 0 rgba(255,255,255,.035);transition:transform .18s cubic-bezier(.2,.9,.2,1),background .18s ease,color .18s ease}
 .ai-chat-message-action svg{width:15px;height:15px}
 .ai-chat-message-action:active{transform:scale(.86);background:rgba(255,255,255,.1);color:#fff}
+.ai-chat-rich-content{width:min(100%,680px);max-width:100%;white-space:normal!important;line-height:1.7!important;letter-spacing:-.012em;overflow-wrap:anywhere}
+.ai-chat-rich-content p{margin:0 0 12px}.ai-chat-rich-content p:last-child{margin-bottom:0}
+.ai-chat-rich-content strong{font-weight:720;color:#fff}
+.ai-chat-rich-content h1,.ai-chat-rich-content h2,.ai-chat-rich-content h3{margin:18px 0 8px;color:#fff;letter-spacing:-.025em;line-height:1.25}
+.ai-chat-rich-content h1:first-child,.ai-chat-rich-content h2:first-child,.ai-chat-rich-content h3:first-child{margin-top:0}
+.ai-chat-rich-content h1{font-size:19px}.ai-chat-rich-content h2{font-size:17px}.ai-chat-rich-content h3{font-size:15.5px}
+.ai-chat-rich-content ul,.ai-chat-rich-content ol{margin:5px 0 13px;padding-inline-start:22px}
+.ai-chat-rich-content li{margin:5px 0;padding-inline-start:2px}
+.ai-inline-code{padding:2px 6px;border-radius:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.06);font:500 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;color:rgba(244,241,255,.94)}
+.ai-code-block{width:100%;margin:14px 0 15px;border:1px solid rgba(255,255,255,.085);border-radius:17px;background:linear-gradient(180deg,rgba(18,17,22,.98),rgba(10,9,13,.98));box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 14px 34px rgba(0,0,0,.22);overflow:hidden}
+.ai-code-head{height:37px;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 13px;border-bottom:1px solid rgba(255,255,255,.065);background:rgba(255,255,255,.025)}
+.ai-code-head span{font:600 10.5px/1 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;text-transform:uppercase;letter-spacing:.045em;color:rgba(255,255,255,.42)}
+.ai-code-head button{height:25px;padding:0 9px;border:0;border-radius:8px;background:rgba(255,255,255,.055);color:rgba(255,255,255,.68);font-size:10.5px;font-weight:620;transition:transform .16s ease,background .16s ease,color .16s ease}
+.ai-code-head button:active{transform:scale(.94);background:rgba(255,255,255,.11);color:#fff}
+.ai-code-block pre{margin:0;padding:15px 16px 17px;overflow:auto;-webkit-overflow-scrolling:touch}
+.ai-code-block code{display:block;min-width:max-content;white-space:pre;tab-size:2;font:500 12.5px/1.62 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;color:rgba(244,241,255,.91);direction:ltr;text-align:left}
+.ai-chat-message.rtl .ai-chat-rich-content{text-align:right}.ai-chat-message.rtl .ai-code-block{direction:ltr;text-align:left}
 .ai-chat-message.github-connect-message,.ai-chat-message.github-result-message{width:min(100%,430px);max-width:430px;display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-top:1px;margin-bottom:22px}
 .github-connect-copy{max-width:92%;font-size:15px;line-height:1.62;letter-spacing:-.012em;color:rgba(255,255,255,.9);white-space:pre-wrap;overflow-wrap:anywhere}
 .github-connect-card,.github-result-card{position:relative;width:100%;min-height:76px;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 13px;border:1px solid rgba(255,255,255,.085);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.061),rgba(255,255,255,.024));box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 16px 40px rgba(0,0,0,.24);overflow:hidden;isolation:isolate}
@@ -41,7 +58,7 @@ const CHAT_REFINEMENTS = `
 .ai-chat-message.rtl .github-connect-copy{text-align:right;align-self:flex-end}
 .ai-chat-message.rtl .github-card-body{text-align:right}
 .ai-thinking-row[data-state="working_on_repository"] span{color:rgba(232,227,255,.9)}
-@media(max-width:420px){.ai-chat-message.github-connect-message,.ai-chat-message.github-result-message{width:100%;max-width:100%}.github-connect-card,.github-result-card{border-radius:18px;padding:11px}.github-card-icon{width:40px;height:40px;flex-basis:40px;border-radius:13px}.github-card-button{min-width:70px;padding:0 13px}.github-card-body span{max-width:160px}}
+@media(max-width:420px){.ai-chat-message.github-connect-message,.ai-chat-message.github-result-message{width:100%;max-width:100%}.github-connect-card,.github-result-card{border-radius:18px;padding:11px}.github-card-icon{width:40px;height:40px;flex-basis:40px;border-radius:13px}.github-card-button{min-width:70px;padding:0 13px}.github-card-body span{max-width:160px}.ai-code-block{border-radius:15px}.ai-code-block pre{padding:14px}}
 `;
 
 export const AI_CHAT_CSS = AI_CHAT_STYLES_SOURCE
