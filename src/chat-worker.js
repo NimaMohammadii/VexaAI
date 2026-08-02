@@ -4,15 +4,14 @@ const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const FORMAT_MODEL = 'gpt-5.6-luna';
 
 const FORMAT_INSTRUCTIONS = `
-You are a response presentation formatter.
-Return exactly one JSON object: {"message":"formatted text"}.
-Preserve the input text exactly: every character, word, punctuation mark, line break, list item, URL, and code block must remain unchanged and in the same order.
-Your only allowed change is adding double-asterisk markers around 1 to 3 genuinely important short phrases.
-Choose conclusions, important actions, warnings, statuses, file names, or key values.
-Never emphasize an entire paragraph or the entire response.
-Never place markers inside inline code or fenced code blocks.
-Do not add explanations or new text.
-The client converts the markers into real bold text, so the user will not see the markers.
+You select the most important phrases in an assistant response.
+Return exactly one JSON object: {"phrases":["exact phrase 1","exact phrase 2"]}.
+Choose 1 to 3 short, genuinely important phrases copied exactly from the input.
+Good choices are conclusions, important actions, warnings, statuses, file names, or key values.
+Each phrase must be a verbatim contiguous substring of the input.
+Do not select an entire sentence or paragraph unless the response is extremely short.
+Do not select text inside inline code, fenced code blocks, or URLs.
+Do not explain your choices and do not change the phrases.
 `;
 
 export default {
@@ -36,7 +35,7 @@ export default {
 async function formatChatResponse(response, env) {
   const raw = await response.text();
   const lines = raw.split('\n');
-  const events = [];
+  const outputLines = [];
   let changed = false;
 
   for (const line of lines) {
@@ -47,7 +46,7 @@ async function formatChatResponse(response, env) {
     try {
       event = JSON.parse(clean);
     } catch {
-      events.push(clean);
+      outputLines.push(clean);
       continue;
     }
 
@@ -66,23 +65,21 @@ async function formatChatResponse(response, env) {
       }
     }
 
-    events.push(JSON.stringify(event));
+    outputLines.push(JSON.stringify(event));
   }
 
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+
   if (!changed) {
-    const headers = new Headers(response.headers);
-    headers.delete('content-length');
     return new Response(raw, {
       status: response.status,
       headers
     });
   }
 
-  const headers = new Headers(response.headers);
-  headers.delete('content-length');
   headers.set('cache-control', 'no-store, no-cache, must-revalidate');
-
-  return new Response(events.join('\n') + '\n', {
+  return new Response(outputLines.join('\n') + '\n', {
     status: response.status,
     headers
   });
@@ -106,31 +103,98 @@ async function addMeaningfulEmphasis(original, env) {
         model: FORMAT_MODEL,
         instructions: FORMAT_INSTRUCTIONS,
         input: [{ role: 'user', content: text.slice(0, 16000) }],
-        max_output_tokens: 6000,
+        max_output_tokens: 1000,
         store: false
       })
     });
 
     if (!response.ok) return text;
     const data = await response.json().catch(() => null);
-    const output = extractOpenAiText(data);
-    if (!output) return text;
+    const parsed = parseJsonObject(extractOpenAiText(data));
+    const phrases = parsed && Array.isArray(parsed.phrases)
+      ? parsed.phrases
+      : [];
 
-    const parsed = parseJsonObject(output);
-    const formatted = String(parsed && parsed.message || '');
-    if (!isSafeFormatting(text, formatted)) return text;
-    return formatted;
+    return applyPhraseEmphasis(text, phrases);
   } catch {
     return text;
   }
 }
 
-function isSafeFormatting(original, formatted) {
-  if (!formatted || formatted === original) return false;
-  const markers = formatted.match(/\*\*/g) || [];
-  const pairCount = markers.length / 2;
-  if (!Number.isInteger(pairCount) || pairCount < 1 || pairCount > 3) return false;
-  return formatted.replace(/\*\*/g, '') === original;
+function applyPhraseEmphasis(text, rawPhrases) {
+  const blocked = findCodeRanges(text);
+  const selected = [];
+  const seen = new Set();
+
+  for (const rawPhrase of rawPhrases.slice(0, 8)) {
+    const phrase = String(rawPhrase || '');
+    const normalized = phrase.trim();
+
+    if (
+      !normalized ||
+      normalized.length < 2 ||
+      normalized.length > 120 ||
+      normalized.includes('\n') ||
+      normalized.includes('**') ||
+      seen.has(normalized) ||
+      normalized.length >= Math.max(12, text.trim().length * 0.72)
+    ) {
+      continue;
+    }
+
+    const range = findAvailablePhraseRange(text, phrase, blocked, selected);
+    if (!range) continue;
+
+    seen.add(normalized);
+    selected.push(range);
+    if (selected.length === 3) break;
+  }
+
+  if (!selected.length) return text;
+
+  let formatted = text;
+  selected
+    .sort((first, second) => second.start - first.start)
+    .forEach(({ start, end }) => {
+      formatted = `${formatted.slice(0, start)}**${formatted.slice(start, end)}**${formatted.slice(end)}`;
+    });
+
+  return formatted;
+}
+
+function findAvailablePhraseRange(text, phrase, blocked, selected) {
+  let from = 0;
+
+  while (from < text.length) {
+    const start = text.indexOf(phrase, from);
+    if (start < 0) return null;
+
+    const range = { start, end: start + phrase.length };
+    const unavailable = [...blocked, ...selected].some((item) => rangesOverlap(range, item));
+    if (!unavailable) return range;
+
+    from = start + Math.max(1, phrase.length);
+  }
+
+  return null;
+}
+
+function findCodeRanges(text) {
+  const ranges = [];
+  const patterns = [/```[\s\S]*?```/g, /`[^`\n]+`/g, /https?:\/\/\S+/g];
+
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text))) {
+      ranges.push({ start: match.index, end: match.index + match[0].length });
+    }
+  }
+
+  return ranges;
+}
+
+function rangesOverlap(first, second) {
+  return first.start < second.end && second.start < first.end;
 }
 
 function parseJsonObject(value) {
@@ -138,6 +202,7 @@ function parseJsonObject(value) {
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/, '');
+
   try {
     return JSON.parse(clean);
   } catch {
@@ -159,6 +224,7 @@ function extractOpenAiText(data) {
       }
     }
   }
+
   return '';
 }
 
