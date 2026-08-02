@@ -44,6 +44,172 @@ const GITHUB_HELPERS = `  var githubConnectionStorageKey='vexaGithubConnection';
   function appendGitHubResultLink(data){if(!data||typeof data!=='object')return;var list=q('aiChatMessages');if(!list)return;var url=String(data.url||'');if(!url)return;var label='View changes';var kind=String(data.kind||'');if(kind==='pull_request'&&data.number)label='Open pull request #'+String(data.number);else if(kind==='merged'&&data.number)label='View merged pull request #'+String(data.number);else if(kind==='status'&&data.number)label='View pull request #'+String(data.number);else if(kind==='workflow')label='View workflow';var messages=list.querySelectorAll('.ai-chat-message.assistant.has-actions');var item=messages[messages.length-1];var actions=item&&item.querySelector('.ai-chat-message-actions');if(!actions)return;var oldLink=actions.querySelector('.github-result-link');if(oldLink)oldLink.remove();var link=document.createElement('button');link.type='button';link.className='github-result-link';link.textContent=label;link.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openGitHubExternal(url)});actions.insertBefore(link,actions.firstChild);item.classList.add('has-github-result');scrollAiChat()}
 `;
 
+const CODE_LOADER_HELPERS = `  function aiCodeStateStage(state){
+    if(state==='writing_code')return 1;
+    if(state==='applying_changes')return 2;
+    if(state==='checking_changes')return 3;
+    return 0;
+  }
+
+  function aiIsCodeState(state){
+    return state==='inspecting_repo'
+      ||state==='writing_code'
+      ||state==='applying_changes'
+      ||state==='checking_changes';
+  }
+
+  function aiCodeStageWeight(stage,index){
+    return aiSmoothMorph(Math.max(0,1-Math.abs(stage-index)));
+  }
+
+  function drawAiCodeLoader(ctx,seconds,mix,stage,width,height){
+    var amount=aiSmoothMorph(mix);
+    if(amount<.01)return;
+
+    var size=Math.min(width,height);
+    var scale=size/48;
+    var inspect=aiCodeStageWeight(stage,0);
+    var writing=aiCodeStageWeight(stage,1);
+    var applying=aiCodeStageWeight(stage,2);
+    var checking=aiCodeStageWeight(stage,3);
+    var pulse=.5+.5*Math.sin(seconds*3.4);
+    var open=1.1*inspect+.96*writing+.73*applying+1.03*checking;
+    var drift=Math.sin(seconds*1.7)*.55*scale;
+
+    ctx.save();
+    ctx.globalCompositeOperation='destination-out';
+    ctx.globalAlpha=amount;
+    ctx.fillRect(0,0,width,height);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(width/2,height/2);
+    ctx.scale(.68+.32*amount,.68+.32*amount);
+    ctx.rotate((1-amount)*-.16);
+    ctx.globalCompositeOperation='lighter';
+    ctx.lineCap='round';
+    ctx.lineJoin='round';
+
+    var braceGradient=ctx.createLinearGradient(-17*scale,-16*scale,17*scale,16*scale);
+    braceGradient.addColorStop(0,'rgba(255,255,255,'+(.44+.4*amount)+')');
+    braceGradient.addColorStop(.5,'rgba(205,145,242,'+(.62+.35*amount)+')');
+    braceGradient.addColorStop(1,'rgba(255,255,255,'+(.38+.4*amount)+')');
+    ctx.strokeStyle=braceGradient;
+    ctx.lineWidth=(1.38+.38*pulse)*scale;
+    ctx.shadowColor='rgba(188,105,238,.58)';
+    ctx.shadowBlur=(4.2+3.8*pulse)*scale;
+
+    function brace(side){
+      var edge=side*11.4*scale*open;
+      var inner=side*6.3*scale*open;
+      var middle=side*14.1*scale*open;
+      ctx.beginPath();
+      ctx.moveTo(inner,-16*scale+drift);
+      ctx.bezierCurveTo(edge,-16*scale+drift,edge,-10.2*scale+drift,edge,-6.1*scale+drift);
+      ctx.bezierCurveTo(edge,-2.1*scale+drift,middle,-2*scale+drift,middle,drift);
+      ctx.bezierCurveTo(middle,2*scale+drift,edge,2.1*scale+drift,edge,6.1*scale+drift);
+      ctx.bezierCurveTo(edge,10.2*scale+drift,edge,16*scale+drift,inner,16*scale+drift);
+      ctx.stroke();
+    }
+
+    brace(-1);
+    brace(1);
+    ctx.shadowBlur=0;
+
+    var coreRadius=(2.8+.55*pulse+1.5*applying)*scale;
+    var core=ctx.createRadialGradient(0,0,.2*scale,0,0,coreRadius*2);
+    core.addColorStop(0,'rgba(255,255,255,'+(.9*amount)+')');
+    core.addColorStop(.32,'rgba(218,175,255,'+(.65*amount)+')');
+    core.addColorStop(1,'rgba(135,50,190,0)');
+    ctx.fillStyle=core;
+    ctx.beginPath();
+    ctx.arc(0,0,coreRadius*2,0,Math.PI*2);
+    ctx.fill();
+
+    for(var ring=0;ring<20;ring+=1){
+      var angle=ring/20*Math.PI*2+seconds*(.5+applying*1.55+checking*.35);
+      var radius=coreRadius*(.9+.13*Math.sin(seconds*2.8+ring*.72));
+      var alpha=(.24+.55*(.5+.5*Math.sin(angle-seconds)))*amount;
+      ctx.fillStyle='rgba(240,218,255,'+alpha+')';
+      ctx.beginPath();
+      ctx.arc(Math.cos(angle)*radius,Math.sin(angle)*radius,(.3+.16*pulse)*scale,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    var lengths=[.88,.61,.76,.49];
+    var typing=(seconds*.48)%1;
+    var scan=(seconds*.36)%1;
+    var verify=(seconds*.3)%1;
+    for(var row=0;row<4;row+=1){
+      var y=(row-1.5)*5.05*scale;
+      var contraction=1-.49*applying;
+      var left=-7.7*scale*contraction;
+      var full=15.4*scale*lengths[row]*contraction;
+      var inspectVisible=.2+.8*Math.max(0,1-Math.abs(row/3-scan)*2.8);
+      var writeVisible=Math.min(1,Math.max(0,typing*1.55-row*.13));
+      var checkVisible=.24+.76*Math.max(0,1-Math.abs(row/3-verify)*3.3);
+      var visible=inspect*inspectVisible+writing*writeVisible+applying*(.44+.56*pulse)+checking*checkVisible;
+      visible=Math.max(.08,Math.min(1,visible));
+      ctx.strokeStyle='rgba(248,237,255,'+(visible*.84*amount)+')';
+      ctx.lineWidth=(.68+.32*visible)*scale;
+      ctx.beginPath();
+      ctx.moveTo(left,y);
+      ctx.lineTo(left+full*visible,y+Math.sin(seconds*3.2+row)*.28*scale*writing);
+      ctx.stroke();
+
+      for(var dot=0;dot<9;dot+=1){
+        var progress=dot/8;
+        var dotVisible=progress<=visible?1:.07;
+        var travel=writing*Math.sin(seconds*4.3+dot*.55+row)*.35*scale+applying*(.5-progress)*2.7*scale*pulse;
+        ctx.fillStyle='rgba(213,166,241,'+((.18+.62*dotVisible)*amount)+')';
+        ctx.beginPath();
+        ctx.arc(left+full*progress+travel,y,(.27+.15*dotVisible)*scale,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    if(inspect+checking>.01){
+      var sweepY=(-14+28*((seconds*.37)%1))*scale;
+      var sweep=ctx.createLinearGradient(-9*scale,0,9*scale,0);
+      sweep.addColorStop(0,'rgba(255,255,255,0)');
+      sweep.addColorStop(.5,'rgba(255,255,255,'+(.48*(inspect+checking)*amount)+')');
+      sweep.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.strokeStyle=sweep;
+      ctx.lineWidth=.72*scale;
+      ctx.beginPath();
+      ctx.moveTo(-9*scale,sweepY);
+      ctx.lineTo(9*scale,sweepY);
+      ctx.stroke();
+    }
+
+    if(writing>.05){
+      var cursorAlpha=(.28+.72*(Math.sin(seconds*8)>0?1:0))*writing*amount;
+      ctx.strokeStyle='rgba(255,255,255,'+cursorAlpha+')';
+      ctx.lineWidth=1.05*scale;
+      ctx.beginPath();
+      ctx.moveTo(6.9*scale,-1.9*scale);
+      ctx.lineTo(6.9*scale,2.2*scale);
+      ctx.stroke();
+    }
+
+    if(checking>.05){
+      var checkAmount=aiSmoothMorph(checking)*amount;
+      ctx.strokeStyle='rgba(255,255,255,'+(.9*checkAmount)+')';
+      ctx.lineWidth=1.55*scale;
+      ctx.shadowColor='rgba(202,139,242,.7)';
+      ctx.shadowBlur=4*scale;
+      ctx.beginPath();
+      ctx.moveTo(-3.7*scale,1.2*scale);
+      ctx.lineTo(-.8*scale,4.2*scale);
+      ctx.lineTo(5.1*scale,-3.5*scale);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+`;
+
 const APPEND_MESSAGE_MARKER = `  function appendAiChatMessage`;
 const THINKING_MARKER = `  function showAiThinking`;
 const CONTENT_MARKER = `item.appendChild(content);list.appendChild(item);`;
@@ -69,9 +235,18 @@ const WORKING_STATUS_MARKER = `    }else if(state==='generating_voice'){
       next='generating_voice';
       labelText='Generating voice';
     }`;
-const WORKING_STATUS_VALUE = `    }else if(state==='working_on_repository'){
-      next='searching';
-      labelText='Searching…';
+const WORKING_STATUS_VALUE = `    }else if(state==='working_on_repository'||state==='inspecting_repo'){
+      next='inspecting_repo';
+      labelText='Inspecting repository';
+    }else if(state==='writing_code'){
+      next='writing_code';
+      labelText='Writing code';
+    }else if(state==='applying_changes'){
+      next='applying_changes';
+      labelText='Applying changes';
+    }else if(state==='checking_changes'){
+      next='checking_changes';
+      labelText='Checking changes';
     }else if(state==='generating_voice'){
       next='generating_voice';
       labelText='Generating voice';
@@ -89,6 +264,147 @@ const SECTION_OPEN_WITH_RESUME = `      api(
       ).catch(function(){});
       resumeGitHubPendingPrompt();`;
 
+const CODE_VARS_MARKER = `  var aiThinkingVoiceMix=0;
+  var aiThinkingLastFrame=0;`;
+const CODE_VARS_VALUE = `  var aiThinkingVoiceMix=0;
+  var aiThinkingCodeMix=0;
+  var aiThinkingCodeStage=0;
+  var aiThinkingLastFrame=0;`;
+const CODE_HELPERS_MARKER = `  function aiVoiceWaveEnvelope(index,count){`;
+const DRAW_SIGNATURE_MARKER = `  function drawAiThinkingOrb(
+    canvas,
+    seconds,
+    searchMix,
+    voiceMix
+  ){`;
+const DRAW_SIGNATURE_VALUE = `  function drawAiThinkingOrb(
+    canvas,
+    seconds,
+    searchMix,
+    voiceMix,
+    codeMix,
+    codeStage
+  ){`;
+const MORPH_MARKER = `    var searchMorph=aiSmoothMorph(searchMix);
+    var voiceMorph=aiSmoothMorph(voiceMix);`;
+const MORPH_VALUE = `    var searchMorph=aiSmoothMorph(searchMix);
+    var voiceMorph=aiSmoothMorph(voiceMix);
+    var codeMorph=aiSmoothMorph(codeMix);`;
+const GHOST_ALPHA_MARKER = `        a:
+          (.1+.22*ghostDepth)
+          *(1-searchMorph)`;
+const GHOST_ALPHA_VALUE = `        a:
+          (.1+.22*ghostDepth)
+          *(1-searchMorph)
+          *(1-codeMorph)`;
+const DOT_ALPHA_MARKER = `          a:
+            (.4+.6*depth)
+            *(1-searchMorph)
+            +(.16+.66*depth)
+            *searchMorph
+            *searchVisible`;
+const DOT_ALPHA_VALUE = `          a:(
+            (.4+.6*depth)
+            *(1-searchMorph)
+            +(.16+.66*depth)
+            *searchMorph
+            *searchVisible
+          )*(1-codeMorph)`;
+const VOICE_BODY_MARKER = `      voiceMorph,
+      width,
+      height
+    );
+    aiOrbPaint(ctx,dots);`;
+const VOICE_BODY_VALUE = `      voiceMorph*(1-codeMorph),
+      width,
+      height
+    );
+    aiOrbPaint(ctx,dots);
+    drawAiCodeLoader(
+      ctx,
+      seconds,
+      codeMorph,
+      codeStage,
+      width,
+      height
+    );`;
+const INITIAL_MIX_MARKER = `    aiThinkingVoiceMix=
+      initialState==='generating_voice'?1:0;
+    aiThinkingLastFrame=0;`;
+const INITIAL_MIX_VALUE = `    aiThinkingVoiceMix=
+      initialState==='generating_voice'?1:0;
+    aiThinkingCodeMix=
+      aiIsCodeState(initialState)?1:0;
+    aiThinkingCodeStage=
+      aiCodeStateStage(initialState);
+    aiThinkingLastFrame=0;`;
+const TARGETS_MARKER = `      var voiceTarget=
+        state==='generating_voice'?1:0;
+      var delta=aiThinkingLastFrame`;
+const TARGETS_VALUE = `      var voiceTarget=
+        state==='generating_voice'?1:0;
+      var codeTarget=aiIsCodeState(state)?1:0;
+      var codeStageTarget=codeTarget
+        ?aiCodeStateStage(state)
+        :aiThinkingCodeStage;
+      var delta=aiThinkingLastFrame`;
+const REDUCED_MARKER = `        aiThinkingSearchMix=searchTarget;
+        aiThinkingVoiceMix=voiceTarget;`;
+const REDUCED_VALUE = `        aiThinkingSearchMix=searchTarget;
+        aiThinkingVoiceMix=voiceTarget;
+        aiThinkingCodeMix=codeTarget;
+        aiThinkingCodeStage=codeStageTarget;`;
+const APPROACH_MARKER = `        aiThinkingVoiceMix=approachAiThinkingMix(
+          aiThinkingVoiceMix,
+          voiceTarget,
+          delta,
+          1.15
+        );`;
+const APPROACH_VALUE = `        aiThinkingVoiceMix=approachAiThinkingMix(
+          aiThinkingVoiceMix,
+          voiceTarget,
+          delta,
+          1.15
+        );
+        aiThinkingCodeMix=approachAiThinkingMix(
+          aiThinkingCodeMix,
+          codeTarget,
+          delta,
+          2.25
+        );
+        aiThinkingCodeStage=approachAiThinkingMix(
+          aiThinkingCodeStage,
+          codeStageTarget,
+          delta,
+          2.4
+        );`;
+const ACTIVE_DRAW_MARKER = `          aiThinkingSearchMix,
+          aiThinkingVoiceMix
+        );`;
+const ACTIVE_DRAW_VALUE = `          aiThinkingSearchMix,
+          aiThinkingVoiceMix,
+          aiThinkingCodeMix,
+          aiThinkingCodeStage
+        );`;
+const EMPTY_DRAW_MARKER = `          seconds,
+          0,
+          0
+        );`;
+const EMPTY_DRAW_VALUE = `          seconds,
+          0,
+          0,
+          0,
+          0
+        );`;
+const REDUCED_DRAW_MARKER = `        next==='searching'?1:0,
+        next==='generating_voice'?1:0
+      );`;
+const REDUCED_DRAW_VALUE = `        next==='searching'?1:0,
+        next==='generating_voice'?1:0,
+        aiIsCodeState(next)?1:0,
+        aiCodeStateStage(next)
+      );`;
+
 let builtSource = AI_CHAT_SOURCE;
 builtSource = replaceRequired(builtSource, OLD_SCROLL, NEW_SCROLL, 'scroll');
 builtSource = replaceRequired(builtSource, OLD_SHARE_ICON, NEW_SHARE_ICON, 'share icon');
@@ -98,8 +414,22 @@ builtSource = replaceRequired(builtSource, CONTENT_MARKER, CONTENT_WITH_ACTIONS,
 builtSource = replaceRequired(builtSource, RENDER_MARKER, RENDER_WITH_CODE_DECORATION, 'code blocks');
 builtSource = replaceRequired(builtSource, GITHUB_REQUEST_MARKER, GITHUB_REQUEST_VALUE, 'GitHub connection request');
 builtSource = replaceRequired(builtSource, RESULT_MARKER, RESULT_WITH_GITHUB, 'GitHub result');
-builtSource = replaceRequired(builtSource, WORKING_STATUS_MARKER, WORKING_STATUS_VALUE, 'repository status');
+builtSource = replaceRequired(builtSource, WORKING_STATUS_MARKER, WORKING_STATUS_VALUE, 'repository statuses');
 builtSource = replaceRequired(builtSource, LOAD_MARKER, LOAD_WITH_CAPTURE, 'connection capture');
 builtSource = replaceRequired(builtSource, SECTION_OPEN_MARKER, SECTION_OPEN_WITH_RESUME, 'connection resume');
+builtSource = replaceRequired(builtSource, CODE_VARS_MARKER, CODE_VARS_VALUE, 'code loader state');
+builtSource = replaceRequired(builtSource, CODE_HELPERS_MARKER, CODE_LOADER_HELPERS + CODE_HELPERS_MARKER, 'code loader drawing');
+builtSource = replaceRequired(builtSource, DRAW_SIGNATURE_MARKER, DRAW_SIGNATURE_VALUE, 'code loader arguments');
+builtSource = replaceRequired(builtSource, MORPH_MARKER, MORPH_VALUE, 'code loader morph');
+builtSource = replaceRequired(builtSource, GHOST_ALPHA_MARKER, GHOST_ALPHA_VALUE, 'code loader ghost fade');
+builtSource = replaceRequired(builtSource, DOT_ALPHA_MARKER, DOT_ALPHA_VALUE, 'code loader dot fade');
+builtSource = replaceRequired(builtSource, VOICE_BODY_MARKER, VOICE_BODY_VALUE, 'code loader render');
+builtSource = replaceRequired(builtSource, INITIAL_MIX_MARKER, INITIAL_MIX_VALUE, 'code loader initial state');
+builtSource = replaceRequired(builtSource, TARGETS_MARKER, TARGETS_VALUE, 'code loader targets');
+builtSource = replaceRequired(builtSource, REDUCED_MARKER, REDUCED_VALUE, 'code loader reduced motion');
+builtSource = replaceRequired(builtSource, APPROACH_MARKER, APPROACH_VALUE, 'code loader animation');
+builtSource = replaceRequired(builtSource, ACTIVE_DRAW_MARKER, ACTIVE_DRAW_VALUE, 'code loader active draw');
+builtSource = replaceRequired(builtSource, EMPTY_DRAW_MARKER, EMPTY_DRAW_VALUE, 'code loader empty draw');
+builtSource = replaceRequired(builtSource, REDUCED_DRAW_MARKER, REDUCED_DRAW_VALUE, 'code loader static draw');
 
 export const AI_CHAT_JS = builtSource;
