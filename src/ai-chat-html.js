@@ -72,58 +72,7 @@ export const AI_CHAT_HTML = `<!doctype html>
         });
       }).observe(document.documentElement,{childList:true,subtree:true});
     })();
-
-    (function(){
-      var telegram=window.Telegram&&window.Telegram.WebApp;
-      if(!telegram)return;
-
-      try{
-        if(telegram.BackButton)telegram.BackButton.hide();
-      }catch(error){}
-
-      var opening=false;
-
-      function showConnectError(message){
-        var toast=document.getElementById('toast');
-        if(!toast)return;
-        toast.textContent=String(message||'Could not connect GitHub');
-        toast.classList.add('show');
-        setTimeout(function(){toast.classList.remove('show')},2200);
-      }
-
-      document.addEventListener('click',async function(event){
-        var target=event.target;
-        var button=target&&target.closest?target.closest('.github-card-button'):null;
-        if(!button||opening)return;
-
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-
-        opening=true;
-        button.disabled=true;
-
-        try{
-          var response=await fetch('/mini-app/api/github/connect',{
-            method:'POST',
-            headers:{'content-type':'application/json'},
-            body:JSON.stringify({initData:String(telegram.initData||'')})
-          });
-          var data=await response.json().catch(function(){return{}});
-          if(!response.ok||!data.url){
-            throw new Error(data.error||'GitHub connection is unavailable');
-          }
-
-          telegram.openLink(String(data.url),{try_instant_view:false});
-        }catch(error){
-          showConnectError(error&&error.message?error.message:'Could not connect GitHub');
-        }finally{
-          opening=false;
-          button.disabled=false;
-        }
-      },true);
-    })();
   </script>
-  <script type="module" src="/mini-app/chat/app.js?v=20260802-github-open-link-18"></script>
+  <script type="module" src="/mini-app/chat/app.js?v=20260802-github-same-webview-19"></script>
 </body>
 </html>`;
