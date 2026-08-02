@@ -46,6 +46,7 @@ export const AI_CHAT_HTML = `<!doctype html>
 
     (function(){
       var searchRequested=false;
+      var thinkingHoldMs=160;
 
       function isSearchRequest(value){
         var text=String(value||'')
@@ -64,22 +65,33 @@ export const AI_CHAT_HTML = `<!doctype html>
 
       new MutationObserver(function(){
         if(!searchRequested)return;
-        var row=document.getElementById('aiThinkingRow');
-        if(!row||row.getAttribute('data-search-started')==='1')return;
 
-        row.setAttribute('data-search-started','1');
-        row.setAttribute('data-state','searching');
+        var row=document.getElementById('aiThinkingRow');
+        if(!row||row.getAttribute('data-search-transition')==='1')return;
+
+        row.setAttribute('data-search-transition','1');
+        row.setAttribute('data-state','thinking');
 
         var label=row.querySelector('span');
-        if(label)label.textContent='Searching…';
+        if(label)label.textContent='Thinking';
 
         searchRequested=false;
+
+        setTimeout(function(){
+          if(!row.isConnected||document.getElementById('aiThinkingRow')!==row){
+            return;
+          }
+
+          row.setAttribute('data-state','searching');
+          var currentLabel=row.querySelector('span');
+          if(currentLabel)currentLabel.textContent='Searching…';
+        },thinkingHoldMs);
       }).observe(document.documentElement,{
         childList:true,
         subtree:true
       });
     })();
   </script>
-  <script type="module" src="/mini-app/chat/app.js?v=20260802-search-morph-first-frame-11"></script>
+  <script type="module" src="/mini-app/chat/app.js?v=20260802-thinking-then-search-12"></script>
 </body>
 </html>`;
