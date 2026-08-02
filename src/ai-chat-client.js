@@ -172,7 +172,7 @@ function aiCodeBuildParticleShapes(){
   return aiCodeParticleShapes;
 }
 
-function drawAiCodeLoader(ctx,seconds,mix,stage,width,height){
+function drawAiCodeLoader(ctx,seconds,mix,stage,width,height,sourceDots){
   var amount=aiSmoothMorph(mix);
   if(amount<.01)return;
 
@@ -191,12 +191,7 @@ function drawAiCodeLoader(ctx,seconds,mix,stage,width,height){
   var scale=size/56;
   var pulse=.5+.5*Math.sin(seconds*3.1);
   var points=[];
-
-  ctx.save();
-  ctx.globalCompositeOperation='destination-out';
-  ctx.globalAlpha=amount;
-  ctx.fillRect(0,0,width,height);
-  ctx.restore();
+  var sourceCount=sourceDots&&sourceDots.length?sourceDots.length:0;
 
   var rotateX=.52*inspect+.08*writing+.38*applying+.1*checking;
   var rotateY=seconds*.58*inspect
@@ -280,11 +275,21 @@ function drawAiCodeLoader(ctx,seconds,mix,stage,width,height){
       brightness*=.74+.26*(.5+.5*Math.sin(seconds*3.7-index*.12));
     }
 
+    var targetX=width/2+x3*perspective*scale;
+    var targetY=height/2+y3*perspective*scale;
+    var targetRadius=(.38+.31*depth+.08*pulse)*scale;
+    var source=sourceCount
+      ?sourceDots[Math.min(
+        sourceCount-1,
+        Math.floor(index*sourceCount/from.length)
+      )]
+      :null;
+
     points.push({
-      x:width/2+x3*perspective*scale,
-      y:height/2+y3*perspective*scale,
-      z:z2,
-      r:(.38+.31*depth+.08*pulse)*scale,
+      x:source?source.x+(targetX-source.x)*amount:targetX,
+      y:source?source.y+(targetY-source.y)*amount:targetY,
+      z:source?source.z+(z2-source.z)*amount:z2,
+      r:source?source.r+(targetRadius-source.r)*amount:targetRadius,
       a:amount*brightness
     });
   }
@@ -443,6 +448,7 @@ const VOICE_BODY_VALUE = `      voiceMorph*(1-codeMorph),
       width,
       height
     );
+    var aiCodeSourceDots=dots.slice();
     aiOrbPaint(ctx,dots);
     drawAiCodeLoader(
       ctx,
@@ -450,7 +456,8 @@ const VOICE_BODY_VALUE = `      voiceMorph*(1-codeMorph),
       codeMorph,
       codeStage,
       width,
-      height
+      height,
+      aiCodeSourceDots
     );`;
 const INITIAL_MIX_MARKER = `    aiThinkingVoiceMix=
       initialState==='generating_voice'?1:0;
