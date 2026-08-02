@@ -67,6 +67,26 @@ const CHAT_REFINEMENTS = `
 @media(max-width:420px){.ai-chat-message.github-connect-message{width:100%;max-width:100%}.github-connect-row{gap:8px}.github-connect-icon{width:24px;flex-basis:24px}.github-connect-icon svg{width:20px;height:20px}.github-card-body span{max-width:150px}.github-card-button{min-width:68px;padding:0 12px}.ai-code-block{border-radius:15px}.ai-code-block pre{padding:14px}.ai-chat-message-actions{border-radius:12px}.ai-chat-message-action{width:32px;height:32px}}
 `;
 
+const FINAL_REFINEMENTS = `
+.ai-chat-message.assistant .ai-chat-rich-content>p:first-child::first-line{font-weight:inherit!important;color:inherit!important}
+.ai-chat-message.assistant .ai-chat-rich-content strong,.ai-chat-rich-content strong{font-weight:680!important;color:#fff!important}
+.ai-chat-message.assistant.has-actions{margin-bottom:30px}
+.ai-chat-message-actions{display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;flex-wrap:wrap!important;gap:9px!important;margin-top:8px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.ai-chat-message.assistant.rtl.has-actions .ai-chat-message-actions{align-self:flex-end!important;direction:rtl!important}
+.ai-chat-message-action{position:relative!important;width:27px!important;height:27px!important;display:grid!important;place-items:center!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:rgba(255,255,255,.48)!important;box-shadow:none!important;filter:none!important;transition:transform .18s cubic-bezier(.2,.9,.2,1),opacity .18s ease,color .18s ease!important}
+.ai-chat-message-action:before{display:none!important}
+.ai-chat-message-action svg{width:17px!important;height:17px!important;filter:none!important}
+@media(hover:hover){.ai-chat-message-action:hover{background:transparent!important;box-shadow:none!important;color:rgba(255,255,255,.86)!important;opacity:1!important}}
+.ai-chat-message-action:focus-visible{outline:1px solid rgba(255,255,255,.42)!important;outline-offset:3px!important;border-radius:2px!important}
+.ai-chat-message-action:active{transform:scale(.86)!important;background:transparent!important;box-shadow:none!important;color:#fff!important;opacity:.72!important}
+.github-result-message{display:none!important}
+.github-result-link{order:-1!important;max-width:min(72vw,330px)!important;min-width:0!important;display:inline-flex!important;align-items:center!important;padding:0!important;margin:0 3px 0 0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:rgba(210,185,255,.9)!important;font-size:13px!important;font-weight:580!important;line-height:1.4!important;letter-spacing:-.01em!important;text-align:start!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;text-decoration:none!important;transition:opacity .18s ease,color .18s ease!important}
+.github-result-link:active{transform:none!important;opacity:.58!important;color:rgba(225,209,255,.96)!important}
+.ai-chat-message.rtl .github-result-link{margin:0 0 0 3px!important;text-align:right!important}
+@media(max-width:420px){.ai-chat-message-actions{gap:8px!important}.ai-chat-message-action{width:27px!important;height:27px!important}.github-result-link{max-width:calc(100vw - 116px)!important;font-size:12.5px!important}}
+`;
+
 export const AI_CHAT_CSS = AI_CHAT_STYLES_SOURCE
   .replace(OLD_SHARE_STYLE, NEW_SHARE_STYLE)
-  + CHAT_REFINEMENTS;
+  + CHAT_REFINEMENTS
+  + FINAL_REFINEMENTS;
