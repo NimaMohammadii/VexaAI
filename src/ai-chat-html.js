@@ -50,15 +50,15 @@ export const AI_CHAT_HTML = `<!doctype html>
 
     (function(){
       var copySvg='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-        +'<path d="M9.2 7.6h7A2.8 2.8 0 0 1 19 10.4v6a2.8 2.8 0 0 1-2.8 2.8h-6a2.8 2.8 0 0 1-2.8-2.8v-7a1.8 1.8 0 0 1 1.8-1.8Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>'
         +'<path d="M15.8 7.6v-.8A2.8 2.8 0 0 0 13 4H6.8A2.8 2.8 0 0 0 4 6.8V13a2.8 2.8 0 0 0 2.8 2.8h.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>'
+        +'<path d="M9.2 7.6h7A2.8 2.8 0 0 1 19 10.4v6a2.8 2.8 0 0 1-2.8 2.8h-6a2.8 2.8 0 0 1-2.8-2.8v-7a1.8 1.8 0 0 1 1.8-1.8Z" fill="#000" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>'
         +'</svg>';
 
       function refreshCopyIcons(root){
         var scope=root&&root.querySelectorAll?root:document;
         scope.querySelectorAll('.ai-chat-message-action[aria-label="Copy message"]').forEach(function(button){
-          if(button.getAttribute('data-clean-copy-icon')==='1')return;
-          button.setAttribute('data-clean-copy-icon','1');
+          if(button.getAttribute('data-clean-copy-icon')==='3')return;
+          button.setAttribute('data-clean-copy-icon','3');
           button.innerHTML=copySvg;
         });
       }
@@ -73,6 +73,6 @@ export const AI_CHAT_HTML = `<!doctype html>
       }).observe(document.documentElement,{childList:true,subtree:true});
     })();
   </script>
-  <script type="module" src="/mini-app/chat/app.js?v=20260802-clean-copy-svg-14"></script>
+  <script type="module" src="/mini-app/chat/app.js?v=20260802-copy-opaque-front-16"></script>
 </body>
 </html>`;
