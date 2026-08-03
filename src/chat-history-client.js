@@ -117,9 +117,20 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
     });
   }
 
+  function prepareHistoryShell(){
+    var container=document.querySelector('.ai-chat-history');
+    if(!container)return;
+    container.innerHTML='';
+    var loading=document.createElement('div');
+    loading.className='vexa-history-empty';
+    loading.textContent='Loading chats…';
+    container.appendChild(loading);
+  }
+
   function bootstrapHistory(){
     if(historyLoading)return;
     historyLoading=true;
+    prepareHistoryShell();
     setHistoryStatus('Loading chats…');
 
     storageApi('/mini-app/api/chats/bootstrap',{
@@ -131,6 +142,7 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
       renderStoredMessages(data.messages||[]);
       setHistoryStatus('Saved to your account');
     }).catch(function(error){
+      renderConversationList([]);
       setHistoryStatus('Chat history unavailable');
       console.warn(error);
     }).finally(function(){
