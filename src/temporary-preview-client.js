@@ -143,6 +143,7 @@ export const TEMPORARY_PREVIEW_CLIENT_JS = String.raw`
       var existingFrame=existing.querySelector('.vexa-preview-frame');
       if(existingTitle)existingTitle.textContent=data.title;
       reloadFrame(existingFrame,data.html);
+      list.appendChild(existing);
       requestAnimationFrame(function(){list.scrollTop=list.scrollHeight});
       return;
     }
