@@ -1,9 +1,19 @@
 name = "vchat"
-main = "src/preview-worker.js"
+main = "src/persistent-chat-worker.js"
 compatibility_date = "2026-08-01"
 
 [vars]
 APP_URL = "https://vchat.vexaagent.workers.dev"
+
+# Persistent chats require a Cloudflare D1 binding named VEXA_DB.
+# Create it with: npx wrangler d1 create vexa-chat
+# Then add the returned database_id using this block:
+# [[d1_databases]]
+# binding = "VEXA_DB"
+# database_name = "vexa-chat"
+# database_id = "<database id>"
+# migrations_dir = "migrations"
+# See docs/chat-memory-setup.md for the complete one-time setup.
 
 # Add secrets with:
 # wrangler secret put BOT_TOKEN
