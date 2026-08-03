@@ -13,6 +13,7 @@ APP_URL = "https://vchat.vexaagent.workers.dev"
 # database_name = "vexa-chat"
 # database_id = "<database id>"
 # migrations_dir = "migrations"
+# See docs/chat-memory-setup.md for the complete one-time setup.
 
 # Add secrets with:
 # wrangler secret put BOT_TOKEN
