@@ -4,5 +4,4 @@ export const CHAT_HISTORY_CSS = String.raw`
 .ai-chat-history-item{cursor:pointer}
 .ai-chat-history-item.active{box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
 .ai-chat-drawer-foot{min-height:25px}
-.ai-chat-history:has(.vexa-history-empty){justify-content:center}
 `;
