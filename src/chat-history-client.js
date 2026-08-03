@@ -4,7 +4,7 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
   window.__vexaPersistentChatsInstalled=true;
 
   var baseFetch=window.fetch.bind(window);
-  var currentConversationId='';
+  var currentConversationId=readCurrentConversationId();
   var historyReady=false;
   var historyLoading=false;
 
@@ -17,7 +17,7 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
           var responseConversationId=String(
             response.headers.get('x-vexa-conversation-id')||''
           );
-          if(responseConversationId)currentConversationId=responseConversationId;
+          if(responseConversationId)setCurrentConversationId(responseConversationId);
           if(response&&typeof response.clone==='function'){
             observeChatResponse(response.clone());
           }
@@ -26,6 +26,18 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
       return response;
     });
   };
+
+  function readCurrentConversationId(){
+    try{return String(localStorage.getItem('vexaCurrentConversationId')||'')}catch(error){return''}
+  }
+
+  function setCurrentConversationId(value){
+    currentConversationId=String(value||'');
+    try{
+      if(currentConversationId)localStorage.setItem('vexaCurrentConversationId',currentConversationId);
+      else localStorage.removeItem('vexaCurrentConversationId');
+    }catch(error){}
+  }
 
   function requestUrlOf(input){
     return typeof input==='string'
@@ -79,7 +91,10 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
           if(event&&event.type==='result')hasResult=true;
         }catch(error){}
       });
-      if(hasResult)setTimeout(refreshConversationList,140);
+      if(hasResult){
+        setTimeout(refreshConversationList,450);
+        setTimeout(refreshConversationList,1400);
+      }
     }).catch(function(){});
   }
 
@@ -111,7 +126,7 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
       conversationId:currentConversationId
     }).then(function(data){
       historyReady=true;
-      currentConversationId=String(data.conversation&&data.conversation.id||'');
+      setCurrentConversationId(String(data.conversation&&data.conversation.id||''));
       renderConversationList(data.conversations||[]);
       renderStoredMessages(data.messages||[]);
       setHistoryStatus('Saved to your account');
@@ -128,7 +143,7 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
     storageApi('/mini-app/api/chats/bootstrap',{
       conversationId:currentConversationId
     }).then(function(data){
-      currentConversationId=String(data.conversation&&data.conversation.id||currentConversationId);
+      setCurrentConversationId(String(data.conversation&&data.conversation.id||currentConversationId));
       renderConversationList(data.conversations||[]);
     }).catch(function(){});
   }
@@ -137,7 +152,7 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
     if(historyLoading)return;
     historyLoading=true;
     storageApi('/mini-app/api/chats/create',{}).then(function(data){
-      currentConversationId=String(data.conversation&&data.conversation.id||'');
+      setCurrentConversationId(String(data.conversation&&data.conversation.id||''));
       renderConversationList(data.conversations||[]);
       clearConversationView();
       closeHistoryDrawer();
@@ -162,7 +177,7 @@ export const CHAT_HISTORY_CLIENT_JS = String.raw`
     storageApi('/mini-app/api/chats/open',{
       conversationId:target
     }).then(function(data){
-      currentConversationId=String(data.conversation&&data.conversation.id||target);
+      setCurrentConversationId(String(data.conversation&&data.conversation.id||target));
       renderConversationList(data.conversations||[]);
       renderStoredMessages(data.messages||[]);
       closeHistoryDrawer();
