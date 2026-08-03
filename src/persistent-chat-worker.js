@@ -6,6 +6,7 @@ const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const OPENAI_MODEL = 'gpt-5.6-luna';
 const MAX_CONTEXT_MESSAGES = 18;
 const MAX_HISTORY_MESSAGES = 500;
+const MAX_VISIBLE_CONVERSATIONS = 200;
 const MAX_MEMORY_ITEMS = 80;
 const MAX_MEMORY_CONTEXT_ITEMS = 24;
 const MAX_MEMORY_CONTEXT_CHARS = 6_000;
@@ -446,8 +447,8 @@ async function listConversations(db, userId) {
     WHERE c.user_id = ?
     GROUP BY c.id
     ORDER BY c.updated_at DESC
-    LIMIT 200`)
-    .bind(userId)
+    LIMIT ?`)
+    .bind(userId, MAX_VISIBLE_CONVERSATIONS)
     .all();
 
   return (result.results || []).map((row) => ({
