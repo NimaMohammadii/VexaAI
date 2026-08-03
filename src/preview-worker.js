@@ -158,7 +158,13 @@ async function handlePreviewAwareChat(request, env, ctx) {
 
   const action = await chooseWorkspaceAction(payload, env).catch(() => null);
 
-  if (!action || action.name === 'delegate_to_vexa') {
+  if (!action) {
+    return messageResponse(
+      'I could not safely determine the correct workspace for that request. Please try again.'
+    );
+  }
+
+  if (action.name === 'delegate_to_vexa') {
     return githubWorker.fetch(request, env, ctx);
   }
 
@@ -244,7 +250,7 @@ async function chooseWorkspaceAction(payload, env) {
       tools: WORKSPACE_TOOLS,
       tool_choice: 'required',
       parallel_tool_calls: false,
-      max_output_tokens: 6_000,
+      max_output_tokens: 8_000,
       store: false
     })
   });
